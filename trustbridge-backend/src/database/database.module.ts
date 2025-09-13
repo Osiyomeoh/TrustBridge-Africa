@@ -1,0 +1,28 @@
+import { Module, Global } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+
+// Import all schemas
+import { Asset, AssetSchema } from '../schemas/asset.schema';
+import { User, UserSchema } from '../schemas/user.schema';
+import { VerificationRequest, VerificationRequestSchema } from '../schemas/verification-request.schema';
+import { Attestor, AttestorSchema } from '../schemas/attestor.schema';
+import { Settlement, SettlementSchema } from '../schemas/settlement.schema';
+import { Operation, OperationSchema } from '../schemas/operation.schema';
+import { Analytics, AnalyticsSchema } from '../schemas/analytics.schema';
+
+@Global()
+@Module({
+  imports: [
+    MongooseModule.forFeature([
+      { name: Asset.name, schema: AssetSchema },
+      { name: User.name, schema: UserSchema },
+      { name: VerificationRequest.name, schema: VerificationRequestSchema },
+      { name: Attestor.name, schema: AttestorSchema },
+      { name: Settlement.name, schema: SettlementSchema },
+      { name: Operation.name, schema: OperationSchema },
+      { name: Analytics.name, schema: AnalyticsSchema },
+    ]),
+  ],
+  exports: [MongooseModule],
+})
+export class DatabaseModule {}

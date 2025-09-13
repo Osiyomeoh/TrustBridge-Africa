@@ -1,0 +1,248 @@
+
+> trustbridge-backend@1.0.0 start:dev
+> nest start --watch
+
+[2J[3J[H[[90m7:36:54 PM[0m] Starting compilation in watch mode...
+
+[[90m7:37:03 PM[0m] Found 0 errors. Watching for file changes.
+
+(node:84167) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:84183) [MONGOOSE] Warning: Duplicate schema index on {"amount":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +18ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMongooseModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDatabaseModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventEmitterModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mThrottlerModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mWebSocketModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDiscoveryModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEventEmitterModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mScheduleModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[HederaService] [39m[32mUsing ECDSA key format[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[HederaService] [39m[32mHedera client initialized for testnet with account 0.0.6564676[39m
+WARNING: Consider using fromStringECDSA() or fromStringED25519() on a HEX-encoded string and fromStringDer() on a HEX-encoded string with DER prefix instead.
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[ChainlinkHederaService] [39m[32mChainlink Hedera client initialized[39m
+[33m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [33m   WARN[39m [38;5;3m[GoogleDriveService] [39m[33mGoogle Drive credentials not configured, using local storage[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mHederaModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mExternalApisModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mNotificationsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mChainlinkModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:05 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mFileUploadModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMongooseCoreModule dependencies initialized[39m[38;5;3m +4705ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMongooseModule dependencies initialized[39m[38;5;3m +11ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMongooseModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMongooseModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMongooseModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMongooseModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMongooseModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMongooseModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMongooseModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMongooseModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAdminModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAssetsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPortfolioModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mInvestmentsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAttestorsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAnalyticsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mMobileModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPaymentsModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsersModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mVerificationModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mTrustBridgeWebSocketGateway subscribed to the "authenticate" message[39m[38;5;3m +40ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mTrustBridgeWebSocketGateway subscribed to the "join_room" message[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mTrustBridgeWebSocketGateway subscribed to the "leave_room" message[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mTrustBridgeWebSocketGateway subscribed to the "subscribe_asset" message[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mTrustBridgeWebSocketGateway subscribed to the "subscribe_investment" message[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mTrustBridgeWebSocketGateway subscribed to the "get_rooms" message[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mTrustBridgeWebSocketGateway subscribed to the "ping" message[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/api/auth}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/wallet, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/email, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/register, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/refresh, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/logout, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/password, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/reset-password, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/confirm-reset, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/me, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/verify, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/auth/permissions, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAssetsController {/api/assets}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/assets, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/assets/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/assets, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/assets/featured, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/assets/owner/:owner, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mInvestmentsController {/api/investments}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/investments, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/investments, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mHederaController {/api/hedera}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/status, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/tokenize, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/mint/:tokenId, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/transfer, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/settlement, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/balance/:accountId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/token-balance/:accountId/:tokenId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/hcs/message, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/hfs/upload, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/health, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/kyc/grant, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/kyc/revoke, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/freeze, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/unfreeze, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/freeze/token, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/associate, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/dissociate, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/token-info/:tokenId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/account-info/:accountId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/compliance/kyc-workflow, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/hedera/compliance/freeze-workflow, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mVerificationController {/api/verification}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/verification, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/verification/status/:assetId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/verification/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/verification/submit, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/verification/attestation, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mChainlinkController {/api/chainlink}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/price/:assetType, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/price/coffee, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/weather, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/market/:assetType, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/historical/:assetType, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/vrf/random, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/vrf/attestor, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/verify/location, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/feeds, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/vrf/config, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/health, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/feeds/available, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/feeds/:symbol, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/feeds/:symbol/info, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/chainlink/feeds/:symbol/historical/:roundId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAttestorsController {/api/attestors}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/attestors, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/attestors/register, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/attestors/location/:country, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/attestors/specialty/:specialty, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/attestors/:id, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/attestors/:id/attestation, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/attestors/:id/reputation, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/attestors/:id/approve, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/attestors/:id/reject, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mExternalApisController {/api/external}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/external, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/external/ocr/extract, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/external/gps/verify, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/external/weather, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/external/market/:symbol, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/external/document/verify, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/external/health, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/external/services, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPortfolioController {/api/portfolio}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/portfolio, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAnalyticsController {/api/analytics}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/analytics/market, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/analytics/real-time, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mUsersController {/api/users}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/users, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mFileUploadController {/api/files}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/files/upload/:assetId/:fileType, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/files/upload-multiple/:assetId/:fileType, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/files/analyze/:fileId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/files/download/:fileId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/files/view/:fileId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/files/:fileId, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/files/stats, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/files/cleanup, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mNotificationsController {/api/notifications}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notifications/send, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notifications/send-asset-submission, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notifications/send-verification-assignment, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notifications/send-investment-confirmation, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notifications/send-system-alert, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notifications/templates, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notifications/templates/:templateId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notifications/templates, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notifications/templates/:templateId, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notifications/templates/:templateId, DELETE} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/notifications/test/:type, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAdminController {/api/admin}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/dashboard, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/stats, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/users, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/assets, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/verifications, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/health, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/logs, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/users/:userId/status, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/assets/:assetId/status, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/attestors/:attestorId/status, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/alerts, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/reports/verification, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/reports/investment, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/reports/financial, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/settings, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/settings, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/backup, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/admin/maintenance, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mMobileController {/api/mobile}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/dashboard/:userId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/operations/:userId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/operations/track/:operationId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/notifications/:userId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/notifications/:userId/:notificationId/read, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/assets/:assetId/:userId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/investments/:investmentId/:userId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/market/:assetType, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/blockchain/status/:assetId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/verification/submit, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/investments/create, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/attestors/:attestorId/operations, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/operations/:operationId/status, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/offline/sync/:userId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/mobile/health, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPaymentsController {/api/payments}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/payments/create, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/payments/escrow, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/payments/escrow/:paymentId/release, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/payments/status/:paymentId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/payments/user/:userId, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/payments/refund/:paymentId, PUT} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/payments/webhook/:provider, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/payments/stats, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/payments/methods, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/api/payments/fees, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +8ms[39m
+[31m[Nest] 84183  - [39m09/04/2025, 7:37:10 PM [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::4003[39m[38;5;3m +2ms[39m
+node:net:1940
+    const ex = new UVExceptionWithHostPort(err, 'listen', address, port);
+               ^
+
+Error: listen EADDRINUSE: address already in use :::4003
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at ExpressAdapter.listen (/Users/MAC/Documents/TrustBridge/trustbridge-backend/node_modules/@nestjs/platform-express/adapters/express-adapter.js:95:32)
+    at /Users/MAC/Documents/TrustBridge/trustbridge-backend/node_modules/@nestjs/core/nest-application.js:183:30
+    at new Promise (<anonymous>)
+    at NestApplication.listen (/Users/MAC/Documents/TrustBridge/trustbridge-backend/node_modules/@nestjs/core/nest-application.js:173:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async bootstrap (/Users/MAC/Documents/TrustBridge/trustbridge-backend/src/main.ts:45:3) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 4003
+}
+
+Node.js v24.6.0

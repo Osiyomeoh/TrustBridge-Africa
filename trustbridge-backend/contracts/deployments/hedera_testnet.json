@@ -1,0 +1,48 @@
+{
+  "network": "hedera_testnet",
+  "timestamp": "2025-09-02T19:55:21.295Z",
+  "contracts": {
+    "TrustToken": {
+      "address": "0x5Fc7CFc9de33F889E5082a794C86924dE0730F1B",
+      "transactionHash": "0x8a7ed3099f8d9aa5853522f45a6e1ea728f1f4514b88fe2cebbd47e2b2cb8222",
+      "gasUsed": "1320274"
+    },
+    "AttestorManager": {
+      "address": "0x4cBc1051eFaa1DE9b269F1D198607116f1b73B2A",
+      "transactionHash": "0x7aa319b6417bcce14b5d7d27d0735918b18975593134330e06ef211c94bf3d30",
+      "gasUsed": "1166992"
+    },
+    "PolicyManager": {
+      "address": "0xdFA7fABDB764D552E4CF411588a7Be516CB0538d",
+      "transactionHash": "0x36194feaff0db889f75ee3d1872dac85f500279a231bdc4a941211242b8723f2",
+      "gasUsed": "830757"
+    },
+    "VerificationRegistry": {
+      "address": "0x191BD2259BeC74d4680295A81f71ED9853d89D52",
+      "transactionHash": "0x5d1231021df50d9fc39c40a2bc914d61d97a0bd6a17c7caedc06dc9ae4cdd8f7",
+      "gasUsed": "1166323"
+    },
+    "AssetFactory": {
+      "address": "0xD051EfA5FDeAB780F80d762bE2e9d2C64af7ED4B",
+      "transactionHash": "0x1ec82af9ee4ed78d17f0e6cb448961b6cbbcd4fd951642a0840993df98f765c8",
+      "gasUsed": "2566909"
+    },
+    "SettlementEngine": {
+      "address": "0x31C0112671810d3Bf29e2fa3C1D2668B8aDD18FD",
+      "transactionHash": "0x032e56ace672585046c8f2001e31719bf00a60ad3afc34b7af8bf745bd19a5ae",
+      "gasUsed": "1092947"
+    },
+    "FeeDistribution": {
+      "address": "0x173782c2151cA9d4c99beFd165FC2293444f6533",
+      "transactionHash": "0xecd9cb95604df57da44cd101056018b43b136d0097d0ada8d6cfffbf39271de9",
+      "gasUsed": "590786"
+    },
+    "VerificationBuffer": {
+      "address": "0xBf47D97f75EC66BFdaC3bBe9E3DBFFce9D57C295",
+      "transactionHash": "0x953d9892648d010c368fc6e1a0d6f8053eb096bd23fac04723f96e0e83f7d71a",
+      "gasUsed": "545935"
+    }
+  },
+  "totalGasUsed": "9280923",
+  "deployer": "0x17d0a5E112F088076d79a5E73Ef3a143506789fF"
+}

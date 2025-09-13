@@ -1,0 +1,17 @@
+{
+  "contractName": "AttestorManager",
+  "address": "0x4cBc1051eFaa1DE9b269F1D198607116f1b73B2A",
+  "network": "hedera_testnet",
+  "sourceFile": "AttestorManager.sol",
+  "metadataFile": "AttestorManager.json",
+  "constructorArgs": [],
+  "hashscanUrl": "https://hashscan.io/testnet/contract/0x4cBc1051eFaa1DE9b269F1D198607116f1b73B2A",
+  "verificationSteps": [
+    "1. Go to the HashScan URL above",
+    "2. Click 'Verify' in the Contract Bytecode section",
+    "3. Upload the .sol source file",
+    "4. Upload the .json metadata file",
+    "5. Enter constructor arguments if any",
+    "6. Click 'VERIFY' to submit"
+  ]
+}

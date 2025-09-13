@@ -1,0 +1,17 @@
+{
+  "contractName": "TrustToken",
+  "address": "0x5Fc7CFc9de33F889E5082a794C86924dE0730F1B",
+  "network": "hedera_testnet",
+  "sourceFile": "TrustToken.sol",
+  "metadataFile": "TrustToken.json",
+  "constructorArgs": [],
+  "hashscanUrl": "https://hashscan.io/testnet/contract/0x5Fc7CFc9de33F889E5082a794C86924dE0730F1B",
+  "verificationSteps": [
+    "1. Go to the HashScan URL above",
+    "2. Click 'Verify' in the Contract Bytecode section",
+    "3. Upload the .sol source file",
+    "4. Upload the .json metadata file",
+    "5. Enter constructor arguments if any",
+    "6. Click 'VERIFY' to submit"
+  ]
+}

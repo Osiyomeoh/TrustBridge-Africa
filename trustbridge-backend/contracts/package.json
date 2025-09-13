@@ -1,0 +1,35 @@
+{
+  "name": "contracts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:all": "hardhat test test/Phase1-Security.test.ts test/Phase2-EdgeCases.test.ts test/Phase3-Integration.test.ts test/Phase4-Performance.test.ts test/Phase5-Economic.test.ts",
+    "deploy": "hardhat run scripts/deploy.ts",
+    "deploy:hedera": "hardhat run scripts/deploy-hedera.ts --network hedera_testnet",
+    "deploy:hedera:mainnet": "hardhat run scripts/deploy-hedera.ts --network hedera_mainnet",
+    "deploy:hedera:testnet": "hardhat run scripts/deploy-hedera-testnet.ts --network hedera_testnet",
+    "setup:attestors": "hardhat run scripts/setup-initial-attestors.ts --network hedera_testnet",
+    "setup:attestors:mainnet": "hardhat run scripts/setup-initial-attestors.ts --network hedera_mainnet",
+    "deploy:full": "./deploy.sh",
+    "node": "hardhat node",
+    "clean": "hardhat clean"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ignition": "^0.15.13",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@types/node": "^22.8.5",
+    "hardhat": "^2.26.0",
+    "typescript": "~5.8.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "dotenv": "^17.2.1"
+  }
+}

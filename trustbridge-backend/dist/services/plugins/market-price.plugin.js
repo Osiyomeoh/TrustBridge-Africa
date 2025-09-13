@@ -1,0 +1,1 @@
+//# sourceMappingURL=market-price.plugin.js.map

@@ -1,0 +1,20 @@
+{
+  "contractName": "VerificationRegistry",
+  "address": "0x191BD2259BeC74d4680295A81f71ED9853d89D52",
+  "network": "hedera_testnet",
+  "sourceFile": "VerificationRegistry.sol",
+  "metadataFile": "VerificationRegistry.json",
+  "constructorArgs": [
+    "0x4cBc1051eFaa1DE9b269F1D198607116f1b73B2A",
+    "0xdFA7fABDB764D552E4CF411588a7Be516CB0538d"
+  ],
+  "hashscanUrl": "https://hashscan.io/testnet/contract/0x191BD2259BeC74d4680295A81f71ED9853d89D52",
+  "verificationSteps": [
+    "1. Go to the HashScan URL above",
+    "2. Click 'Verify' in the Contract Bytecode section",
+    "3. Upload the .sol source file",
+    "4. Upload the .json metadata file",
+    "5. Enter constructor arguments if any",
+    "6. Click 'VERIFY' to submit"
+  ]
+}

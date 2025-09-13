@@ -1,0 +1,17 @@
+{
+  "contractName": "PolicyManager",
+  "address": "0xdFA7fABDB764D552E4CF411588a7Be516CB0538d",
+  "network": "hedera_testnet",
+  "sourceFile": "PolicyManager.sol",
+  "metadataFile": "PolicyManager.json",
+  "constructorArgs": [],
+  "hashscanUrl": "https://hashscan.io/testnet/contract/0xdFA7fABDB764D552E4CF411588a7Be516CB0538d",
+  "verificationSteps": [
+    "1. Go to the HashScan URL above",
+    "2. Click 'Verify' in the Contract Bytecode section",
+    "3. Upload the .sol source file",
+    "4. Upload the .json metadata file",
+    "5. Enter constructor arguments if any",
+    "6. Click 'VERIFY' to submit"
+  ]
+}
