@@ -1,0 +1,11 @@
+{
+  "network": "hedera_testnet",
+  "timestamp": "2025-09-26T06:55:57.518Z",
+  "deployer": "0xA6e8bf8E89Bd2c2BD37e308F275C4f52284a911F",
+  "faucetAddress": "0x0dD677A36Cfcf6d7ADFcf68329da234207c58210",
+  "trustTokenAddress": "0xa6f8fC5b5A9B5670dF868247585bcD86eD124ba2",
+  "initialBalance": "100000.0",
+  "faucetAmount": "1000",
+  "cooldownPeriod": "24 hours",
+  "maxDailyAmount": "5000"
+}

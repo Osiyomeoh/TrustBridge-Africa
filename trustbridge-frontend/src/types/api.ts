@@ -28,7 +28,7 @@ export interface Asset {
   maturityDate: string;
   expectedAPY: number;
   verificationScore: number;
-  status: 'PENDING' | 'VERIFIED' | 'REJECTED' | 'TOKENIZED';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'TOKENIZED';
   investments: string[];
   operations: any[];
   createdAt: string;

@@ -12,15 +12,19 @@ const mongoose_1 = require("@nestjs/mongoose");
 const assets_controller_1 = require("./assets.controller");
 const assets_service_1 = require("./assets.service");
 const asset_schema_1 = require("../schemas/asset.schema");
-const hedera_module_1 = require("../hedera/hedera.module");
+const asset_v2_schema_1 = require("../schemas/asset-v2.schema");
+const api_module_1 = require("../api/api.module");
 let AssetsModule = class AssetsModule {
 };
 exports.AssetsModule = AssetsModule;
 exports.AssetsModule = AssetsModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            mongoose_1.MongooseModule.forFeature([{ name: asset_schema_1.Asset.name, schema: asset_schema_1.AssetSchema }]),
-            hedera_module_1.HederaModule,
+            mongoose_1.MongooseModule.forFeature([
+                { name: asset_schema_1.Asset.name, schema: asset_schema_1.AssetSchema },
+                { name: asset_v2_schema_1.AssetV2.name, schema: asset_v2_schema_1.AssetV2Schema }
+            ]),
+            api_module_1.ApiModule,
         ],
         controllers: [assets_controller_1.AssetsController],
         providers: [assets_service_1.AssetsService],

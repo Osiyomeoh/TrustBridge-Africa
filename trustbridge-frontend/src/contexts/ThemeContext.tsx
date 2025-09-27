@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, FC, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
 
@@ -18,10 +18,10 @@ export const useTheme = () => {
 };
 
 interface ThemeProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+export const ThemeProvider: FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     // Check localStorage first, then default to dark
     const savedTheme = localStorage.getItem('trustbridge-theme') as Theme;

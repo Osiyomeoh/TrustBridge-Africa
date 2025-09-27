@@ -21,6 +21,6 @@ import { GmailService } from '../services/gmail.service';
   ],
   controllers: [AuthController],
   providers: [AuthService, GmailService],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

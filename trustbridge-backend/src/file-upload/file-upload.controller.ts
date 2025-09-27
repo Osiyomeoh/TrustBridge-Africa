@@ -16,7 +16,7 @@ import { Response } from 'express';
 import { FileUploadService, UploadedFile as UploadedFileType } from './file-upload.service';
 
 @ApiTags('File Upload')
-@Controller('api/files')
+@Controller('files')
 export class FileUploadController {
   constructor(private readonly fileUploadService: FileUploadService) {}
 

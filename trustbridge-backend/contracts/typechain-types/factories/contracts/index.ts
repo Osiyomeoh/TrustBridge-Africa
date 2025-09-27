@@ -2,13 +2,21 @@
 /* tslint:disable */
 /* eslint-disable */
 export * as interfaces from "./interfaces";
-export { AssetFactory__factory } from "./AssetFactory__factory";
-export { AssetToken__factory } from "./AssetToken__factory";
-export { AttestorManager__factory } from "./AttestorManager__factory";
-export { Counter__factory } from "./Counter__factory";
+export { AMCManager__factory } from "./AMCManager__factory";
+export { AdvancedMinting__factory } from "./AdvancedMinting__factory";
+export { AssetNFT__factory } from "./AssetNFT__factory";
+export { AttestorVerificationSystem__factory } from "./AttestorVerificationSystem__factory";
+export { BatchMinting__factory } from "./BatchMinting__factory";
+export { CoreAssetFactory__factory } from "./CoreAssetFactory__factory";
 export { FeeDistribution__factory } from "./FeeDistribution__factory";
-export { PolicyManager__factory } from "./PolicyManager__factory";
-export { SettlementEngine__factory } from "./SettlementEngine__factory";
+export { Governance__factory } from "./Governance__factory";
+export { NFTMarketplace__factory } from "./NFTMarketplace__factory";
+export { PoolManager__factory } from "./PoolManager__factory";
+export { PoolToken__factory } from "./PoolToken__factory";
+export { SPVManager__factory } from "./SPVManager__factory";
+export { TRUSTAssetFactory__factory } from "./TRUSTAssetFactory__factory";
+export { TRUSTFaucet__factory } from "./TRUSTFaucet__factory";
+export { TRUSTMarketplace__factory } from "./TRUSTMarketplace__factory";
+export { TradingEngine__factory } from "./TradingEngine__factory";
 export { TrustToken__factory } from "./TrustToken__factory";
-export { VerificationBuffer__factory } from "./VerificationBuffer__factory";
 export { VerificationRegistry__factory } from "./VerificationRegistry__factory";

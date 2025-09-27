@@ -74,4 +74,9 @@ contract FeeDistribution is AccessControl, ReentrancyGuard {
         
         emit ValidatorRewarded(msg.sender, reward);
     }
+    
+    // Allow contract to receive ETH
+    receive() external payable {
+        // Accept ETH transfers
+    }
 }

@@ -26,7 +26,7 @@ export class UpdateOperationStatusDto {
 }
 
 @ApiTags('Mobile API')
-@Controller('api/mobile')
+@Controller('mobile')
 export class MobileController {
   constructor(private readonly mobileService: MobileService) {}
 

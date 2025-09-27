@@ -73,21 +73,32 @@ export class MobileService {
 
   async getMobileDashboard(userId: string): Promise<MobileDashboard> {
     try {
-      const user = await this.userModel.findById(userId).select('-password');
+      // Check if userId is a valid ObjectId, otherwise search by walletAddress
+      let user;
+      if (userId.match(/^[0-9a-fA-F]{24}$/)) {
+        // Valid ObjectId
+        user = await this.userModel.findById(userId).select('-password');
+      } else {
+        // Assume it's a wallet address
+        user = await this.userModel.findOne({ walletAddress: userId }).select('-password');
+      }
+      
       if (!user) {
         throw new Error('User not found');
       }
 
-      const assets = await this.assetModel.find({ owner: userId })
+      // Use the actual user ID for asset queries
+      const actualUserId = user._id.toString();
+      const assets = await this.assetModel.find({ owner: actualUserId })
         .sort({ createdAt: -1 })
         .limit(10);
 
-      const investments = await this.getUserInvestments(userId);
-      const operations = await this.getUserOperations(userId);
-      const notifications = await this.getUserNotifications(userId);
+      const investments = await this.getUserInvestments(actualUserId);
+      const operations = await this.getUserOperations(actualUserId);
+      const notifications = await this.getUserNotifications(actualUserId);
 
       const stats = {
-        totalAssets: await this.assetModel.countDocuments({ owner: userId }),
+        totalAssets: await this.assetModel.countDocuments({ owner: actualUserId }),
         totalInvestments: investments.length,
         totalValue: assets.reduce((sum, asset) => sum + asset.totalValue, 0),
         pendingOperations: operations.filter(op => op.status === 'pending' || op.status === 'in_progress').length,

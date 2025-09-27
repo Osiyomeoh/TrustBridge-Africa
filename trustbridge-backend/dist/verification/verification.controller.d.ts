@@ -31,7 +31,31 @@ export declare class VerificationController {
     private readonly verificationService;
     private readonly ipfsService;
     constructor(verificationService: VerificationService, ipfsService: IPFSService);
+    test(): Promise<{
+        success: boolean;
+        message: string;
+        timestamp: string;
+    }>;
     getAllVerifications(): Promise<{
+        success: boolean;
+        data: import("../schemas/verification-request.schema").VerificationRequest[];
+        message: string;
+    }>;
+    getUserVerifications(req: any): Promise<{
+        success: boolean;
+        data: import("../schemas/verification-request.schema").VerificationRequest[];
+        message: string;
+    }>;
+    createBulkMinimalVerifications(body: {
+        verifications: any[];
+    }): Promise<{
+        success: boolean;
+        data: import("../schemas/verification-request.schema").VerificationRequest[];
+        message: string;
+    }>;
+    createBulkVerifications(body: {
+        verifications: any[];
+    }): Promise<{
         success: boolean;
         data: import("../schemas/verification-request.schema").VerificationRequest[];
         message: string;
@@ -39,6 +63,24 @@ export declare class VerificationController {
     getVerificationStatus(assetId: string): Promise<{
         success: boolean;
         data: import("../schemas/verification-request.schema").VerificationRequest;
+        message: string;
+    }>;
+    getAttestorVerifications(req: any): Promise<{
+        success: boolean;
+        data: {
+            requestId: any;
+            assetId: any;
+            status: any;
+            requiredType: number;
+            evidenceHashes: any;
+            documentTypes: any;
+            fee: string;
+            deadline: number;
+            submittedAt: number;
+            score: any;
+            owner: any;
+            attestors: any[];
+        }[];
         message: string;
     }>;
     getVerificationById(id: string): Promise<{

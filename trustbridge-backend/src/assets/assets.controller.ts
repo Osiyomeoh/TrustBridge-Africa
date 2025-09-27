@@ -1,11 +1,12 @@
 import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { AssetsService } from './assets.service';
+import { AssetsService, CreateDigitalAssetDto, CreateRWAAssetDto } from './assets.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { Asset } from '../schemas/asset.schema';
+import { AssetV2 } from '../schemas/asset-v2.schema';
 
 @ApiTags('Assets')
-@Controller('api/assets')
+@Controller('assets')
 export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}
 
@@ -60,10 +61,10 @@ export class AssetsController {
   }
 
   @Post('create-with-tokenization')
-  @ApiOperation({ summary: 'Create new asset with Hedera tokenization' })
-  @ApiResponse({ status: 201, description: 'Asset created and tokenized successfully' })
+  @ApiOperation({ summary: 'Create new asset with Hedera tokenization (DEPRECATED)' })
+  @ApiResponse({ status: 201, description: 'Asset created successfully' })
   @ApiResponse({ status: 400, description: 'Validation error' })
-  @ApiResponse({ status: 500, description: 'Tokenization failed' })
+  @ApiResponse({ status: 500, description: 'Creation failed' })
   async createAssetWithTokenization(@Body() createAssetDto: CreateAssetDto): Promise<{ 
     success: boolean; 
     data: Asset; 
@@ -72,13 +73,14 @@ export class AssetsController {
     message?: string;
   }> {
     try {
-      const result = await this.assetsService.createAssetWithTokenization(createAssetDto);
+      // Redirect to basic asset creation (legacy method)
+      const result = await this.assetsService.createAsset(createAssetDto);
       return {
         success: true,
-        data: result.asset,
-        tokenId: result.tokenId,
-        transactionId: result.transactionId,
-        message: 'Asset created and tokenized successfully on Hedera network'
+        data: result,
+        tokenId: undefined,
+        transactionId: `legacy_${Date.now()}`,
+        message: 'Asset created successfully (legacy method - use /digital or /rwa endpoints)'
       };
     } catch (error) {
       return {
@@ -109,5 +111,99 @@ export class AssetsController {
       success: true,
       data: assets,
     };
+  }
+
+  // ========================================
+  // NEW DUAL ASSET SYSTEM ENDPOINTS
+  // ========================================
+
+  @Post('digital')
+  @ApiOperation({ summary: 'Create digital asset' })
+  @ApiResponse({ status: 201, description: 'Digital asset created successfully' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  async createDigitalAsset(@Body() createDigitalAssetDto: CreateDigitalAssetDto): Promise<{ 
+    success: boolean; 
+    data: AssetV2; 
+    assetId: string; 
+    transactionId: string;
+    message?: string;
+  }> {
+    try {
+      const result = await this.assetsService.createDigitalAsset(createDigitalAssetDto);
+      return {
+        success: true,
+        data: result.asset,
+        assetId: result.assetId,
+        transactionId: result.transactionId,
+        message: 'Digital asset created successfully on blockchain'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        data: null,
+        assetId: '',
+        transactionId: '',
+        message: error.message
+      };
+    }
+  }
+
+  @Post('rwa')
+  @ApiOperation({ summary: 'Create RWA asset' })
+  @ApiResponse({ status: 201, description: 'RWA asset created successfully' })
+  @ApiResponse({ status: 400, description: 'Validation error' })
+  async createRWAAsset(@Body() createRWAAssetDto: CreateRWAAssetDto): Promise<{ 
+    success: boolean; 
+    data: AssetV2; 
+    assetId: string; 
+    transactionId: string;
+    message?: string;
+  }> {
+    try {
+      const result = await this.assetsService.createRWAAsset(createRWAAssetDto);
+      return {
+        success: true,
+        data: result.asset,
+        assetId: result.assetId,
+        transactionId: result.transactionId,
+        message: 'RWA asset created successfully on blockchain'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        data: null,
+        assetId: '',
+        transactionId: '',
+        message: error.message
+      };
+    }
+  }
+
+  @Post('verify/:assetId')
+  @ApiOperation({ summary: 'Verify asset' })
+  @ApiResponse({ status: 200, description: 'Asset verified successfully' })
+  @ApiResponse({ status: 400, description: 'Verification failed' })
+  async verifyAsset(
+    @Param('assetId') assetId: string,
+    @Body() body: { verificationLevel: number }
+  ): Promise<{ 
+    success: boolean; 
+    transactionId: string;
+    message?: string;
+  }> {
+    try {
+      const result = await this.assetsService.verifyAsset(assetId, body.verificationLevel);
+      return {
+        success: true,
+        transactionId: result.transactionId,
+        message: `Asset verified to level ${body.verificationLevel}`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        transactionId: '',
+        message: error.message
+      };
+    }
   }
 }

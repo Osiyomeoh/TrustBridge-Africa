@@ -54,6 +54,84 @@ let AttestorsController = class AttestorsController {
             };
         }
     }
+    async applyAsAttestor(applicationData) {
+        try {
+            if (applicationData.verificationType === 'manual_verification') {
+                const result = await this.attestorsService.processManualAttestorApplication(applicationData);
+                return {
+                    success: true,
+                    data: result.data,
+                    message: result.message
+                };
+            }
+            else {
+                const result = await this.attestorsService.processAttestorApplication(applicationData);
+                return {
+                    success: true,
+                    data: result,
+                    message: 'Attestor application submitted successfully and pending verification'
+                };
+            }
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to submit attestor application'
+            };
+        }
+    }
+    async getAttestorApplications() {
+        try {
+            const applications = await this.attestorsService.getAllAttestorApplications();
+            return {
+                success: true,
+                data: applications,
+                message: `Found ${applications.length} attestor applications`
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to get attestor applications'
+            };
+        }
+    }
+    async approveAttestorApplication(id, body) {
+        try {
+            const result = await this.attestorsService.approveAttestorApplication(id, body.reviewerNotes);
+            return {
+                success: true,
+                data: result,
+                message: 'Attestor application approved successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to approve application'
+            };
+        }
+    }
+    async rejectAttestorApplication(id, body) {
+        try {
+            const result = await this.attestorsService.rejectAttestorApplication(id, body.reviewerNotes);
+            return {
+                success: true,
+                data: result,
+                message: 'Attestor application rejected'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to reject application'
+            };
+        }
+    }
     async getAttestorsByLocation(country, region) {
         try {
             const attestors = await this.attestorsService.getAttestorsByLocation(country, region);
@@ -189,6 +267,45 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AttestorsController.prototype, "registerExternalParty", null);
 __decorate([
+    (0, common_1.Post)('apply'),
+    (0, swagger_1.ApiOperation)({ summary: 'Apply to become an attestor (manual or automated verification)' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Attestor application submitted successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AttestorsController.prototype, "applyAsAttestor", null);
+__decorate([
+    (0, common_1.Get)('applications'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all attestor applications for admin review' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of attestor applications' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AttestorsController.prototype, "getAttestorApplications", null);
+__decorate([
+    (0, common_1.Put)('applications/:id/approve'),
+    (0, swagger_1.ApiOperation)({ summary: 'Approve attestor application' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Application ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Application approved successfully' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AttestorsController.prototype, "approveAttestorApplication", null);
+__decorate([
+    (0, common_1.Put)('applications/:id/reject'),
+    (0, swagger_1.ApiOperation)({ summary: 'Reject attestor application' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Application ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Application rejected successfully' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AttestorsController.prototype, "rejectAttestorApplication", null);
+__decorate([
     (0, common_1.Get)('location/:country'),
     (0, swagger_1.ApiOperation)({ summary: 'Get attestors by location' }),
     (0, swagger_1.ApiParam)({ name: 'country', description: 'Country code' }),
@@ -265,7 +382,7 @@ __decorate([
 ], AttestorsController.prototype, "rejectAttestor", null);
 exports.AttestorsController = AttestorsController = __decorate([
     (0, swagger_1.ApiTags)('Attestors'),
-    (0, common_1.Controller)('api/attestors'),
+    (0, common_1.Controller)('attestors'),
     __metadata("design:paramtypes", [attestors_service_1.AttestorsService])
 ], AttestorsController);
 //# sourceMappingURL=attestors.controller.js.map

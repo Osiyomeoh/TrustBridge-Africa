@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import Navigation from './Navigation';
 import Header from './Header';
-import { cn } from '../../lib/utils';
+import { cn } from '../../utils/helpers';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -19,8 +19,8 @@ const Layout: React.FC<LayoutProps> = ({ children, className }) => {
       {/* Navigation */}
       <Navigation />
       
-      {/* Main Content */}
-      <div className="lg:ml-64">
+      {/* Main Content - Full Width (Sidebar is Overlay) */}
+      <div className="w-full">
         {/* Header */}
         <Header />
         

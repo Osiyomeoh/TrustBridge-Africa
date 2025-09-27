@@ -57,7 +57,7 @@ const AssetGallery: React.FC<AssetGalleryProps> = ({ assets = [], loading = fals
       value: `$${(asset.totalValue / 1000000).toFixed(1)}M`,
       type: getTypeMapping(asset.type),
       description: asset.description,
-      tokenized: asset.status === 'VERIFIED' || asset.status === 'TOKENIZED',
+      tokenized: asset.status === 'APPROVED' || asset.status === 'TOKENIZED',
       investors: asset.investments?.length || 0,
       apy: asset.expectedAPY,
       verificationScore: asset.verificationScore

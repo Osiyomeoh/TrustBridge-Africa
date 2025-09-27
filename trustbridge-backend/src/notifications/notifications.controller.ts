@@ -23,7 +23,7 @@ export class CreateTemplateDto {
 }
 
 @ApiTags('Notifications')
-@Controller('api/notifications')
+@Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 

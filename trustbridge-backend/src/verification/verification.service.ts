@@ -662,11 +662,137 @@ export class VerificationService {
     return this.verificationModel.find().sort({ createdAt: -1 });
   }
 
+  async getAttestorVerifications(attestorAddress: string): Promise<VerificationRequest[]> {
+    try {
+      // For now, return all pending verification requests
+      // In a real implementation, this would filter by attestor type and availability
+      const verifications = await this.verificationModel
+        .find({ 
+          status: 'PENDING',
+          // Add more filtering logic here based on attestor type and requirements
+        })
+        .sort({ createdAt: -1 })
+        .exec();
+      
+      console.log(`Found ${verifications.length} verification requests for attestor ${attestorAddress}`);
+      return verifications;
+    } catch (error) {
+      console.error('Failed to get attestor verifications:', error);
+      throw new Error('Failed to retrieve attestor verifications');
+    }
+  }
+
+  async getUserVerifications(userId: string): Promise<VerificationRequest[]> {
+    return this.verificationModel.find({ userId }).sort({ createdAt: -1 });
+  }
+
   async getVerificationById(id: string): Promise<VerificationRequest> {
     const verification = await this.verificationModel.findById(id).exec();
     if (!verification) {
       throw new Error('Verification request not found');
     }
     return verification;
+  }
+
+  async createBulkMinimalVerifications(verifications: any[]): Promise<VerificationRequest[]> {
+    try {
+      console.log(`Creating ${verifications.length} minimal verification requests (blockchain-first)...`);
+      
+      const createdVerifications = [];
+      
+      for (const verificationData of verifications) {
+        try {
+          // Check if verification already exists for this assetId
+          const existingVerification = await this.verificationModel.findOne({ 
+            assetId: verificationData.assetId 
+          });
+          
+          if (existingVerification) {
+            console.log(`Verification already exists for asset ${verificationData.assetId}, skipping...`);
+            continue;
+          }
+          
+          // Create minimal verification request - only store what's NOT on blockchain
+          const verification = new this.verificationModel({
+            assetId: verificationData.assetId, // Reference to blockchain asset
+            status: verificationData.status || 'SUBMITTED', // Local status only
+            submittedBy: verificationData.submittedBy, // User reference
+            documents: verificationData.documents || [], // File references only
+            photos: verificationData.photos || [] // File references only
+            // Don't store asset metadata, scores, evidence - they're on blockchain
+          });
+          
+          const savedVerification = await verification.save();
+          createdVerifications.push(savedVerification);
+          
+          console.log(`✅ Created minimal verification for asset: ${verificationData.assetId}`);
+          
+        } catch (error) {
+          console.error(`❌ Error creating verification for asset ${verificationData.assetId}:`, error.message);
+        }
+      }
+      
+      console.log(`Successfully created ${createdVerifications.length} minimal verification requests`);
+      return createdVerifications;
+      
+    } catch (error) {
+      console.error('Error in createBulkMinimalVerifications:', error);
+      throw error;
+    }
+  }
+
+  async createBulkVerifications(verifications: any[]): Promise<VerificationRequest[]> {
+    try {
+      console.log(`Creating ${verifications.length} verification requests...`);
+      
+      const createdVerifications = [];
+      
+      for (const verificationData of verifications) {
+        try {
+          // Check if verification already exists for this assetId
+          const existingVerification = await this.verificationModel.findOne({ 
+            assetId: verificationData.assetId 
+          });
+          
+          if (existingVerification) {
+            console.log(`Verification already exists for asset ${verificationData.assetId}, skipping...`);
+            continue;
+          }
+          
+          // Create new verification request
+          const verification = new this.verificationModel({
+            assetId: verificationData.assetId,
+            assetName: verificationData.assetName,
+            assetType: verificationData.assetType,
+            status: verificationData.status || 'SUBMITTED',
+            submittedBy: verificationData.submittedBy,
+            evidence: verificationData.evidence || [],
+            scoring: verificationData.scoring || {
+              automatedScore: 0,
+              attestorScore: 0,
+              finalScore: 0
+            },
+            attestations: verificationData.attestations || [],
+            documents: verificationData.documents || [],
+            photos: verificationData.photos || []
+          });
+          
+          const savedVerification = await verification.save();
+          createdVerifications.push(savedVerification);
+          
+          console.log(`✅ Created verification for asset: ${verificationData.assetName}`);
+          
+        } catch (error) {
+          console.error(`❌ Error creating verification for asset ${verificationData.assetId}:`, error.message);
+        }
+      }
+      
+      console.log(`Successfully created ${createdVerifications.length} verification requests`);
+      return createdVerifications;
+      
+    } catch (error) {
+      console.error('Error in createBulkVerifications:', error);
+      throw error;
+    }
   }
 }

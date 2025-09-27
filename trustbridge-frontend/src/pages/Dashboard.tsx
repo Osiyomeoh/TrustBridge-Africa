@@ -3,14 +3,22 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/UI/Card';
 import Button from '../components/UI/Button';
-import { TrendingUp, DollarSign, Activity, Users, Globe, ArrowUpRight, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import { TrendingUp, DollarSign, Activity, Users, Globe, ArrowUpRight, Sparkles, Loader2, AlertCircle, Settings, ShoppingCart, Award, Building2, Shield, Coins, BarChart3, Vote, Building, User } from 'lucide-react';
 import { useMarketAnalytics, useHederaStatus, useAssets } from '../hooks/useApi';
 import { useAuth } from '../contexts/AuthContext';
+import { useTrustTokenBalance } from '../hooks/useTrustTokenBalance';
 import KYCBanner from '../components/UI/KYCBanner';
+import { IntegrationTest } from '../components/Debug/IntegrationTest';
+import { contractService } from '../services/contractService';
+import { useToast } from '../hooks/useToast';
 
 const Dashboard: React.FC = () => {
   const { user, startKYC } = useAuth();
+  const { balance: trustBalance, loading: trustLoading } = useTrustTokenBalance();
   const [showKYCBanner, setShowKYCBanner] = useState(true);
+  const [showIntegrationTest, setShowIntegrationTest] = useState(false);
+  const [mintingTokens, setMintingTokens] = useState(false);
+  const { toast } = useToast();
   const navigate = useNavigate();
   
   // Fetch real data from backend
@@ -19,10 +27,10 @@ const Dashboard: React.FC = () => {
   const { data: assetsData, loading: assetsLoading } = useAssets();
 
   // Check if KYC is required - only require KYC if user exists and KYC is not approved
-  const isKYCRequired = user ? user.kycStatus !== 'approved' : false;
+  const isKYCRequired = user ? user.kycStatus?.toLowerCase() !== 'approved' : false;
   
-  // Temporary override for testing - remove this later
-  const isKYCRequiredOverride = false;
+  // Handle cases where user might not be authenticated
+  const isAuthenticated = !!user;
   
   // Debug logging
   console.log('Dashboard Debug:', {
@@ -45,36 +53,64 @@ const Dashboard: React.FC = () => {
     setShowKYCBanner(false);
   };
 
-  const handleCreateAsset = () => {
-    console.log('Create & Verify Asset button clicked');
-    navigate('/dashboard/verify-asset');
+  const handleMintTrustTokens = async (amount: string) => {
+    console.log('🚀 === STARTING TRUST TOKEN MINTING ===');
+    console.log('💰 Amount to mint:', amount, 'TRUST');
+    console.log('👤 User wallet:', address);
+    console.log('🌐 Network:', window.ethereum?.chainId);
+    
+    setMintingTokens(true);
+    try {
+      console.log('📞 Calling contractService.mintTrustTokens...');
+      await contractService.mintTrustTokens(amount);
+      console.log('✅ mintTrustTokens completed successfully');
+      
+      toast({
+        title: 'TRUST Tokens Minted!',
+        description: `Successfully minted ${amount} TRUST tokens to your wallet.`,
+        variant: 'default'
+      });
+      
+      console.log('🔄 Refreshing page to update balances...');
+      // Refresh balance
+      window.location.reload();
+    } catch (error) {
+      console.error('❌ Error minting TRUST tokens:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      
+      toast({
+        title: 'Minting Failed',
+        description: `Failed to mint TRUST tokens: ${error.message}`,
+        variant: 'destructive'
+      });
+    } finally {
+      console.log('🏁 Minting process completed');
+      setMintingTokens(false);
+    }
   };
 
-  const handleViewPortfolio = () => {
-    console.log('View Portfolio button clicked');
-    navigate('/dashboard/portfolio');
+  const handleToggleIntegrationTest = () => {
+    setShowIntegrationTest(!showIntegrationTest);
   };
 
-  const handleManageAssets = () => {
-    console.log('Manage Assets button clicked');
-    navigate('/dashboard/assets');
-  };
-
-
-
-  // Format stats from real data
+  // Format analytics data for display
   const stats = useMemo(() => {
-    if (analyticsLoading || !analyticsData || typeof analyticsData !== 'object' || !('data' in analyticsData) || !analyticsData.data) {
+    if (analyticsLoading || !analyticsData) {
       return [
-        { title: 'Total Value Locked', value: '...', change: '...', icon: DollarSign, color: 'text-neon-green', trend: 'up' },
-        { title: 'Active Assets', value: '...', change: '...', icon: Activity, color: 'text-electric-mint', trend: 'up' },
-        { title: 'Total Users', value: '...', change: '...', icon: Users, color: 'text-neon-green', trend: 'up' },
-        { title: 'Network Status', value: '...', change: '...', icon: Globe, color: 'text-electric-mint', trend: 'stable' }
+        { title: 'Total Value Locked', value: '$0.0M', change: '+0%', icon: DollarSign, color: 'text-neon-green', trend: 'stable' },
+        { title: 'Active Assets', value: '0', change: '+0%', icon: Activity, color: 'text-electric-mint', trend: 'stable' },
+        { title: 'Total Users', value: '0', change: '+0%', icon: Users, color: 'text-neon-green', trend: 'stable' },
+        { title: 'Network Status', value: 'Offline', change: '0%', icon: Globe, color: 'text-red-500', trend: 'down' }
       ];
     }
 
-    const data = analyticsData.data || {};
-    const hederaStatus = hederaData && typeof hederaData === 'object' && 'data' in hederaData ? (hederaData.data as any)?.status : 'unknown';
+    const data = analyticsData.data || analyticsData;
+    const hederaStatus = hederaData?.status || 'disconnected';
+    
     return [
       {
         title: 'Total Value Locked',
@@ -111,28 +147,15 @@ const Dashboard: React.FC = () => {
     ];
   }, [analyticsData, analyticsLoading, hederaData]);
 
-  // Format recent assets from real data
-  const recentAssets = useMemo(() => {
-    if (assetsLoading || !assetsData || typeof assetsData !== 'object' || !('data' in assetsData) || !Array.isArray(assetsData.data)) return [];
-    
-    return assetsData.data.slice(0, 3).map((asset: any) => ({
-      name: asset.name,
-      value: `$${(asset.totalValue / 1000000).toFixed(1)}M`,
-      change: `+${asset.expectedAPY?.toFixed(1) || '0'}%`,
-      category: asset.type.replace('_', ' '),
-      status: asset.status
-    }));
-  }, [assetsData, assetsLoading]);
-
   // Show loading state
   if (analyticsLoading || hederaLoading || assetsLoading) {
     return (
       <div className="min-h-screen bg-black text-off-white p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-neon-green mx-auto mb-4" />
-            <p className="text-lg text-off-white/70">Loading dashboard data...</p>
-          </div>
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-neon-green mx-auto mb-3" />
+              <p className="text-sm text-off-white/70">Loading dashboard data...</p>
+            </div>
         </div>
       </div>
     );
@@ -144,20 +167,25 @@ const Dashboard: React.FC = () => {
       <div className="min-h-screen bg-black text-off-white p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <p className="text-lg text-off-white/70 mb-2">Failed to load dashboard data</p>
-            <p className="text-sm text-off-white/50">{analyticsError}</p>
+            <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-3" />
+            <p className="text-sm text-off-white/70 mb-2">Failed to load dashboard data</p>
+            <p className="text-xs text-off-white/50">{analyticsError}</p>
           </div>
         </div>
       </div>
     );
   }
 
+  // Show integration test if toggled
+  if (showIntegrationTest) {
+    return <IntegrationTest />;
+  }
+
   return (
     <div className="min-h-screen bg-black text-off-white relative overflow-hidden p-4 sm:p-6 lg:p-8">
 
-      {/* KYC Banner */}
-      {isKYCRequired && showKYCBanner && user?.kycStatus && (
+      {/* KYC Banner - Only show for authenticated users */}
+      {isAuthenticated && isKYCRequired && showKYCBanner && user?.kycStatus && (
         <KYCBanner
           kycStatus={user.kycStatus}
           onStartKYC={handleStartKYC}
@@ -199,7 +227,7 @@ const Dashboard: React.FC = () => {
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-neon-green/10 border border-neon-green/30 rounded-full">
               <div className="w-2 h-2 bg-neon-green rounded-full animate-pulse" />
               <Sparkles className="w-4 h-4 text-neon-green" />
-              <span className="text-xs font-semibold text-neon-green uppercase tracking-wider">Live Dashboard</span>
+              <span className="text-xs font-medium text-neon-green uppercase tracking-wider">Live Dashboard</span>
             </div>
           </motion.div>
 
@@ -213,37 +241,216 @@ const Dashboard: React.FC = () => {
             <Button 
               variant="neon" 
               size="lg" 
-              className="floating group px-8 py-4 text-lg"
-              disabled={isKYCRequiredOverride}
-              title={isKYCRequiredOverride ? "Complete KYC verification to manage assets" : ""}
-              onClick={handleManageAssets}
+              className="floating group px-6 py-3 text-sm"
+              onClick={() => navigate('/marketplace')}
             >
-              <DollarSign className="w-6 h-6 mr-3" />
-              Manage Assets
-              <ArrowUpRight className="w-5 h-5 ml-3 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              <Globe className="w-4 h-4 mr-2" />
+              Browse Marketplace
+              <ArrowUpRight className="w-4 h-4 ml-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
             </Button>
             
             <Button 
               variant="outline" 
               size="lg" 
-              className="px-8 py-4 text-lg border-neon-green/30 text-neon-green hover:bg-neon-green/10 hover:border-neon-green/50"
-              disabled={isKYCRequiredOverride}
-              title={isKYCRequiredOverride ? "Complete KYC verification to view portfolio" : ""}
-              onClick={handleViewPortfolio}
+              className="px-6 py-3 text-sm border-neon-green/30 text-neon-green hover:bg-neon-green/10 hover:border-neon-green/50"
+              onClick={() => navigate('/dashboard/profile')}
             >
-              <Activity className="w-6 h-6 mr-3" />
-              View Portfolio
-              <ArrowUpRight className="w-5 h-5 ml-3 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              <User className="w-4 h-4 mr-2" />
+              My Profile
+              <ArrowUpRight className="w-4 h-4 ml-2 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
             </Button>
           </motion.div>
         </motion.div>
 
-        {/* Stats Grid with Floating Cards */}
+        {/* Core Features */}
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.6 }}
+        >
+          {/* Digital Assets */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.5 }}
+          >
+            <Card variant="floating" className="hover:scale-105 transition-all duration-300 group shadow-md hover:shadow-lg">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-colors">
+                    <Globe className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Digital Assets</CardTitle>
+                    <p className="text-xs text-text-secondary">NFTs & Digital Art</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-text-secondary mb-3">
+                  Create, mint, and trade digital assets including NFTs, digital art, and collectibles.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="w-full text-sm border-blue-400/30 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400/50"
+                  onClick={() => navigate('/marketplace?category=digital')}
+                >
+                  <Globe className="w-3.5 h-3.5 mr-1.5" />
+                  Browse Digital Assets
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Real World Assets */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.9, duration: 0.5 }}
+          >
+            <Card variant="floating" className="hover:scale-105 transition-all duration-300 group shadow-md hover:shadow-lg">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-500/20 rounded-lg group-hover:bg-green-500/30 transition-colors">
+                    <Building2 className="w-6 h-6 text-green-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Real World Assets</CardTitle>
+                    <p className="text-xs text-text-secondary">Tokenized Physical Assets</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-text-secondary mb-3">
+                  Tokenize and trade real estate, vehicles, commodities, and other physical assets with full verification.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="w-full text-sm border-green-400/30 text-green-400 hover:bg-green-400/10 hover:border-green-400/50"
+                  onClick={() => navigate('/marketplace?category=rwa')}
+                >
+                  <Building2 className="w-3.5 h-3.5 mr-1.5" />
+                  Browse RWA Assets
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Portfolio & Investments */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.0, duration: 0.5 }}
+          >
+            <Card variant="floating" className="hover:scale-105 transition-all duration-300 group shadow-md hover:shadow-lg">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500/20 rounded-lg group-hover:bg-purple-500/30 transition-colors">
+                    <Activity className="w-6 h-6 text-purple-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Portfolio & Investments</CardTitle>
+                    <p className="text-xs text-text-secondary">Track your investments</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-text-secondary mb-3">
+                  Monitor your asset portfolio, track performance, and manage your investments across digital and RWA assets.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="w-full text-sm border-purple-400/30 text-purple-400 hover:bg-purple-400/10 hover:border-purple-400/50"
+                  onClick={() => navigate('/dashboard/portfolio')}
+                >
+                  <Activity className="w-3.5 h-3.5 mr-1.5" />
+                  View Portfolio
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+
+        {/* TRUST Token Minting Section */}
+        <motion.div
+          className="mb-12"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 1.1 }}
+        >
+          <Card variant="floating" className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border-purple-500/30">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-500/20 rounded-lg">
+                  <Coins className="w-6 h-6 text-purple-400" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Get TRUST Tokens</CardTitle>
+                  <p className="text-xs text-text-secondary">Mint TRUST tokens to create and trade assets</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-text-secondary">Current Balance</p>
+                  <p className="text-lg font-bold text-neon-green">
+                    {trustLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      `${trustBalance || '0'} TRUST`
+                    )}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-text-secondary">Required for Asset Creation</p>
+                  <p className="text-sm font-medium text-orange-400">10 TRUST</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  onClick={() => handleMintTrustTokens('100')}
+                  disabled={mintingTokens}
+                  className="bg-purple-600 hover:bg-purple-700 text-white text-xs"
+                >
+                  {mintingTokens ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <Coins className="w-3 h-3 mr-1" />
+                  )}
+                  Mint 100 TRUST
+                </Button>
+                <Button
+                  onClick={() => handleMintTrustTokens('1000')}
+                  disabled={mintingTokens}
+                  className="bg-purple-600 hover:bg-purple-700 text-white text-xs"
+                >
+                  {mintingTokens ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <Coins className="w-3 h-3 mr-1" />
+                  )}
+                  Mint 1000 TRUST
+                </Button>
+              </div>
+              
+              <p className="text-xs text-text-secondary mt-3">
+                TRUST tokens are required to create digital assets and participate in the ecosystem.
+                <br />
+                <span className="text-orange-400">Note: You need MINTER_ROLE to mint tokens. Contact the contract administrator or use a faucet.</span>
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Simple Stats Section */}
         <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
+          transition={{ duration: 0.8, delay: 1.2 }}
         >
           {stats.map((stat, index) => {
             const Icon = stat.icon;
@@ -252,203 +459,25 @@ const Dashboard: React.FC = () => {
                 key={stat.title}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9 + index * 0.1, duration: 0.5 }}
+                transition={{ delay: 1.3 + index * 0.1, duration: 0.5 }}
               >
-                <Card variant="floating" className="hover:scale-105 transition-all duration-300 group shadow-md hover:shadow-lg">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2 bg-neon-green/10 rounded-lg group-hover:bg-neon-green/20 transition-colors">
-                        <Icon className={`w-6 h-6 ${stat.color}`} />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-semibold text-neon-green">{stat.change}</span>
-                        {stat.trend === 'up' && <TrendingUp className="w-3 h-3 text-neon-green" />}
-                      </div>
+                <Card variant="floating" className="text-center group hover:scale-105 transition-all duration-300">
+                  <CardContent className="p-4">
+                    <div className={`inline-flex p-2 rounded-lg mb-3 ${stat.color.replace('text-', 'bg-').replace('-400', '-500/20')}`}>
+                      <Icon className={`w-4 h-4 ${stat.color}`} />
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <CardTitle className="text-3xl font-bold mb-2 text-text-primary">{stat.value}</CardTitle>
-                    <p className="text-sm text-text-secondary font-medium">{stat.title}</p>
+                    <h3 className="text-sm font-medium text-off-white mb-1">{stat.title}</h3>
+                    <p className="text-lg font-bold text-neon-green mb-1">{stat.value}</p>
+                    <p className={`text-xs ${stat.trend === 'up' ? 'text-green-400' : stat.trend === 'down' ? 'text-red-400' : 'text-gray-400'}`}>
+                      {stat.change}
+                    </p>
                   </CardContent>
                 </Card>
               </motion.div>
             );
           })}
         </motion.div>
-
-        {/* Bento Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-12">
-          {/* Recent Assets - Large Card */}
-          <motion.div
-            className="lg:col-span-8"
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 1.2 }}
-          >
-            <Card variant="floating" className="h-full diagonal-cut-large">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-2xl">
-                  <div className="p-2 bg-neon-green/20 rounded-lg">
-                    <TrendingUp className="w-6 h-6 text-neon-green" />
-                  </div>
-                  Recent Assets
-                  <div className="ml-auto">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      disabled={isKYCRequiredOverride}
-                      title={isKYCRequiredOverride ? "Complete KYC verification to view all assets" : ""}
-                      onClick={handleManageAssets}
-                    >
-                      View All
-                      <ArrowUpRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {recentAssets.map((asset: any, index: number) => (
-                    <motion.div
-                      key={asset.name}
-                      className="flex items-center justify-between p-6 bg-background-tertiary/30 rounded-xl border border-border-accent/20 hover:border-border-accent/40 transition-all duration-300 group hover:bg-background-tertiary/50 shadow-sm hover:shadow-md"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 1.3 + index * 0.1, duration: 0.4 }}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-neon-green to-electric-mint rounded-lg flex items-center justify-center">
-                          <span className="text-black font-bold text-lg">A</span>
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-text-primary text-lg">{asset.name}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-sm text-electric-mint bg-electric-mint/10 px-2 py-1 rounded-full">
-                              {asset.category}
-                            </span>
-                            <span className="text-sm text-neon-green bg-neon-green/10 px-2 py-1 rounded-full">
-                              {asset.status}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-neon-green text-xl">{asset.value}</p>
-                        <p className="text-sm text-electric-mint font-medium">{asset.change}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Quick Actions - Medium Card */}
-          <motion.div
-            className="lg:col-span-4"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 1.4 }}
-          >
-            <Card variant="neon" className="h-full">
-              <CardHeader>
-                <CardTitle className="text-2xl text-neon-green flex items-center gap-2">
-                  <Sparkles className="w-6 h-6" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button 
-                  variant="primary" 
-                  fullWidth 
-                  className="justify-start group"
-                  disabled={isKYCRequiredOverride}
-                  title={isKYCRequiredOverride ? "Complete KYC verification to create assets" : ""}
-                  onClick={handleCreateAsset}
-                >
-                  <DollarSign className="w-5 h-5 mr-3" />
-                  Create & Tokenize Asset
-                  <ArrowUpRight className="w-4 h-4 ml-auto group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  fullWidth 
-                  className="justify-start group"
-                  disabled={isKYCRequiredOverride}
-                  title={isKYCRequiredOverride ? "Complete KYC verification to view portfolio" : ""}
-                  onClick={handleViewPortfolio}
-                >
-                  <Activity className="w-5 h-5 mr-3" />
-                  View Portfolio
-                  <ArrowUpRight className="w-4 h-4 ml-auto group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  fullWidth 
-                  className="justify-start group"
-                  disabled={isKYCRequiredOverride}
-                  title={isKYCRequiredOverride ? "Complete KYC verification to invite friends" : ""}
-                >
-                  <Users className="w-5 h-5 mr-3" />
-                  Invite Friends
-                  <ArrowUpRight className="w-4 h-4 ml-auto group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Live Activity Feed */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1.6 }}
-        >
-          <Card variant="glass" className="overflow-hidden">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3 text-2xl">
-                <div className="w-3 h-3 bg-electric-mint rounded-full animate-pulse" />
-                Live Activity
-                <div className="ml-auto">
-                  <span className="text-sm text-electric-mint bg-electric-mint/10 px-3 py-1 rounded-full">
-                    Real-time
-                  </span>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { action: 'Asset Created', user: '0x1234...5678', time: '2 min ago', type: 'success' },
-                  { action: 'Investment Made', user: '0x9876...5432', time: '5 min ago', type: 'info' },
-                  { action: 'Verification Complete', user: '0x4567...8901', time: '8 min ago', type: 'success' },
-                  { action: 'New User Registered', user: '0x7890...1234', time: '12 min ago', type: 'info' }
-                ].map((activity, index) => (
-                  <motion.div
-                    key={index}
-                    className="flex items-center justify-between p-4 bg-dark-gray/20 rounded-lg hover:bg-dark-gray/30 transition-colors group"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 1.7 + index * 0.1, duration: 0.4 }}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-2 h-2 rounded-full ${
-                        activity.type === 'success' ? 'bg-neon-green' : 'bg-electric-mint'
-                      }`} />
-                      <span className="text-sm text-off-white font-medium">{activity.action}</span>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-neon-green font-mono">{activity.user}</p>
-                      <p className="text-xs text-off-white/50">{activity.time}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
-
     </div>
   );
 };

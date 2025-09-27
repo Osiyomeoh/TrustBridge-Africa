@@ -9,7 +9,7 @@ export class SmartVerificationRequestDto {
 }
 
 @ApiTags('Smart Verification')
-@Controller('api/verification/smart')
+@Controller('verification/smart')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class SmartVerificationController {

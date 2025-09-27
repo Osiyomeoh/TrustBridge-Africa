@@ -185,6 +185,38 @@ let HederaController = class HederaController {
             message: 'File uploaded successfully'
         };
     }
+    async createDualTokenization(body) {
+        const result = await this.hederaService.createDualTokenization(body);
+        return {
+            success: true,
+            data: result,
+            message: 'Dual tokenization created successfully'
+        };
+    }
+    async getUserAssets(userAddress) {
+        const result = await this.hederaService.getUserAssets(userAddress);
+        return {
+            success: true,
+            data: result,
+            message: 'User assets retrieved successfully'
+        };
+    }
+    async getMarketplaceData() {
+        const result = await this.hederaService.getMarketplaceData();
+        return {
+            success: true,
+            data: result,
+            message: 'Marketplace data retrieved successfully'
+        };
+    }
+    async updateDualTokenization(body) {
+        const result = await this.hederaService.updateDualTokenization(body);
+        return {
+            success: true,
+            data: result,
+            message: 'Dual tokenization updated successfully'
+        };
+    }
     async healthCheck() {
         const isHealthy = await this.hederaService.healthCheck();
         return {
@@ -192,6 +224,40 @@ let HederaController = class HederaController {
             data: { healthy: isHealthy },
             message: isHealthy ? 'Hedera services are healthy' : 'Hedera services are not responding'
         };
+    }
+    async testHTSSimple() {
+        try {
+            const result = await this.hederaService.testSimpleHTSToken();
+            return {
+                success: true,
+                data: result,
+                message: 'Simple HTS test completed successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Simple HTS test failed'
+            };
+        }
+    }
+    async testHFSHCS() {
+        try {
+            const result = await this.hederaService.testHFSHCSIntegration();
+            return {
+                success: true,
+                data: result,
+                message: 'HFS + HCS test completed successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'HFS + HCS test failed'
+            };
+        }
     }
     async grantKYC(kycRequest) {
         const transactionId = await this.hederaService.grantKYC(kycRequest);
@@ -376,6 +442,41 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], HederaController.prototype, "uploadFile", null);
 __decorate([
+    (0, common_1.Post)('create-dual-tokenization'),
+    (0, swagger_1.ApiOperation)({ summary: 'Create dual tokenization (ERC-721 + HTS) for an asset' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Dual tokenization created successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "createDualTokenization", null);
+__decorate([
+    (0, common_1.Get)('user-assets/:userAddress'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all assets for a user using Hedera services' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'User assets retrieved successfully' }),
+    __param(0, (0, common_1.Param)('userAddress')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "getUserAssets", null);
+__decorate([
+    (0, common_1.Get)('marketplace-data'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get marketplace data using Hedera services' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Marketplace data retrieved successfully' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "getMarketplaceData", null);
+__decorate([
+    (0, common_1.Post)('update-dual-tokenization'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update dual tokenization with ERC-721 data' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Dual tokenization updated successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "updateDualTokenization", null);
+__decorate([
     (0, common_1.Get)('health'),
     (0, swagger_1.ApiOperation)({ summary: 'Health check for Hedera services' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Health status' }),
@@ -383,6 +484,22 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], HederaController.prototype, "healthCheck", null);
+__decorate([
+    (0, common_1.Post)('test-hts-simple'),
+    (0, swagger_1.ApiOperation)({ summary: 'Test simple HTS token creation' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'HTS test completed' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "testHTSSimple", null);
+__decorate([
+    (0, common_1.Post)('test-hfs-hcs'),
+    (0, swagger_1.ApiOperation)({ summary: 'Test HFS + HCS integration (simplest flow)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'HFS + HCS test completed' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "testHFSHCS", null);
 __decorate([
     (0, common_1.Post)('kyc/grant'),
     (0, swagger_1.ApiOperation)({ summary: 'Grant KYC status for account on token' }),
@@ -491,7 +608,7 @@ __decorate([
 ], HederaController.prototype, "completeFreezeWorkflow", null);
 exports.HederaController = HederaController = __decorate([
     (0, swagger_1.ApiTags)('Hedera'),
-    (0, common_1.Controller)('api/hedera'),
+    (0, common_1.Controller)('hedera'),
     __metadata("design:paramtypes", [hedera_service_1.HederaService])
 ], HederaController);
 //# sourceMappingURL=hedera.controller.js.map

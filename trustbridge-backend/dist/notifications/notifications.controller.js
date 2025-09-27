@@ -229,7 +229,7 @@ __decorate([
 ], NotificationsController.prototype, "testNotification", null);
 exports.NotificationsController = NotificationsController = __decorate([
     (0, swagger_1.ApiTags)('Notifications'),
-    (0, common_1.Controller)('api/notifications'),
+    (0, common_1.Controller)('notifications'),
     __metadata("design:paramtypes", [notifications_service_1.NotificationsService])
 ], NotificationsController);
 //# sourceMappingURL=notifications.controller.js.map

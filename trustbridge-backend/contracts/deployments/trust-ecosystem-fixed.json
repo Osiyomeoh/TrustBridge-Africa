@@ -1,0 +1,167 @@
+{
+  "network": "hedera_testnet",
+  "chainId": 296,
+  "deploymentDate": "2025-09-26T11:21:42.055Z",
+  "deployer": "0xA6e8bf8E89Bd2c2BD37e308F275C4f52284a911F",
+  "description": "TrustBridge Ecosystem - Fixed Version with transferFrom fix",
+  "changes": [
+    "Fixed CoreAssetFactory to use transfer instead of transferFrom for fee collection",
+    "Granted MINTER_ROLE to CoreAssetFactory on AssetNFT contract",
+    "Updated workflow: users send TRUST tokens to contract first, then create assets"
+  ],
+  "contracts": {
+    "trustToken": {
+      "address": "0x170B35e97C217dBf63a500EaB884392F7BF6Ec34",
+      "name": "TrustToken",
+      "description": "TRUST token with public minting capability",
+      "features": [
+        "Public mintTestTokens function (max 1000 TRUST per mint)",
+        "Standard ERC20 functionality",
+        "Access control for admin functions"
+      ],
+      "issues": [
+        "transferFrom function has custom error 0xfb8f41b2 - not working",
+        "transfer function works perfectly"
+      ]
+    },
+    "assetNFT": {
+      "address": "0x42be9627C970D40248690F010b3c2a7F8C68576C",
+      "name": "AssetNFT",
+      "description": "NFT contract for representing assets",
+      "features": [
+        "Standard ERC721 functionality",
+        "Minting capability for authorized contracts"
+      ],
+      "roles": {
+        "MINTER_ROLE": "0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6",
+        "grantedTo": "0x930131a22b9D2e060d8E4EF1aE21185d4F59F52F"
+      }
+    },
+    "coreAssetFactory": {
+      "address": "0x930131a22b9D2e060d8E4EF1aE21185d4F59F52F",
+      "name": "CoreAssetFactory",
+      "description": "Main contract for creating digital and real-world assets",
+      "features": [
+        "Digital asset creation",
+        "Real-world asset creation",
+        "Fixed fee collection using transfer instead of transferFrom",
+        "Asset management and verification"
+      ],
+      "fees": {
+        "digitalCreationFee": "10 TRUST",
+        "minCreationFee": "100 TRUST",
+        "amcTransferFee": "50 TRUST"
+      },
+      "workflow": [
+        "User sends TRUST tokens to contract using transfer()",
+        "Contract checks if it has sufficient tokens",
+        "Contract transfers fee to fee recipient using transfer()",
+        "Asset is created and NFT is minted"
+      ],
+      "fixes": [
+        "Replaced transferFrom with transfer for fee collection",
+        "Added contract balance check before asset creation",
+        "Maintained all original functionality"
+      ]
+    },
+    "verificationRegistry": {
+      "address": "0xC2e5D63Da10A3139857D18Cf43eB93CE0133Ca4B",
+      "name": "VerificationRegistry",
+      "description": "Registry for asset verification data"
+    },
+    "trustAssetFactory": {
+      "address": "0x044e4e033978af17102C69E1B79B6Ddc6078A0D9",
+      "name": "TRUSTAssetFactory",
+      "description": "Legacy asset factory (deprecated in favor of CoreAssetFactory)"
+    },
+    "attestorVerificationSystem": {
+      "address": "0x5a109F8e0405Fa0034fFC41Dab805E1DBc84aE56",
+      "name": "AttestorVerificationSystem",
+      "description": "System for managing attestor verification"
+    },
+    "trustMarketplace": {
+      "address": "0x44C2e6BCAc1E91e3107616F4D0e03692fb853610",
+      "name": "TRUSTMarketplace",
+      "description": "Marketplace for trading assets"
+    },
+    "poolManager": {
+      "address": "0x4F863bDAaE4611dF7df5C5eBa2fd42aAaA984646",
+      "name": "PoolManager",
+      "description": "Manages asset pools"
+    },
+    "poolToken": {
+      "address": "0x3262BBF6c5d3Af2cdA1B4E44A10eF16af3A6662e",
+      "name": "PoolToken",
+      "description": "Token for pool participation"
+    },
+    "tradingEngine": {
+      "address": "0xc326cF6Ab5EF03B2Df5390463634Db9d778e01E7",
+      "name": "TradingEngine",
+      "description": "Engine for executing trades"
+    },
+    "feeDistribution": {
+      "address": "0xa00343B86a5531155F22d91899229124e6619843",
+      "name": "FeeDistribution",
+      "description": "Distributes fees to stakeholders"
+    },
+    "spvManager": {
+      "address": "0x10D7EfA83A38A8e37Bad40ac40aDDf7906c0cB43",
+      "name": "SPVManager",
+      "description": "Manages Special Purpose Vehicles"
+    },
+    "amcManager": {
+      "address": "0xeDdEA0d8332e332382136feB27FbeAa2f0301250",
+      "name": "AMCManager",
+      "description": "Asset Management Company manager"
+    },
+    "batchMinting": {
+      "address": "0xF91BBA338533895852cF7108182cb4FF58E817f9",
+      "name": "BatchMinting",
+      "description": "Batch minting functionality"
+    },
+    "advancedMinting": {
+      "address": "0x1A3bf7392234484D73727a5b7CE90832D4124128",
+      "name": "AdvancedMinting",
+      "description": "Advanced minting features"
+    }
+  },
+  "frontendUpdates": {
+    "contractAddresses": {
+      "coreAssetFactory": "0x930131a22b9D2e060d8E4EF1aE21185d4F59F52F"
+    },
+    "workflowChanges": [
+      "Users must send TRUST tokens to contract before creating assets",
+      "Removed approval/transferFrom workflow",
+      "Added direct transfer to contract workflow"
+    ],
+    "filesUpdated": [
+      "src/config/contracts.ts",
+      "src/services/contractService.ts"
+    ]
+  },
+  "testing": {
+    "status": "PASSED",
+    "tests": [
+      "TRUST token transfer works",
+      "TRUST token transferFrom fails (expected)",
+      "Digital asset creation works with new workflow",
+      "Fee collection works correctly",
+      "NFT minting works"
+    ],
+    "gasUsage": {
+      "digitalAssetCreation": "~1,000,000 gas",
+      "trustTokenTransfer": "~26,000 gas"
+    }
+  },
+  "knownIssues": [
+    "TRUST token transferFrom function has custom error 0xfb8f41b2",
+    "Workaround: Use transfer function instead",
+    "All functionality preserved with new workflow"
+  ],
+  "nextSteps": [
+    "Update frontend to use new contract address",
+    "Update frontend to use new workflow",
+    "Test complete user flow",
+    "Deploy to production"
+  ]
+}

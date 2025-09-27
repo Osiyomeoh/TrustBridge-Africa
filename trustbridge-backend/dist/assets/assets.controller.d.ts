@@ -1,6 +1,7 @@
-import { AssetsService } from './assets.service';
+import { AssetsService, CreateDigitalAssetDto, CreateRWAAssetDto } from './assets.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { Asset } from '../schemas/asset.schema';
+import { AssetV2 } from '../schemas/asset-v2.schema';
 export declare class AssetsController {
     private readonly assetsService;
     constructor(assetsService: AssetsService);
@@ -30,5 +31,26 @@ export declare class AssetsController {
     getAssetsByOwner(owner: string): Promise<{
         success: boolean;
         data: Asset[];
+    }>;
+    createDigitalAsset(createDigitalAssetDto: CreateDigitalAssetDto): Promise<{
+        success: boolean;
+        data: AssetV2;
+        assetId: string;
+        transactionId: string;
+        message?: string;
+    }>;
+    createRWAAsset(createRWAAssetDto: CreateRWAAssetDto): Promise<{
+        success: boolean;
+        data: AssetV2;
+        assetId: string;
+        transactionId: string;
+        message?: string;
+    }>;
+    verifyAsset(assetId: string, body: {
+        verificationLevel: number;
+    }): Promise<{
+        success: boolean;
+        transactionId: string;
+        message?: string;
     }>;
 }

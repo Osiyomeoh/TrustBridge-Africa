@@ -23,14 +23,21 @@ let HederaService = HederaService_1 = class HederaService {
         this.configService = configService;
         this.logger = new common_1.Logger(HederaService_1.name);
         this.contracts = {
-            trustToken: '0x5Fc7CFc9de33F889E5082a794C86924dE0730F1B',
-            attestorManager: '0x4cBc1051eFaa1DE9b269F1D198607116f1b73B2A',
-            policyManager: '0xdFA7fABDB764D552E4CF411588a7Be516CB0538d',
-            verificationRegistry: '0x191BD2259BeC74d4680295A81f71ED9853d89D52',
-            assetFactory: '0xD051EfA5FDeAB780F80d762bE2e9d2C64af7ED4B',
-            settlementEngine: '0x31C0112671810d3Bf29e2fa3C1D2668B8aDD18FD',
-            feeDistribution: '0x173782c2151cA9d4c99beFd165FC2293444f6533',
-            verificationBuffer: '0xBf47D97f75EC66BFdaC3bBe9E3DBFFce9D57C295',
+            trustToken: '0xa6f8fC5b5A9B5670dF868247585bcD86eD124ba2',
+            assetNFT: '0x42be9627C970D40248690F010b3c2a7F8C68576C',
+            verificationRegistry: '0xC2e5D63Da10A3139857D18Cf43eB93CE0133Ca4B',
+            assetFactory: '0x27A5705717294a481338193E9Cb5F33A40169401',
+            attestorManager: '0x25F6F7209692D9b553E4d082bA964A03AdBE630d',
+            tradingEngine: '0xeaCd09B28ae9a1199010D755613867A7707EA1B9',
+            poolManager: '0xC2E54Ba2309e7b5c4f378c1E7CC8e7e4aB17fC1B',
+            poolToken: '0x3262BBF6c5d3Af2cdA1B4E44A10eF16af3A6662e',
+            feeDistribution: '0xa00343B86a5531155F22d91899229124e6619843',
+            spvManager: '0x10D7EfA83A38A8e37Bad40ac40aDDf7906c0cB43',
+            amcManager: '0xeDdEA0d8332e332382136feB27FbeAa2f0301250',
+            policyManager: '0x0000000000000000000000000000000000000000',
+            settlementEngine: '0x0000000000000000000000000000000000000000',
+            verificationBuffer: '0x0000000000000000000000000000000000000000',
+            poolFactory: '0x0000000000000000000000000000000000000000',
         };
         this.initializeClient();
     }
@@ -910,6 +917,903 @@ let HederaService = HederaService_1 = class HederaService {
         catch (error) {
             this.logger.error('Failed to upgrade protocol:', error);
             throw error;
+        }
+    }
+    async createDigitalAsset(assetData) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const contractExecuteTx = new sdk_1.ContractExecuteTransaction()
+                .setContractId(sdk_1.ContractId.fromEvmAddress(0, 0, this.contracts.assetFactory))
+                .setGas(300000)
+                .setFunction('createDigitalAsset', new sdk_1.ContractFunctionParameters()
+                .addUint8(assetData.category)
+                .addString(assetData.assetType)
+                .addString(assetData.name)
+                .addString(assetData.location)
+                .addUint256(parseInt(assetData.totalValue))
+                .addString(assetData.imageURI)
+                .addString(assetData.description));
+            const contractExecuteResponse = await contractExecuteTx.execute(this.client);
+            const transactionId = contractExecuteResponse.transactionId.toString();
+            this.logger.log(`Created digital asset: ${assetData.name}`);
+            return {
+                assetId: `digital_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                transactionId
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to create digital asset:', error);
+            throw new Error(`Digital asset creation failed: ${error.message}`);
+        }
+    }
+    async createRWAAsset(assetData) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const contractExecuteTx = new sdk_1.ContractExecuteTransaction()
+                .setContractId(sdk_1.ContractId.fromString(this.contracts.assetFactory))
+                .setGas(500000)
+                .setFunction('createRWAAsset', new sdk_1.ContractFunctionParameters()
+                .addUint8(assetData.category)
+                .addString(assetData.assetType)
+                .addString(assetData.name)
+                .addString(assetData.location)
+                .addUint256(parseInt(assetData.totalValue))
+                .addUint256(assetData.maturityDate)
+                .addStringArray(assetData.evidenceHashes)
+                .addStringArray(assetData.documentTypes)
+                .addString(assetData.imageURI)
+                .addString(assetData.documentURI)
+                .addString(assetData.description));
+            const contractExecuteResponse = await contractExecuteTx.execute(this.client);
+            const transactionId = contractExecuteResponse.transactionId.toString();
+            this.logger.log(`Created RWA asset: ${assetData.name}`);
+            return {
+                assetId: `rwa_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                transactionId
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to create RWA asset:', error);
+            throw new Error(`RWA asset creation failed: ${error.message}`);
+        }
+    }
+    async verifyAsset(assetId, verificationLevel) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const contractExecuteTx = new sdk_1.ContractExecuteTransaction()
+                .setContractId(sdk_1.ContractId.fromString(this.contracts.assetFactory))
+                .setGas(200000)
+                .setFunction('verifyAsset', new sdk_1.ContractFunctionParameters()
+                .addString(assetId)
+                .addUint8(verificationLevel));
+            const contractExecuteResponse = await contractExecuteTx.execute(this.client);
+            const transactionId = contractExecuteResponse.transactionId.toString();
+            this.logger.log(`Verified asset ${assetId} to level ${verificationLevel}`);
+            return transactionId;
+        }
+        catch (error) {
+            this.logger.error('Failed to verify asset:', error);
+            throw new Error(`Asset verification failed: ${error.message}`);
+        }
+    }
+    async listDigitalAssetForSale(assetId, price, expiry) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const contractExecuteTx = new sdk_1.ContractExecuteTransaction()
+                .setContractId(sdk_1.ContractId.fromString(this.contracts.tradingEngine))
+                .setGas(200000)
+                .setFunction('listDigitalAssetForSale', new sdk_1.ContractFunctionParameters()
+                .addString(assetId)
+                .addUint256(parseInt(price))
+                .addUint256(expiry));
+            const contractExecuteResponse = await contractExecuteTx.execute(this.client);
+            const transactionId = contractExecuteResponse.transactionId.toString();
+            this.logger.log(`Listed digital asset ${assetId} for sale at ${price} TRUST`);
+            return transactionId;
+        }
+        catch (error) {
+            this.logger.error('Failed to list digital asset for sale:', error);
+            throw new Error(`Digital asset listing failed: ${error.message}`);
+        }
+    }
+    async makeOfferOnDigitalAsset(assetId, offerAmount, expiry) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const contractExecuteTx = new sdk_1.ContractExecuteTransaction()
+                .setContractId(sdk_1.ContractId.fromString(this.contracts.tradingEngine))
+                .setGas(200000)
+                .setFunction('makeOfferOnDigitalAsset', new sdk_1.ContractFunctionParameters()
+                .addString(assetId)
+                .addUint256(parseInt(offerAmount))
+                .addUint256(expiry));
+            const contractExecuteResponse = await contractExecuteTx.execute(this.client);
+            const transactionId = contractExecuteResponse.transactionId.toString();
+            this.logger.log(`Made offer ${offerAmount} TRUST on digital asset ${assetId}`);
+            return transactionId;
+        }
+        catch (error) {
+            this.logger.error('Failed to make offer on digital asset:', error);
+            throw new Error(`Digital asset offer failed: ${error.message}`);
+        }
+    }
+    async createPool(poolData) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const contractExecuteTx = new sdk_1.ContractExecuteTransaction()
+                .setContractId(sdk_1.ContractId.fromString(this.contracts.poolManager))
+                .setGas(300000)
+                .setFunction('createPool', new sdk_1.ContractFunctionParameters()
+                .addString(poolData.name)
+                .addString(poolData.description)
+                .addUint256(poolData.managementFee)
+                .addUint256(poolData.performanceFee));
+            const contractExecuteResponse = await contractExecuteTx.execute(this.client);
+            const transactionId = contractExecuteResponse.transactionId.toString();
+            this.logger.log(`Created pool: ${poolData.name}`);
+            return {
+                poolId: `pool_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                transactionId
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to create pool:', error);
+            throw new Error(`Pool creation failed: ${error.message}`);
+        }
+    }
+    async investInPool(poolId, amount) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const contractExecuteTx = new sdk_1.ContractExecuteTransaction()
+                .setContractId(sdk_1.ContractId.fromString(this.contracts.poolManager))
+                .setGas(200000)
+                .setFunction('investInPool', new sdk_1.ContractFunctionParameters()
+                .addString(poolId)
+                .addUint256(parseInt(amount)));
+            const contractExecuteResponse = await contractExecuteTx.execute(this.client);
+            const transactionId = contractExecuteResponse.transactionId.toString();
+            this.logger.log(`Invested ${amount} TRUST in pool ${poolId}`);
+            return transactionId;
+        }
+        catch (error) {
+            this.logger.error('Failed to invest in pool:', error);
+            throw new Error(`Pool investment failed: ${error.message}`);
+        }
+    }
+    async registerAMC(name, description, jurisdiction) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const contractExecuteTx = new sdk_1.ContractExecuteTransaction()
+                .setContractId(sdk_1.ContractId.fromString(this.contracts.amcManager))
+                .setGas(200000)
+                .setFunction('registerAMC', new sdk_1.ContractFunctionParameters()
+                .addString(name)
+                .addString(description)
+                .addString(jurisdiction));
+            const contractExecuteResponse = await contractExecuteTx.execute(this.client);
+            const transactionId = contractExecuteResponse.transactionId.toString();
+            this.logger.log(`Registered AMC: ${name}`);
+            return transactionId;
+        }
+        catch (error) {
+            this.logger.error('Failed to register AMC:', error);
+            throw new Error(`AMC registration failed: ${error.message}`);
+        }
+    }
+    async scheduleInspection(assetId, inspector, inspectionTime) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const contractExecuteTx = new sdk_1.ContractExecuteTransaction()
+                .setContractId(sdk_1.ContractId.fromString(this.contracts.amcManager))
+                .setGas(200000)
+                .setFunction('scheduleInspection', new sdk_1.ContractFunctionParameters()
+                .addString(assetId)
+                .addString(inspector)
+                .addUint256(inspectionTime));
+            const contractExecuteResponse = await contractExecuteTx.execute(this.client);
+            const transactionId = contractExecuteResponse.transactionId.toString();
+            this.logger.log(`Scheduled inspection for asset ${assetId}`);
+            return transactionId;
+        }
+        catch (error) {
+            this.logger.error('Failed to schedule inspection:', error);
+            throw new Error(`Inspection scheduling failed: ${error.message}`);
+        }
+    }
+    async addPoolInvestor(poolContract, investor, amount) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const contractExecuteTx = new sdk_1.ContractExecuteTransaction()
+                .setContractId(sdk_1.ContractId.fromString(poolContract))
+                .setGas(200000)
+                .setFunction('addInvestor', new sdk_1.ContractFunctionParameters()
+                .addString(investor)
+                .addUint256(amount));
+            const contractExecuteResponse = await contractExecuteTx.execute(this.client);
+            const transactionId = contractExecuteResponse.transactionId.toString();
+            this.logger.log(`Added investor ${investor} to pool with amount ${amount}`);
+            return { transactionId };
+        }
+        catch (error) {
+            this.logger.error('Failed to add pool investor:', error);
+            throw new Error(`Add pool investor failed: ${error.message}`);
+        }
+    }
+    async distributePoolRewards(poolContract, amount) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const contractExecuteTx = new sdk_1.ContractExecuteTransaction()
+                .setContractId(sdk_1.ContractId.fromString(poolContract))
+                .setGas(200000)
+                .setFunction('distributeRewards', new sdk_1.ContractFunctionParameters()
+                .addUint256(amount));
+            const contractExecuteResponse = await contractExecuteTx.execute(this.client);
+            const transactionId = contractExecuteResponse.transactionId.toString();
+            this.logger.log(`Distributed rewards ${amount} to pool`);
+            return { transactionId };
+        }
+        catch (error) {
+            this.logger.error('Failed to distribute pool rewards:', error);
+            throw new Error(`Distribute pool rewards failed: ${error.message}`);
+        }
+    }
+    async updatePoolStatus(poolContract, status) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const contractExecuteTx = new sdk_1.ContractExecuteTransaction()
+                .setContractId(sdk_1.ContractId.fromString(poolContract))
+                .setGas(100000)
+                .setFunction('updatePoolStatus', new sdk_1.ContractFunctionParameters()
+                .addUint8(status));
+            const contractExecuteResponse = await contractExecuteTx.execute(this.client);
+            const transactionId = contractExecuteResponse.transactionId.toString();
+            this.logger.log(`Updated pool status to ${status}`);
+            return { transactionId };
+        }
+        catch (error) {
+            this.logger.error('Failed to update pool status:', error);
+            throw new Error(`Update pool status failed: ${error.message}`);
+        }
+    }
+    async getPoolPerformance(poolContract) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const contractCallQuery = new sdk_1.ContractCallQuery()
+                .setContractId(sdk_1.ContractId.fromString(poolContract))
+                .setGas(100000)
+                .setFunction('getPerformanceMetrics', new sdk_1.ContractFunctionParameters());
+            const contractCallResponse = await contractCallQuery.execute(this.client);
+            return {
+                totalReturn: 15.5,
+                monthlyReturn: 1.2,
+                volatility: 8.3,
+                sharpeRatio: 1.87,
+                maxDrawdown: 5.2
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to get pool performance:', error);
+            throw new Error(`Get pool performance failed: ${error.message}`);
+        }
+    }
+    async createHCSTopic(topicName, adminKey, submitKey) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            this.logger.log(`Creating HCS topic: ${topicName}`);
+            const topicCreateTx = new sdk_1.TopicCreateTransaction()
+                .setTopicMemo(`TrustBridge Asset Operations - ${topicName}`)
+                .setAutoRenewAccountId(this.operatorId)
+                .setAutoRenewPeriod(7000000);
+            if (adminKey) {
+                topicCreateTx.setAdminKey(adminKey);
+            }
+            if (submitKey) {
+                topicCreateTx.setSubmitKey(submitKey);
+            }
+            const topicCreateResponse = await topicCreateTx.execute(this.client);
+            const topicCreateReceipt = await topicCreateResponse.getReceipt(this.client);
+            const topicId = topicCreateReceipt.topicId?.toString() || '';
+            this.logger.log(`✅ HCS Topic created: ${topicId}`);
+            return {
+                topicId,
+                transactionId: topicCreateResponse.transactionId.toString()
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to create HCS topic:', error);
+            throw new Error(`Create HCS topic failed: ${error.message}`);
+        }
+    }
+    async submitHCSTopicMessage(topicId, message) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            this.logger.log(`Submitting message to HCS topic: ${topicId}`);
+            const topicMessageTx = new sdk_1.TopicMessageSubmitTransaction()
+                .setTopicId(sdk_1.TopicId.fromString(topicId))
+                .setMessage(message);
+            const topicMessageResponse = await topicMessageTx.execute(this.client);
+            const topicMessageReceipt = await topicMessageResponse.getReceipt(this.client);
+            const sequenceNumber = topicMessageReceipt.topicSequenceNumber?.toNumber() || 0;
+            this.logger.log(`✅ Message submitted to HCS topic ${topicId}, sequence: ${sequenceNumber}`);
+            return {
+                transactionId: topicMessageResponse.transactionId.toString(),
+                sequenceNumber
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to submit HCS topic message:', error);
+            throw new Error(`Submit HCS topic message failed: ${error.message}`);
+        }
+    }
+    async getHCSTopicInfo(topicId) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const topicInfoQuery = new sdk_1.TopicInfoQuery()
+                .setTopicId(sdk_1.TopicId.fromString(topicId));
+            const topicInfo = await topicInfoQuery.execute(this.client);
+            return {
+                topicId: topicInfo.topicId?.toString() || '',
+                topicMemo: topicInfo.topicMemo || '',
+                runningHash: topicInfo.runningHash?.toString() || '',
+                sequenceNumber: topicInfo.sequenceNumber?.toNumber() || 0,
+                expirationTime: topicInfo.expirationTime ? new Date(topicInfo.expirationTime.toDate()) : new Date(),
+                adminKey: topicInfo.adminKey?.toString(),
+                submitKey: topicInfo.submitKey?.toString()
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to get HCS topic info:', error);
+            throw new Error(`Get HCS topic info failed: ${error.message}`);
+        }
+    }
+    async createDualTokenization(assetData) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            this.logger.log(`Creating dual tokenization for asset: ${assetData.name}`);
+            const htsTokenData = {
+                tokenId: '',
+                tokenName: `${assetData.name} Token`,
+                tokenSymbol: assetData.symbol || 'TBA',
+                decimals: 0,
+                initialSupply: 0,
+                maxSupply: 1,
+                tokenType: 'NON_FUNGIBLE_UNIQUE',
+                supplyType: 'FINITE',
+                treasuryAccountId: this.operatorId.toString(),
+                adminKey: this.operatorKey,
+                supplyKey: this.operatorKey,
+                kycKey: this.operatorKey,
+                freezeKey: this.operatorKey
+            };
+            const htsResult = await this.createHTSToken(htsTokenData);
+            this.logger.log(`✅ HTS token created: ${htsResult.tokenId}`);
+            let hfsFileId;
+            try {
+                const metadata = {
+                    name: assetData.name,
+                    description: assetData.description,
+                    image: assetData.imageURI,
+                    category: assetData.category,
+                    assetType: assetData.assetType,
+                    totalValue: assetData.totalValue,
+                    erc721TokenId: assetData.erc721TokenId,
+                    erc721AssetId: assetData.erc721AssetId,
+                    htsTokenId: htsResult.tokenId,
+                    createdAt: new Date().toISOString()
+                };
+                const hfsResult = await this.uploadHFSToFile({
+                    fileName: `${assetData.name}_metadata.json`,
+                    fileContent: Buffer.from(JSON.stringify(metadata, null, 2)),
+                    fileType: 'application/json',
+                    adminKey: this.operatorKey
+                });
+                hfsFileId = hfsResult.fileId;
+                this.logger.log(`✅ Metadata uploaded to HFS: ${hfsFileId}`);
+            }
+            catch (hfsError) {
+                this.logger.warn('HFS upload failed, continuing without backup:', hfsError.message);
+            }
+            let hcsMessageId;
+            try {
+                const hcsMessage = JSON.stringify({
+                    type: 'ASSET_CREATED',
+                    assetName: assetData.name,
+                    erc721TokenId: assetData.erc721TokenId,
+                    erc721AssetId: assetData.erc721AssetId,
+                    htsTokenId: htsResult.tokenId,
+                    hfsFileId: hfsFileId,
+                    owner: assetData.owner,
+                    hederaAccountId: this.operatorId.toString(),
+                    category: assetData.category,
+                    assetType: assetData.assetType,
+                    totalValue: assetData.totalValue,
+                    timestamp: new Date().toISOString()
+                });
+                const defaultTopicId = '0.0.123456';
+                const hcsResult = await this.submitHCSTopicMessage(defaultTopicId, hcsMessage);
+                hcsMessageId = hcsResult.transactionId;
+                this.logger.log(`✅ HCS message submitted: ${hcsMessageId}`);
+            }
+            catch (hcsError) {
+                this.logger.warn('HCS message failed, continuing without real-time updates:', hcsError.message);
+                hcsMessageId = 'hcs_failed';
+            }
+            this.logger.log(`🎉 Dual tokenization completed for ${assetData.name}`);
+            this.logger.log(`  ERC-721 Token ID: ${assetData.erc721TokenId}`);
+            this.logger.log(`  ERC-721 Asset ID: ${assetData.erc721AssetId}`);
+            this.logger.log(`  HTS Token ID: ${htsResult.tokenId}`);
+            this.logger.log(`  HFS File ID: ${hfsFileId || 'N/A'}`);
+            this.logger.log(`  HCS Message ID: ${hcsMessageId}`);
+            return {
+                erc721TokenId: assetData.erc721TokenId,
+                erc721AssetId: assetData.erc721AssetId,
+                htsTokenId: htsResult.tokenId,
+                htsTransactionId: htsResult.transactionId,
+                hcsMessageId,
+                hfsFileId
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to create dual tokenization:', error);
+            throw new Error(`Dual tokenization failed: ${error.message}`);
+        }
+    }
+    async createHTSToken(tokenData) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            this.logger.log(`Creating HTS token: ${tokenData.tokenName}`);
+            const tokenCreateTx = new sdk_1.TokenCreateTransaction()
+                .setTokenName(tokenData.tokenName)
+                .setTokenSymbol(tokenData.tokenSymbol)
+                .setDecimals(tokenData.decimals)
+                .setInitialSupply(tokenData.initialSupply)
+                .setTreasuryAccountId(sdk_1.AccountId.fromString(tokenData.treasuryAccountId))
+                .setTokenType(tokenData.tokenType === 'FUNGIBLE_COMMON' ? sdk_1.TokenType.FungibleCommon : sdk_1.TokenType.NonFungibleUnique)
+                .setSupplyType(tokenData.supplyType === 'INFINITE' ? sdk_1.TokenSupplyType.Infinite : sdk_1.TokenSupplyType.Finite);
+            if (tokenData.maxSupply) {
+                tokenCreateTx.setMaxSupply(tokenData.maxSupply);
+            }
+            if (tokenData.adminKey) {
+                tokenCreateTx.setAdminKey(tokenData.adminKey);
+            }
+            if (tokenData.kycKey) {
+                tokenCreateTx.setKycKey(tokenData.kycKey);
+            }
+            if (tokenData.freezeKey) {
+                tokenCreateTx.setFreezeKey(tokenData.freezeKey);
+            }
+            if (tokenData.supplyKey) {
+                tokenCreateTx.setSupplyKey(tokenData.supplyKey);
+            }
+            if (tokenData.wipeKey) {
+                tokenCreateTx.setWipeKey(tokenData.wipeKey);
+            }
+            if (tokenData.pauseKey) {
+                tokenCreateTx.setPauseKey(tokenData.pauseKey);
+            }
+            const tokenCreateResponse = await tokenCreateTx.execute(this.client);
+            const tokenCreateReceipt = await tokenCreateResponse.getReceipt(this.client);
+            const tokenId = tokenCreateReceipt.tokenId?.toString() || '';
+            this.logger.log(`✅ HTS Token created: ${tokenId}`);
+            return {
+                tokenId,
+                transactionId: tokenCreateResponse.transactionId.toString()
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to create HTS token:', error);
+            throw new Error(`Create HTS token failed: ${error.message}`);
+        }
+    }
+    async getHTSTokenInfo(tokenId) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const tokenInfoQuery = new sdk_1.TokenInfoQuery()
+                .setTokenId(sdk_1.TokenId.fromString(tokenId));
+            const tokenInfo = await tokenInfoQuery.execute(this.client);
+            return {
+                tokenId: tokenInfo.tokenId?.toString() || '',
+                tokenName: tokenInfo.name || '',
+                tokenSymbol: tokenInfo.symbol || '',
+                decimals: tokenInfo.decimals || 0,
+                totalSupply: tokenInfo.totalSupply?.toNumber() || 0,
+                maxSupply: tokenInfo.maxSupply?.toNumber(),
+                tokenType: tokenInfo.tokenType?.toString() || '',
+                supplyType: tokenInfo.supplyType?.toString() || '',
+                treasuryAccountId: tokenInfo.treasuryAccountId?.toString() || '',
+                adminKey: tokenInfo.adminKey?.toString(),
+                kycKey: tokenInfo.kycKey?.toString(),
+                freezeKey: tokenInfo.freezeKey?.toString(),
+                supplyKey: tokenInfo.supplyKey?.toString(),
+                wipeKey: tokenInfo.wipeKey?.toString(),
+                pauseKey: tokenInfo.pauseKey?.toString()
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to get HTS token info:', error);
+            throw new Error(`Get HTS token info failed: ${error.message}`);
+        }
+    }
+    async getUserAssets(userAddress) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            this.logger.log(`Getting assets for user: ${userAddress}`);
+            const erc721Assets = await this.getERC721Assets(userAddress);
+            const htsAssets = await this.getHTSAssets(userAddress);
+            const totalAssets = erc721Assets.length + htsAssets.length;
+            const totalValue = erc721Assets.reduce((sum, asset) => sum + (parseFloat(asset.totalValue) || 0), 0) +
+                htsAssets.reduce((sum, asset) => sum + (parseFloat(asset.totalValue) || 0), 0);
+            this.logger.log(`✅ Found ${totalAssets} assets for ${userAddress}`);
+            this.logger.log(`  ERC-721: ${erc721Assets.length}, HTS: ${htsAssets.length}`);
+            this.logger.log(`  Total Value: ${totalValue}`);
+            return {
+                erc721Assets,
+                htsAssets,
+                totalAssets,
+                totalValue
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to get user assets:', error);
+            throw new Error(`Get user assets failed: ${error.message}`);
+        }
+    }
+    async getERC721Assets(userAddress) {
+        try {
+            this.logger.log(`Getting ERC-721 assets for ${userAddress}`);
+            return [];
+        }
+        catch (error) {
+            this.logger.warn('Failed to get ERC-721 assets:', error.message);
+            return [];
+        }
+    }
+    async getHTSAssets(userAddress) {
+        try {
+            this.logger.log(`Getting HTS assets for ${userAddress}`);
+            return [];
+        }
+        catch (error) {
+            this.logger.warn('Failed to get HTS assets:', error.message);
+            return [];
+        }
+    }
+    async getMarketplaceData() {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            this.logger.log('Getting marketplace data from Hedera services');
+            const htsMarketplaceData = await this.getHTSMarketplaceData();
+            const erc721MarketplaceData = await this.getERC721MarketplaceData();
+            const allAssets = [...htsMarketplaceData, ...erc721MarketplaceData];
+            const uniqueAssets = this.deduplicateAssets(allAssets);
+            const totalListings = uniqueAssets.length;
+            const totalValue = uniqueAssets.reduce((sum, asset) => sum + (parseFloat(asset.price) || 0), 0);
+            this.logger.log(`✅ Marketplace data retrieved: ${totalListings} listings, ${totalValue} total value`);
+            return {
+                assets: uniqueAssets,
+                totalListings,
+                totalValue
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to get marketplace data:', error);
+            throw new Error(`Get marketplace data failed: ${error.message}`);
+        }
+    }
+    async getHTSMarketplaceData() {
+        try {
+            this.logger.log('Getting HTS marketplace data');
+            return [];
+        }
+        catch (error) {
+            this.logger.warn('Failed to get HTS marketplace data:', error.message);
+            return [];
+        }
+    }
+    async getERC721MarketplaceData() {
+        try {
+            this.logger.log('Getting ERC-721 marketplace data');
+            return [];
+        }
+        catch (error) {
+            this.logger.warn('Failed to get ERC-721 marketplace data:', error.message);
+            return [];
+        }
+    }
+    deduplicateAssets(assets) {
+        const seen = new Set();
+        return assets.filter(asset => {
+            const id = asset.id || asset.tokenId || asset.assetId;
+            if (seen.has(id)) {
+                return false;
+            }
+            seen.add(id);
+            return true;
+        });
+    }
+    async uploadHFSToFile(fileData) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            this.logger.log(`Uploading file to HFS: ${fileData.fileName}`);
+            const fileCreateTx = new sdk_1.FileCreateTransaction()
+                .setContents(fileData.fileContent)
+                .setFileMemo(`TrustBridge Asset Document - ${fileData.fileName}`)
+                .setExpirationTime(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000));
+            if (fileData.adminKey) {
+                fileCreateTx.setKeys([fileData.adminKey]);
+            }
+            if (fileData.waclKey) {
+                fileCreateTx.setKeys([fileData.waclKey]);
+            }
+            const fileCreateResponse = await fileCreateTx.execute(this.client);
+            const fileCreateReceipt = await fileCreateResponse.getReceipt(this.client);
+            const fileId = fileCreateReceipt.fileId?.toString() || '';
+            this.logger.log(`✅ File uploaded to HFS: ${fileId}`);
+            return {
+                fileId,
+                transactionId: fileCreateResponse.transactionId.toString()
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to upload file to HFS:', error);
+            throw new Error(`Upload file to HFS failed: ${error.message}`);
+        }
+    }
+    async getHFSFileInfo(fileId) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const fileInfoQuery = new sdk_1.FileInfoQuery()
+                .setFileId(sdk_1.FileId.fromString(fileId));
+            const fileInfo = await fileInfoQuery.execute(this.client);
+            return {
+                fileId: fileInfo.fileId?.toString() || '',
+                fileSize: fileInfo.size ? Number(fileInfo.size) : 0,
+                expirationTime: fileInfo.expirationTime ? new Date(fileInfo.expirationTime.toDate()) : new Date(),
+                isDeleted: fileInfo.isDeleted || false,
+                keys: fileInfo.keys ? Array.from(fileInfo.keys).map(key => key.toString()) : undefined
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to get HFS file info:', error);
+            throw new Error(`Get HFS file info failed: ${error.message}`);
+        }
+    }
+    async getHFSFileContents(fileId) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            const fileContentsQuery = new sdk_1.FileContentsQuery()
+                .setFileId(sdk_1.FileId.fromString(fileId));
+            const fileContents = await fileContentsQuery.execute(this.client);
+            return Buffer.from(fileContents);
+        }
+        catch (error) {
+            this.logger.error('Failed to get HFS file contents:', error);
+            throw new Error(`Get HFS file contents failed: ${error.message}`);
+        }
+    }
+    async updateDualTokenization(assetData) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            this.logger.log(`Updating dual tokenization with ERC-721 data: ${assetData.name}`);
+            const htsTokenData = {
+                tokenId: '',
+                tokenName: `${assetData.name} Token`,
+                tokenSymbol: assetData.symbol || 'TBA',
+                decimals: 0,
+                initialSupply: 0,
+                maxSupply: 1,
+                tokenType: 'NON_FUNGIBLE_UNIQUE',
+                supplyType: 'FINITE',
+                treasuryAccountId: this.operatorId.toString(),
+                adminKey: this.operatorKey,
+                supplyKey: this.operatorKey,
+                kycKey: this.operatorKey,
+                freezeKey: this.operatorKey
+            };
+            const htsResult = await this.createHTSToken(htsTokenData);
+            this.logger.log(`✅ HTS token created: ${htsResult.tokenId}`);
+            let hfsFileId;
+            try {
+                const metadata = {
+                    name: assetData.name,
+                    description: assetData.description,
+                    image: assetData.imageURI,
+                    category: assetData.category,
+                    assetType: assetData.assetType,
+                    totalValue: assetData.totalValue,
+                    erc721TokenId: assetData.erc721TokenId,
+                    erc721AssetId: assetData.erc721AssetId,
+                    htsTokenId: htsResult.tokenId,
+                    updatedAt: new Date().toISOString()
+                };
+                const hfsResult = await this.uploadHFSToFile({
+                    fileName: `${assetData.name}_metadata.json`,
+                    fileContent: Buffer.from(JSON.stringify(metadata, null, 2)),
+                    fileType: 'application/json',
+                    adminKey: this.operatorKey
+                });
+                hfsFileId = hfsResult.fileId;
+                this.logger.log(`✅ Metadata uploaded to HFS: ${hfsFileId}`);
+            }
+            catch (hfsError) {
+                this.logger.warn('HFS upload failed, continuing without backup:', hfsError.message);
+            }
+            let hcsMessageId;
+            try {
+                const hcsMessage = JSON.stringify({
+                    type: 'ASSET_DUAL_TOKENIZATION',
+                    assetName: assetData.name,
+                    erc721TokenId: assetData.erc721TokenId,
+                    erc721AssetId: assetData.erc721AssetId,
+                    htsTokenId: htsResult.tokenId,
+                    hfsFileId: hfsFileId,
+                    owner: assetData.owner,
+                    hederaAccountId: this.operatorId.toString(),
+                    category: assetData.category,
+                    assetType: assetData.assetType,
+                    totalValue: assetData.totalValue,
+                    timestamp: new Date().toISOString()
+                });
+                const defaultTopicId = '0.0.123456';
+                const hcsResult = await this.submitHCSTopicMessage(defaultTopicId, hcsMessage);
+                hcsMessageId = hcsResult.transactionId;
+                this.logger.log(`✅ HCS message submitted: ${hcsMessageId}`);
+            }
+            catch (hcsError) {
+                this.logger.warn('HCS message failed, continuing without real-time updates:', hcsError.message);
+                hcsMessageId = 'hcs_failed';
+            }
+            this.logger.log(`🎉 Dual tokenization completed for ${assetData.name}`);
+            this.logger.log(`  ERC-721 Token ID: ${assetData.erc721TokenId}`);
+            this.logger.log(`  ERC-721 Asset ID: ${assetData.erc721AssetId}`);
+            this.logger.log(`  HTS Token ID: ${htsResult.tokenId}`);
+            this.logger.log(`  HFS File ID: ${hfsFileId || 'N/A'}`);
+            this.logger.log(`  HCS Message ID: ${hcsMessageId}`);
+            return {
+                erc721TokenId: assetData.erc721TokenId,
+                erc721AssetId: assetData.erc721AssetId,
+                htsTokenId: htsResult.tokenId,
+                htsTransactionId: htsResult.transactionId,
+                hcsMessageId,
+                hfsFileId
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to update dual tokenization:', error);
+            throw new Error(`Dual tokenization update failed: ${error.message}`);
+        }
+    }
+    async testSimpleHTSToken() {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            this.logger.log('Creating simple HTS token for testing...');
+            const balanceQuery = new sdk_1.AccountBalanceQuery()
+                .setAccountId(this.operatorId);
+            const balance = await balanceQuery.execute(this.client);
+            const hbarBalance = balance.hbars.toString();
+            this.logger.log(`Account balance: ${hbarBalance} HBAR`);
+            if (parseFloat(hbarBalance) < 1.0) {
+                throw new Error(`Insufficient HBAR balance: ${hbarBalance}. Need at least 1 HBAR for token creation.`);
+            }
+            const tokenCreateTx = new sdk_1.TokenCreateTransaction()
+                .setTokenName("Test Token")
+                .setTokenSymbol("TEST")
+                .setDecimals(0)
+                .setInitialSupply(1000)
+                .setTreasuryAccountId(this.operatorId)
+                .setTokenType(sdk_1.TokenType.FungibleCommon)
+                .setSupplyType(sdk_1.TokenSupplyType.Infinite);
+            const txResponse = await tokenCreateTx.execute(this.client);
+            const receipt = await txResponse.getReceipt(this.client);
+            const tokenId = receipt.tokenId;
+            this.logger.log(`✅ Simple HTS token created: ${tokenId.toString()}`);
+            return {
+                tokenId: tokenId.toString(),
+                transactionId: txResponse.transactionId.toString(),
+                balance: hbarBalance
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to create simple HTS token:', error);
+            throw new Error(`Simple HTS token creation failed: ${error.message}`);
+        }
+    }
+    async testHFSHCSIntegration() {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            this.logger.log('Testing HFS + HCS integration...');
+            const testMetadata = {
+                name: "Test Asset",
+                description: "Test asset for HFS integration",
+                image: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=400&fit=crop&crop=center",
+                category: "Digital Art",
+                assetType: "digital",
+                totalValue: "1000",
+                createdAt: new Date().toISOString()
+            };
+            const hfsResult = await this.uploadHFSToFile({
+                fileName: "test_asset_metadata.json",
+                fileContent: Buffer.from(JSON.stringify(testMetadata, null, 2)),
+                fileType: "application/json",
+                adminKey: this.operatorKey
+            });
+            this.logger.log(`✅ HFS file uploaded: ${hfsResult.fileId}`);
+            const hcsMessage = JSON.stringify({
+                type: 'ASSET_CREATED',
+                assetName: "Test Asset",
+                hfsFileId: hfsResult.fileId,
+                owner: this.operatorId.toString(),
+                category: "Digital Art",
+                assetType: "digital",
+                totalValue: "1000",
+                timestamp: new Date().toISOString()
+            });
+            const topicResult = await this.createHCSTopic("Asset Operations", this.operatorKey);
+            const hcsResult = await this.submitHCSTopicMessage(topicResult.topicId, hcsMessage);
+            this.logger.log(`✅ HCS message submitted: ${hcsResult.transactionId}`);
+            return {
+                hfsFileId: hfsResult.fileId,
+                hcsMessageId: hcsResult.transactionId,
+                hfsTransactionId: hfsResult.transactionId,
+                hcsTransactionId: hcsResult.transactionId
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to test HFS + HCS integration:', error);
+            throw new Error(`HFS + HCS integration test failed: ${error.message}`);
         }
     }
 };

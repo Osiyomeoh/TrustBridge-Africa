@@ -2,8 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/UI/Card';
 import Button from '../components/UI/Button';
-import { TrendingUp, TrendingDown, DollarSign, PieChart, BarChart3, Eye, ArrowUpRight, Loader2, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, PieChart, BarChart3, Eye, ArrowUpRight, Loader2, AlertCircle, Coins, Wallet } from 'lucide-react';
 import { usePortfolio, useInvestments } from '../hooks/useApi';
+import { useWallet } from '../contexts/WalletContext';
+import { useTrustTokenBalance } from '../hooks/useTrustTokenBalance';
 import { Portfolio as PortfolioType, Investment } from '../types/api';
 
 const Portfolio: React.FC = () => {
@@ -12,6 +14,10 @@ const Portfolio: React.FC = () => {
   // Fetch real data from backend
   const { data: portfolioData, loading: portfolioLoading, error: portfolioError } = usePortfolio();
   const { data: investmentsData, loading: investmentsLoading, error: investmentsError } = useInvestments();
+  
+  // Wallet and token balances
+  const { balance: hbarBalance, address } = useWallet();
+  const { balance: trustBalance, loading: trustLoading } = useTrustTokenBalance();
 
   // Format portfolio stats from real data
   const portfolioStats = useMemo(() => {
@@ -120,7 +126,7 @@ const Portfolio: React.FC = () => {
 
       {/* Portfolio Stats */}
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.2 }}
@@ -178,6 +184,40 @@ const Portfolio: React.FC = () => {
             </div>
             <h3 className="text-2xl font-bold text-neon-green mb-1">Live</h3>
             <p className="text-sm text-off-white/70">Real-time Data</p>
+          </CardContent>
+        </Card>
+
+        {/* HBAR Balance */}
+        <Card variant="floating" className="hover:scale-105 transition-transform">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <Wallet className="w-8 h-8 text-electric-mint" />
+              <div className="w-5 h-5 bg-electric-mint rounded-full"></div>
+            </div>
+            <h3 className="text-2xl font-bold text-electric-mint mb-1">
+              {hbarBalance ? `${parseFloat(hbarBalance).toFixed(2)}` : '0.00'}
+            </h3>
+            <p className="text-sm text-off-white/70">HBAR Balance</p>
+            <p className="text-xs text-electric-mint font-semibold">Native Currency</p>
+          </CardContent>
+        </Card>
+
+        {/* TRUST Token Balance */}
+        <Card variant="floating" className="hover:scale-105 transition-transform">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <Coins className="w-8 h-8 text-neon-green" />
+              {trustLoading ? (
+                <Loader2 className="w-5 h-5 text-neon-green animate-spin" />
+              ) : (
+                <div className="w-5 h-5 bg-neon-green rounded-full"></div>
+              )}
+            </div>
+            <h3 className="text-2xl font-bold text-neon-green mb-1">
+              {trustLoading ? '...' : `${parseFloat(trustBalance).toFixed(2)}`}
+            </h3>
+            <p className="text-sm text-off-white/70">TRUST Tokens</p>
+            <p className="text-xs text-neon-green font-semibold">Protocol Token</p>
           </CardContent>
         </Card>
       </motion.div>

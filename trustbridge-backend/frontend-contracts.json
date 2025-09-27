@@ -1,0 +1,28 @@
+{
+  "network": "hedera_testnet",
+  "timestamp": "2025-09-22T15:02:47.091Z",
+  "contracts": {
+    "trustToken": "0xa6f8fC5b5A9B5670dF868247585bcD86eD124ba2",
+    "assetNFT": "0x42be9627C970D40248690F010b3c2a7F8C68576C",
+    "verificationRegistry": "0xC2e5D63Da10A3139857D18Cf43eB93CE0133Ca4B",
+    "assetFactory": "0x27A5705717294a481338193E9Cb5F33A40169401",
+    "attestorManager": "0x25F6F7209692D9b553E4d082bA964A03AdBE630d",
+    "tradingEngine": "0xeaCd09B28ae9a1199010D755613867A7707EA1B9",
+    "poolManager": "0xC2E54Ba2309e7b5c4f378c1E7CC8e7e4aB17fC1B",
+    "poolToken": "0x3262BBF6c5d3Af2cdA1B4E44A10eF16af3A6662e",
+    "feeDistribution": "0xa00343B86a5531155F22d91899229124e6619843",
+    "spvManager": "0x10D7EfA83A38A8e37Bad40ac40aDDf7906c0cB43",
+    "amcManager": "0xeDdEA0d8332e332382136feB27FbeAa2f0301250",
+    "policyManager": "0x0000000000000000000000000000000000000000",
+    "settlementEngine": "0x0000000000000000000000000000000000000000",
+    "verificationBuffer": "0x0000000000000000000000000000000000000000",
+    "poolFactory": "0x0000000000000000000000000000000000000000"
+  },
+  "configuration": {
+    "tokenEconomy": "TRUST",
+    "gasCurrency": "HBAR",
+    "feeRecipient": "0xA6e8bf8E89Bd2c2BD37e308F275C4f52284a911F",
+    "totalSupply": "200000000.0",
+    "maxSupply": "1000000000.0"
+  }
+}

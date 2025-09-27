@@ -4,7 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { KycService } from './kyc.service';
 
 @ApiTags('KYC')
-@Controller('api/kyc')
+@Controller('kyc')
 export class KycController {
   constructor(private readonly kycService: KycService) {}
 

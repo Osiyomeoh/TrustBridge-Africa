@@ -37,6 +37,17 @@ contract TrustToken is ERC20, AccessControl, Pausable, ReentrancyGuard {
         _mint(to, amount);
     }
     
+    /**
+     * @notice Public minting function for testing purposes
+     * @dev Allows any user to mint up to 1000 TRUST tokens for testing
+     * @param amount Amount of tokens to mint (max 1000)
+     */
+    function mintTestTokens(uint256 amount) external {
+        require(amount <= 1000 * 10**18, "Test minting limited to 1000 TRUST tokens");
+        require(totalSupply() + amount <= MAX_SUPPLY, "Exceeds max supply");
+        _mint(msg.sender, amount);
+    }
+    
     function burn(uint256 amount) external onlyRole(BURNER_ROLE) {
         _burn(msg.sender, amount);
     }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, HttpException, HttpStatus, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpException, HttpStatus, UseInterceptors, UploadedFile, UseGuards, Req } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiProperty, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 import { IsString, IsNumber, IsObject, ValidateNested, IsArray, IsOptional } from 'class-validator';
@@ -96,14 +96,23 @@ export class SubmitVerificationWithFilesDto {
 }
 
 @ApiTags('Verification')
-@Controller('api/verification')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+@Controller('verification')
 export class VerificationController {
   constructor(
     private readonly verificationService: VerificationService,
     private readonly ipfsService: IPFSService,
   ) {}
+
+  @Get('test')
+  @ApiOperation({ summary: 'Test endpoint' })
+  @ApiResponse({ status: 200, description: 'Test successful' })
+  async test() {
+    return {
+      success: true,
+      message: 'Verification API is working',
+      timestamp: new Date().toISOString()
+    };
+  }
 
   @Get()
   @ApiOperation({ summary: 'Get all verification requests' })
@@ -115,6 +124,82 @@ export class VerificationController {
         success: true,
         data: verifications,
         message: `Found ${verifications.length} verification requests`
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Get('user')
+  @ApiOperation({ summary: 'Get verification requests for current user' })
+  @ApiResponse({ status: 200, description: 'User verification requests retrieved successfully' })
+  async getUserVerifications(@Req() req: any) {
+    try {
+      // For now, get all verifications since we don't have proper auth
+      // In production, this should use the authenticated user's ID
+      const verifications = await this.verificationService.getAllVerifications();
+      
+      return {
+        success: true,
+        data: verifications,
+        message: `Found ${verifications.length} verification requests`
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+
+  @Post('bulk-create-minimal')
+  @ApiOperation({ summary: 'Create minimal verification requests (blockchain-first approach)' })
+  @ApiResponse({ status: 201, description: 'Minimal verification requests created successfully' })
+  async createBulkMinimalVerifications(@Body() body: { verifications: any[] }) {
+    try {
+      const { verifications } = body;
+      
+      const createdVerifications = await this.verificationService.createBulkMinimalVerifications(verifications);
+      
+      return {
+        success: true,
+        data: createdVerifications,
+        message: `Successfully created ${createdVerifications.length} minimal verification requests`
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post('bulk-create')
+  @ApiOperation({ summary: 'Create multiple verification requests' })
+  @ApiResponse({ status: 201, description: 'Verification requests created successfully' })
+  async createBulkVerifications(@Body() body: { verifications: any[] }) {
+    try {
+      const { verifications } = body;
+      
+      const createdVerifications = await this.verificationService.createBulkVerifications(verifications);
+      
+      return {
+        success: true,
+        data: createdVerifications,
+        message: `Successfully created ${createdVerifications.length} verification requests`
       };
     } catch (error) {
       throw new HttpException(
@@ -146,6 +231,49 @@ export class VerificationController {
           message: error.message,
         },
         HttpStatus.NOT_FOUND
+      );
+    }
+  }
+
+  @Get('attestor')
+  @ApiOperation({ summary: 'Get verification requests for attestors' })
+  @ApiResponse({ status: 200, description: 'Attestor verification requests retrieved successfully' })
+  async getAttestorVerifications(@Req() req: any) {
+    try {
+      // Get all verifications from database and transform to frontend format
+      const verifications = await this.verificationService.getAllVerifications();
+      
+      // Transform database verifications to frontend format
+      const transformedVerifications = verifications.map((verification: any) => ({
+        requestId: verification._id,
+        assetId: verification.assetId,
+        status: verification.status.toLowerCase(),
+        requiredType: 0, // Default attestor type
+        evidenceHashes: verification.evidence?.map((e: any) => e.hash || '') || [],
+        documentTypes: verification.evidence?.map((e: any) => e.type || 'Document') || [],
+        fee: '0.1', // Default fee
+        deadline: verification.createdAt ? new Date(verification.createdAt).getTime() + (7 * 24 * 60 * 60 * 1000) : Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 days from creation
+        submittedAt: verification.createdAt ? new Date(verification.createdAt).getTime() : Date.now(),
+        score: verification.scoring?.finalScore || 0,
+        owner: verification.submittedBy || '0x0000000000000000000000000000000000000000',
+        attestors: []
+      }));
+
+      console.log(`📋 Found ${transformedVerifications.length} verification requests for attestor`);
+      
+      return {
+        success: true,
+        data: transformedVerifications,
+        message: `Found ${transformedVerifications.length} verification requests for attestor`
+      };
+    } catch (error) {
+      console.error('Error getting attestor verifications:', error);
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
   }

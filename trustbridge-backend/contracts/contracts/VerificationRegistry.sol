@@ -4,8 +4,6 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./interfaces/IVerificationRegistry.sol";
-import "./interfaces/IAttestorManager.sol";
-import "./interfaces/IPolicyManager.sol";
 
 /**
  * @title Verification Registry
@@ -19,28 +17,14 @@ contract VerificationRegistry is IVerificationRegistry, AccessControl, Reentranc
     mapping(bytes32 => VerificationRecord) public verifications;
     mapping(bytes32 => mapping(address => bool)) public attestorSigned;
     
-    IAttestorManager public attestorManager;
-    IPolicyManager public policyManager;
-
     // Events
     event VerificationSubmitted(bytes32 indexed assetId, bytes32 assetType, uint256 score, bytes32 evidenceRoot);
     event VerificationApproved(bytes32 indexed assetId, uint256 score);
     event VerificationRevoked(bytes32 indexed assetId, string reason);
 
-    constructor(address _attestorManager, address _policyManager) {
+    constructor() {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(GATEWAY_ROLE, msg.sender);
-        
-        attestorManager = IAttestorManager(_attestorManager);
-        policyManager = IPolicyManager(_policyManager);
-    }
-
-    function setAttestorManager(address _attestorManager) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        attestorManager = IAttestorManager(_attestorManager);
-    }
-
-    function setPolicyManager(address _policyManager) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        policyManager = IPolicyManager(_policyManager);
     }
 
     function submitVerification(
@@ -56,13 +40,12 @@ contract VerificationRegistry is IVerificationRegistry, AccessControl, Reentranc
         require(verifications[assetId].assetId == 0, "Verification already exists");
         require(attestorSigs.length == signingAttestors.length, "Signature count mismatch");
         
-        IPolicyManager.AssetTypePolicy memory policy = policyManager.getAssetTypePolicy(assetType);
-        require(policy.minScore > 0, "Asset type not supported");
-        require(attestorSigs.length >= policy.requiredAttestors, "Insufficient attestor signatures");
+        // Basic validation - can be enhanced later
+        require(attestorSigs.length >= 1, "At least one attestor signature required");
 
-        // Verify attestor signatures
+        // Verify attestor signatures (simplified for now)
         for (uint i = 0; i < signingAttestors.length; i++) {
-            require(attestorManager.isAttestorActive(signingAttestors[i]), "Inactive attestor");
+            require(signingAttestors[i] != address(0), "Invalid attestor address");
             
             // In production, would verify the actual signature here
             // bytes32 messageHash = keccak256(abi.encodePacked(assetId, score, evidenceRoot));
@@ -80,20 +63,22 @@ contract VerificationRegistry is IVerificationRegistry, AccessControl, Reentranc
         record.expiresAt = expiresAt;
         record.attestors = signingAttestors;
 
+        // Add to verification IDs array for enumeration
+        if (!verificationExists[assetId]) {
+            verificationIds.push(assetId);
+            verificationExists[assetId] = true;
+        }
+
         // Mark attestor signatures
         for (uint i = 0; i < signingAttestors.length; i++) {
             attestorSigned[assetId][signingAttestors[i]] = true;
-            attestorManager.incrementAttestationCount(signingAttestors[i]);
+            // Attestor count tracking removed for now
         }
 
-        // Determine status
-        if (score >= policy.minScore) {
-            if (policy.requiresManualReview && score < 8500) { // 85%
-                record.status = VerificationStatus.PENDING;
-            } else {
-                record.status = VerificationStatus.VERIFIED;
-                emit VerificationApproved(assetId, score);
-            }
+        // Determine status (simplified)
+        if (score >= 7000) { // 70% threshold
+            record.status = VerificationStatus.VERIFIED;
+            emit VerificationApproved(assetId, score);
         } else {
             record.status = VerificationStatus.REJECTED;
         }
@@ -129,7 +114,7 @@ contract VerificationRegistry is IVerificationRegistry, AccessControl, Reentranc
 
         // Slash attestors who signed this verification
         for (uint i = 0; i < record.attestors.length; i++) {
-            attestorManager.slashAttestor(record.attestors[i], "Fraudulent verification");
+            // Attestor slashing removed for now
         }
 
         emit VerificationRevoked(assetId, reason);
@@ -170,5 +155,31 @@ contract VerificationRegistry is IVerificationRegistry, AccessControl, Reentranc
         returns (bool) 
     {
         return attestorSigned[assetId][attestor];
+    }
+
+    // Array to store all verification IDs for enumeration
+    bytes32[] public verificationIds;
+    mapping(bytes32 => bool) public verificationExists;
+
+    function getAllVerifications() 
+        external 
+        view 
+        returns (VerificationRecord[] memory) 
+    {
+        VerificationRecord[] memory allVerifications = new VerificationRecord[](verificationIds.length);
+        
+        for (uint i = 0; i < verificationIds.length; i++) {
+            allVerifications[i] = verifications[verificationIds[i]];
+        }
+        
+        return allVerifications;
+    }
+
+    function getVerificationCount() 
+        external 
+        view 
+        returns (uint256) 
+    {
+        return verificationIds.length;
     }
 }

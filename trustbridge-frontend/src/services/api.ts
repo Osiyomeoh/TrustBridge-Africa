@@ -36,9 +36,15 @@ apiClient.interceptors.response.use(
 )
 
 export const apiService = {
+  // Generic HTTP methods
+  get: (url: string, config?: any) => apiClient.get(url, config).then(res => res.data),
+  post: (url: string, data?: any, config?: any) => apiClient.post(url, data, config).then(res => res.data),
+  put: (url: string, data?: any, config?: any) => apiClient.put(url, data, config).then(res => res.data),
+  delete: (url: string, config?: any) => apiClient.delete(url, config).then(res => res.data),
+  
   // Analytics
-  getMarketAnalytics: () => apiClient.get('/analytics/market').then(res => res.data),
-  getRealTimeAnalytics: () => apiClient.get('/analytics/real-time').then(res => res.data),
+  getMarketAnalytics: () => apiClient.get('/external/analytics/overview').then(res => res.data),
+  getRealTimeAnalytics: () => apiClient.get('/external/analytics/stats').then(res => res.data),
   
   // Assets
   getAssets: (params?: any) => apiClient.get('/assets', { params }).then(res => res.data),

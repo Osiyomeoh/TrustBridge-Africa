@@ -12,12 +12,13 @@ const file_upload_controller_1 = require("./file-upload.controller");
 const file_upload_service_1 = require("./file-upload.service");
 const google_drive_service_1 = require("./google-drive.service");
 const hedera_module_1 = require("../hedera/hedera.module");
+const ipfs_module_1 = require("../ipfs/ipfs.module");
 let FileUploadModule = class FileUploadModule {
 };
 exports.FileUploadModule = FileUploadModule;
 exports.FileUploadModule = FileUploadModule = __decorate([
     (0, common_1.Module)({
-        imports: [hedera_module_1.HederaModule],
+        imports: [hedera_module_1.HederaModule, ipfs_module_1.IPFSModule],
         controllers: [file_upload_controller_1.FileUploadController],
         providers: [file_upload_service_1.FileUploadService, google_drive_service_1.GoogleDriveService],
         exports: [file_upload_service_1.FileUploadService, google_drive_service_1.GoogleDriveService],

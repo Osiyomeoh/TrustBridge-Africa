@@ -440,6 +440,40 @@ let AuthController = class AuthController {
             };
         }
     }
+    async createOnfidoSession(body) {
+        try {
+            const result = await this.authService.createOnfidoSession(body.vendorData, body.verificationType);
+            return {
+                success: true,
+                data: result,
+                message: 'Onfido session created successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to create Onfido session'
+            };
+        }
+    }
+    async getOnfidoSessionStatus(sessionId) {
+        try {
+            const result = await this.authService.getOnfidoSessionStatus(sessionId);
+            return {
+                success: true,
+                data: result,
+                message: 'Session status retrieved successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to get session status'
+            };
+        }
+    }
     async generateToken(body) {
         try {
             const result = await this.authService.generateTokenForVerifiedUser(body.walletAddress);
@@ -686,6 +720,26 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "getDiditSessionStatus", null);
 __decorate([
+    (0, common_1.Post)('onfido/session'),
+    (0, swagger_1.ApiOperation)({ summary: 'Create Onfido verification session for attestors' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Onfido session created successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Failed to create Onfido session' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "createOnfidoSession", null);
+__decorate([
+    (0, common_1.Get)('onfido/session/:sessionId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get Onfido session status' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Session status retrieved successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Failed to get session status' }),
+    __param(0, (0, common_1.Param)('sessionId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "getOnfidoSessionStatus", null);
+__decorate([
     (0, common_1.Post)('generate-token'),
     (0, swagger_1.ApiOperation)({ summary: 'Generate access token for verified user' }),
     (0, swagger_1.ApiBody)({ schema: { type: 'object', properties: { walletAddress: { type: 'string' } }, required: ['walletAddress'] } }),
@@ -698,7 +752,7 @@ __decorate([
 ], AuthController.prototype, "generateToken", null);
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('Authentication'),
-    (0, common_1.Controller)('api/auth'),
+    (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])
 ], AuthController);
 //# sourceMappingURL=auth.controller.js.map

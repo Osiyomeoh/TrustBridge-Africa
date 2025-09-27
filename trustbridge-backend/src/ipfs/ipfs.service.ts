@@ -3,6 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import FormData from 'form-data';
 
+export interface IPFSFileMetadata {
+  name?: string;
+  description?: string;
+  location?: string;
+  [key: string]: any;
+}
+
 export interface IPFSUploadResult {
   cid: string;
   ipfsUrl: string;
@@ -10,13 +17,11 @@ export interface IPFSUploadResult {
   timestamp: string;
 }
 
-export interface IPFSFileMetadata {
-  name: string;
-  type: string;
-  size: number;
-  description?: string;
-  category?: string;
-  tags?: string[];
+export interface IPFSPresignedUrlResult {
+  presignedUrl: string;
+  fields: Record<string, string>;
+  cid?: string;
+  ipfsUrl?: string;
 }
 
 @Injectable()
@@ -43,38 +48,51 @@ export class IPFSService {
    */
   async generatePresignedUrl(
     fileName: string,
-    fileSize: number,
     fileType: string,
     metadata?: IPFSFileMetadata
-  ): Promise<{ url: string; fields: Record<string, string> }> {
+  ): Promise<IPFSPresignedUrlResult> {
     try {
-      // For now, we'll use direct Pinata API upload
-      // In production, you might want to implement actual presigned URLs
-      const uploadUrl = 'https://api.pinata.cloud/pinning/pinFileToIPFS';
-      
-      // Generate a unique filename
-      const uniqueFileName = `${Date.now()}_${fileName}`;
-      
+      if (!this.pinataApiKey || !this.pinataSecretKey) {
+        throw new BadRequestException('Pinata credentials not configured');
+      }
+
+      // For now, return a simple presigned URL structure
+      // In a real implementation, you would generate this with Pinata
+      const cid = `QmPresigned${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
+      const ipfsUrl = `https://${this.pinataGatewayUrl}/ipfs/${cid}`;
+
+      // Ensure all metadata values are strings or numbers for Pinata compatibility
+      const sanitizedMetadata = metadata ? Object.fromEntries(
+        Object.entries(metadata).map(([key, value]) => [
+          key, 
+          typeof value === 'string' || typeof value === 'number' ? value : String(value)
+        ])
+      ) : {};
+
       return {
-        url: uploadUrl,
+        presignedUrl: `https://api.pinata.cloud/pinning/pinFileToIPFS`,
         fields: {
+          'pinata_api_key': this.pinataApiKey,
+          'pinata_secret_api_key': this.pinataSecretKey,
           'pinataMetadata': JSON.stringify({
-            name: uniqueFileName,
+            name: fileName,
             keyvalues: {
               originalName: fileName,
               fileType: fileType,
-              fileSize: fileSize.toString(),
-              ...metadata
+              uploadTime: new Date().toISOString(),
+              ...sanitizedMetadata
             }
           }),
           'pinataOptions': JSON.stringify({
             cidVersion: 1
           })
-        }
+        },
+        cid,
+        ipfsUrl
       };
     } catch (error) {
       this.logger.error('Failed to generate presigned URL:', error);
-      throw new BadRequestException('Failed to generate upload URL');
+      throw new BadRequestException(`Failed to generate presigned URL: ${error.message}`);
     }
   }
 
@@ -98,13 +116,21 @@ export class IPFSService {
         contentType: fileType
       });
 
+      // Ensure all metadata values are strings or numbers for Pinata compatibility
+      const sanitizedMetadata = metadata ? Object.fromEntries(
+        Object.entries(metadata).map(([key, value]) => [
+          key, 
+          typeof value === 'string' || typeof value === 'number' ? value : String(value)
+        ])
+      ) : {};
+
       formData.append('pinataMetadata', JSON.stringify({
         name: fileName,
         keyvalues: {
           originalName: fileName,
           fileType: fileType,
           uploadTime: new Date().toISOString(),
-          ...metadata
+          ...sanitizedMetadata
         }
       }));
 
@@ -148,9 +174,9 @@ export class IPFSService {
   }
 
   /**
-   * Pin a file by CID
+   * Pin a file to IPFS using Pinata
    */
-  async pinFile(cid: string, metadata?: IPFSFileMetadata): Promise<boolean> {
+  async pinFile(cid: string, name?: string): Promise<IPFSUploadResult> {
     try {
       if (!this.pinataApiKey || !this.pinataSecretKey) {
         throw new BadRequestException('Pinata credentials not configured');
@@ -161,8 +187,10 @@ export class IPFSService {
         {
           hashToPin: cid,
           pinataMetadata: {
-            name: `pinned_${cid}`,
-            keyvalues: metadata || {}
+            name: name || `pinned-${cid}`,
+            keyvalues: {
+              pinnedAt: new Date().toISOString()
+            }
           }
         },
         {
@@ -174,15 +202,26 @@ export class IPFSService {
         }
       );
 
-      return response.status === 200;
+      this.logger.log(`File pinned to IPFS: ${cid}`);
+
+      return {
+        cid,
+        ipfsUrl: `https://${this.pinataGatewayUrl}/ipfs/${cid}`,
+        pinSize: 0,
+        timestamp: new Date().toISOString()
+      };
     } catch (error) {
-      this.logger.error('Failed to pin file:', error);
-      return false;
+      this.logger.error('IPFS pin failed:', error);
+      if (error.response) {
+        this.logger.error('Pinata API error:', error.response.data);
+        throw new BadRequestException(`IPFS pin failed: ${error.response.data?.error || error.response.statusText}`);
+      }
+      throw new BadRequestException(`IPFS pin failed: ${error.message}`);
     }
   }
 
   /**
-   * Unpin a file by CID
+   * Unpin a file from IPFS using Pinata
    */
   async unpinFile(cid: string): Promise<boolean> {
     try {
@@ -190,7 +229,7 @@ export class IPFSService {
         throw new BadRequestException('Pinata credentials not configured');
       }
 
-      const response = await axios.delete(
+      await axios.delete(
         `https://api.pinata.cloud/pinning/unpin/${cid}`,
         {
           headers: {
@@ -200,56 +239,62 @@ export class IPFSService {
         }
       );
 
-      return response.status === 200;
+      this.logger.log(`File unpinned from IPFS: ${cid}`);
+      return true;
     } catch (error) {
-      this.logger.error('Failed to unpin file:', error);
-      return false;
+      this.logger.error('IPFS unpin failed:', error);
+      if (error.response) {
+        this.logger.error('Pinata API error:', error.response.data);
+        throw new BadRequestException(`IPFS unpin failed: ${error.response.data?.error || error.response.statusText}`);
+      }
+      throw new BadRequestException(`IPFS unpin failed: ${error.message}`);
     }
   }
 
   /**
-   * Get file metadata
+   * Get file from IPFS
    */
-  async getFileMetadata(cid: string): Promise<IPFSFileMetadata | null> {
+  async getFile(cid: string): Promise<Buffer> {
     try {
-      if (!this.pinataApiKey || !this.pinataSecretKey) {
-        throw new BadRequestException('Pinata credentials not configured');
-      }
-
       const response = await axios.get(
-        `https://api.pinata.cloud/data/pinList?hashContains=${cid}`,
+        `https://${this.pinataGatewayUrl}/ipfs/${cid}`,
+        {
+          responseType: 'arraybuffer'
+        }
+      );
+
+      return Buffer.from(response.data);
+    } catch (error) {
+      this.logger.error('Failed to get file from IPFS:', error);
+      throw new BadRequestException(`Failed to get file from IPFS: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get file metadata from IPFS
+   */
+  async getFileMetadata(cid: string): Promise<any> {
+    try {
+      const response = await axios.get(
+        `https://${this.pinataGatewayUrl}/ipfs/${cid}`,
         {
           headers: {
-            'pinata_api_key': this.pinataApiKey,
-            'pinata_secret_api_key': this.pinataSecretKey
+            'Accept': 'application/json'
           }
         }
       );
 
-      const pins = response.data.rows;
-      if (pins.length === 0) {
-        return null;
-      }
-
-      const pin = pins[0];
-      return {
-        name: pin.metadata.name,
-        type: pin.metadata.keyvalues?.fileType || 'unknown',
-        size: pin.size,
-        description: pin.metadata.keyvalues?.description,
-        category: pin.metadata.keyvalues?.category,
-        tags: pin.metadata.keyvalues?.tags ? pin.metadata.keyvalues.tags.split(',') : []
-      };
+      return response.data;
     } catch (error) {
-      this.logger.error('Failed to get file metadata:', error);
-      return null;
+      this.logger.error('Failed to get file metadata from IPFS:', error);
+      throw new BadRequestException(`Failed to get file metadata from IPFS: ${error.message}`);
     }
   }
 
   /**
-   * List all pinned files
+   * List pinned files from Pinata
    */
-  async listPinnedFiles(): Promise<IPFSUploadResult[]> {
+  async listFiles(): Promise<any[]> {
     try {
       if (!this.pinataApiKey || !this.pinataSecretKey) {
         throw new BadRequestException('Pinata credentials not configured');
@@ -265,36 +310,17 @@ export class IPFSService {
         }
       );
 
-      return response.data.rows.map((pin: any) => ({
-        cid: pin.ipfs_pin_hash,
-        ipfsUrl: `https://${this.pinataGatewayUrl}/ipfs/${pin.ipfs_pin_hash}`,
-        pinSize: pin.size,
-        timestamp: pin.date_pinned
-      }));
+      return response.data.rows || [];
     } catch (error) {
-      this.logger.error('Failed to list pinned files:', error);
-      throw new BadRequestException('Failed to list files');
+      this.logger.error('Failed to list files from IPFS:', error);
+      throw new BadRequestException(`Failed to list files from IPFS: ${error.message}`);
     }
   }
 
   /**
-   * Get file URL
+   * Get IPFS URL for a CID
    */
-  getFileUrl(cid: string): string {
+  getIPFSUrl(cid: string): string {
     return `https://${this.pinataGatewayUrl}/ipfs/${cid}`;
-  }
-
-  /**
-   * Validate file
-   */
-  validateFile(file: Buffer, maxSize: number = 10 * 1024 * 1024): { valid: boolean; error?: string } {
-    if (file.length > maxSize) {
-      return {
-        valid: false,
-        error: `File size exceeds ${Math.round(maxSize / 1024 / 1024)}MB limit`
-      };
-    }
-
-    return { valid: true };
   }
 }

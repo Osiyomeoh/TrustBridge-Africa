@@ -2,6 +2,5 @@
 /* tslint:disable */
 /* eslint-disable */
 export { IAssetFactory__factory } from "./IAssetFactory__factory";
-export { IAttestorManager__factory } from "./IAttestorManager__factory";
-export { IPolicyManager__factory } from "./IPolicyManager__factory";
+export { IPoolFactory__factory } from "./IPoolFactory__factory";
 export { IVerificationRegistry__factory } from "./IVerificationRegistry__factory";

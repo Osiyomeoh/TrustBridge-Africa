@@ -103,7 +103,7 @@ __decorate([
 ], KycController.prototype, "handleWebhook", null);
 exports.KycController = KycController = __decorate([
     (0, swagger_1.ApiTags)('KYC'),
-    (0, common_1.Controller)('api/kyc'),
+    (0, common_1.Controller)('kyc'),
     __metadata("design:paramtypes", [kyc_service_1.KycService])
 ], KycController);
 //# sourceMappingURL=kyc.controller.js.map

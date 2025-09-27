@@ -64,5 +64,9 @@ export declare class VerificationService {
     private approveVerification;
     getVerificationStatus(assetId: string): Promise<VerificationRequest>;
     getAllVerifications(): Promise<VerificationRequest[]>;
+    getAttestorVerifications(attestorAddress: string): Promise<VerificationRequest[]>;
+    getUserVerifications(userId: string): Promise<VerificationRequest[]>;
     getVerificationById(id: string): Promise<VerificationRequest>;
+    createBulkMinimalVerifications(verifications: any[]): Promise<VerificationRequest[]>;
+    createBulkVerifications(verifications: any[]): Promise<VerificationRequest[]>;
 }

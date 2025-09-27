@@ -1,57 +1,235 @@
-# Sample Hardhat 3 Beta Project (`node:test` and `viem`)
+# TrustBridge Smart Contracts
 
-This project showcases a Hardhat 3 Beta project using the native Node.js test runner (`node:test`) and the `viem` library for Ethereum interactions.
+## 🌍 Overview
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+TrustBridge is a comprehensive real-world asset (RWA) tokenization platform built on Hedera Hashgraph, specifically designed for the African market. This repository contains all the smart contracts that power the TrustBridge ecosystem.
 
-## Project Overview
+## 📋 Contract Architecture
 
-This example project includes:
+### Core Contracts
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using [`node:test`](nodejs.org/api/test.html), the new Node.js native test runner, and [`viem`](https://viem.sh/).
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+1. **TrustToken.sol** - Native platform token (TRUST)
+2. **AssetFactory.sol** - Creates and manages individual asset tokens
+3. **PoolFactory.sol** - Creates investment pools with DROP/TIN tokens
+4. **TradingEngine.sol** - Secondary market trading platform
+5. **ProfessionalAttestor.sol** - Licensed verification providers
+6. **SPVManager.sol** - Special Purpose Vehicle for institutional compliance
+7. **Governance.sol** - DAO governance system
+8. **FeeDistribution.sol** - Protocol fee allocation
 
-## Usage
+### Supporting Contracts
 
-### Running Tests
+- **PoolToken.sol** - DROP (senior) and TIN (junior) tokens for pools
+- **PoolManager.sol** - Individual pool management
+- **AttestorManager.sol** - Attestor registration and reputation
+- **VerificationRegistry.sol** - Asset verification tracking
 
-To run all the tests in the project, execute the following command:
+## 🚀 Quick Start
 
-```shell
-npx hardhat test
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- Hedera testnet account
+
+### Installation
+
+```bash
+npm install
 ```
 
-You can also selectively run the Solidity or `node:test` tests:
+### Environment Setup
 
-```shell
-npx hardhat test solidity
-npx hardhat test nodejs
+Create a `.env` file:
+
+```env
+HEDERA_ACCOUNT_ID=0.0.123456
+HEDERA_PRIVATE_KEY=your-private-key
+HEDERA_NETWORK=testnet
 ```
 
-### Make a deployment to Sepolia
+### Compile Contracts
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
+```bash
+npm run compile
 ```
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
+### Run Tests
 
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
+```bash
+npm run test
 ```
 
-After setting the variable, you can run the deployment with the Sepolia network:
+### Deploy to Hedera Testnet
 
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
+```bash
+npm run deploy:testnet
 ```
+
+## 📊 Contract Features
+
+### 1. Asset Tokenization
+- Individual asset tokenization
+- KYC and freeze controls
+- Verification integration
+- Metadata storage
+
+### 2. Pool Management
+- DROP/TIN tranche structure
+- Professional fund management
+- Risk distribution
+- Automated rewards
+
+### 3. Trading Engine
+- Order book system
+- Automated matching
+- Fee management
+- Liquidity provision
+
+### 4. Professional Attestors
+- Licensed verification providers
+- Reputation system
+- Staking requirements
+- Slashing mechanism
+
+### 5. SPV Management
+- Institutional compliance
+- Investor management
+- Distribution automation
+- Regulatory reporting
+
+### 6. Governance
+- DAO voting system
+- Proposal management
+- Protocol upgrades
+- Parameter changes
+
+## 🔧 Development
+
+### Testing
+
+```bash
+# Run all tests
+npm run test
+
+# Run with coverage
+npm run test:coverage
+
+# Run gas report
+npm run gas-report
+```
+
+### Deployment
+
+```bash
+# Deploy to testnet
+npm run deploy:testnet
+
+# Deploy to mainnet
+npm run deploy:mainnet
+
+# Verify contracts
+npm run verify:testnet
+```
+
+### Contract Sizes
+
+```bash
+npm run size
+```
+
+## 📈 Fee Structure
+
+### Tokenization Fees
+- **Asset Tokenization**: 2% of asset value
+- **Pool Creation**: 0.1% of total pool value
+- **Trading**: 0.25% per trade
+
+### Management Fees
+- **Pool Management**: 1% annually
+- **SPV Management**: 1-2% annually
+- **Performance Fees**: 10-20% of profits
+
+### Fee Distribution
+- **Treasury**: 40%
+- **Stakers**: 30%
+- **Insurance**: 20%
+- **Validators**: 10%
+
+## 🛡️ Security Features
+
+- **Access Control**: Role-based permissions
+- **Pausable**: Emergency stop functionality
+- **ReentrancyGuard**: Protection against reentrancy attacks
+- **Upgradeable**: Proxy pattern for upgrades
+- **Audit Ready**: Comprehensive test coverage
+
+## 🌍 African Market Focus
+
+### Mobile Optimization
+- Gas-efficient operations
+- Low transaction costs
+- Offline capability support
+
+### Local Features
+- Multi-currency support
+- Local language metadata
+- Community verification
+- Micro-investment support
+
+## 📚 API Integration
+
+### Backend Integration
+- RESTful API endpoints
+- WebSocket real-time updates
+- Event monitoring
+- Transaction tracking
+
+### Frontend Integration
+- React components
+- Wallet integration
+- Real-time data
+- Mobile optimization
+
+## 🔍 Monitoring
+
+### Events
+- Contract events for all major operations
+- Real-time monitoring
+- Analytics integration
+- Alert system
+
+### Metrics
+- Transaction volume
+- Fee collection
+- User activity
+- Performance metrics
+
+## 🚀 Deployment
+
+### Testnet Deployment
+1. Configure Hedera testnet credentials
+2. Run `npm run deploy:testnet`
+3. Verify contracts
+4. Test functionality
+
+### Mainnet Deployment
+1. Configure Hedera mainnet credentials
+2. Run `npm run deploy:mainnet`
+3. Verify contracts
+4. Monitor operations
+
+## 📞 Support
+
+- **Documentation**: [docs.trustbridge.africa](https://docs.trustbridge.africa)
+- **Discord**: [discord.gg/trustbridge](https://discord.gg/trustbridge)
+- **GitHub**: [github.com/trustbridge](https://github.com/trustbridge)
+- **Email**: dev@trustbridge.africa
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+---
+
+**TrustBridge - Building the bridge between African assets and global capital markets** 🌍✨

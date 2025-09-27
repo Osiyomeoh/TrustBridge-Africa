@@ -18,7 +18,7 @@ export class PinFileRequestDto {
 }
 
 @ApiTags('IPFS')
-@Controller('api/ipfs')
+@Controller('ipfs')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class IPFSController {
@@ -30,16 +30,15 @@ export class IPFSController {
   @ApiResponse({ status: 400, description: 'Invalid request' })
   async generatePresignedUrl(@Body() request: PresignedUrlRequestDto) {
     try {
-      const { url, fields } = await this.ipfsService.generatePresignedUrl(
+      const result = await this.ipfsService.generatePresignedUrl(
         request.fileName,
-        request.fileSize,
         request.fileType,
         request.metadata
       );
 
       return {
         success: true,
-        data: { url, fields },
+        data: result,
         message: 'Presigned URL generated successfully'
       };
     } catch (error) {
@@ -93,9 +92,10 @@ export class IPFSController {
         message: 'File uploaded successfully'
       };
     } catch (error) {
+      console.error('IPFS upload error in controller:', error);
       return {
         success: false,
-        message: 'Upload failed',
+        message: `Upload failed: ${error.message}`,
         error: error.message
       };
     }
@@ -107,11 +107,12 @@ export class IPFSController {
   @ApiResponse({ status: 400, description: 'Pin failed' })
   async pinFile(@Body() request: PinFileRequestDto) {
     try {
-      const success = await this.ipfsService.pinFile(request.cid, request.metadata);
+      const result = await this.ipfsService.pinFile(request.cid, request.metadata?.name);
 
       return {
-        success,
-        message: success ? 'File pinned successfully' : 'Failed to pin file'
+        success: true,
+        data: result,
+        message: 'File pinned successfully'
       };
     } catch (error) {
       return {
@@ -149,7 +150,7 @@ export class IPFSController {
   @ApiResponse({ status: 404, description: 'File not found' })
   async getFile(@Param('cid') cid: string, @Res() res: Response) {
     try {
-      const fileUrl = this.ipfsService.getFileUrl(cid);
+      const fileUrl = this.ipfsService.getIPFSUrl(cid);
       
       // Redirect to the IPFS URL
       res.redirect(fileUrl);
@@ -193,7 +194,7 @@ export class IPFSController {
   @ApiResponse({ status: 400, description: 'Failed to list files' })
   async listPinnedFiles() {
     try {
-      const files = await this.ipfsService.listPinnedFiles();
+      const files = await this.ipfsService.listFiles();
 
       return {
         success: true,
@@ -214,7 +215,7 @@ export class IPFSController {
   @ApiResponse({ status: 200, description: 'URL retrieved successfully' })
   async getFileUrl(@Param('cid') cid: string) {
     try {
-      const url = this.ipfsService.getFileUrl(cid);
+      const url = this.ipfsService.getIPFSUrl(cid);
 
       return {
         success: true,

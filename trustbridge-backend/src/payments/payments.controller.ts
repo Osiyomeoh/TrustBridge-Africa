@@ -33,7 +33,7 @@ export class RefundPaymentDto {
 }
 
 @ApiTags('Payments')
-@Controller('api/payments')
+@Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 

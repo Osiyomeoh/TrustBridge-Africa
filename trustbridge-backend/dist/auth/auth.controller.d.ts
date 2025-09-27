@@ -217,6 +217,31 @@ export declare class AuthController {
         error: any;
         data?: undefined;
     }>;
+    createOnfidoSession(body: {
+        vendorData?: string;
+        verificationType?: string;
+    }): Promise<{
+        success: boolean;
+        data: any;
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    getOnfidoSessionStatus(sessionId: string): Promise<{
+        success: boolean;
+        data: any;
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
     generateToken(body: {
         walletAddress: string;
     }): Promise<{

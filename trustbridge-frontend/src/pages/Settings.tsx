@@ -2,11 +2,17 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/UI/Card';
 import Button from '../components/UI/Button';
-import { User, Bell, Shield, Wallet, Globe, Moon, Sun, LogOut, Save, Key, Eye, EyeOff } from 'lucide-react';
+import { User, Bell, Shield, Wallet, Globe, Moon, Sun, LogOut, Save, Key, Eye, EyeOff, Coins } from 'lucide-react';
+import { useWallet } from '../contexts/WalletContext';
+import { useTrustTokenBalance } from '../hooks/useTrustTokenBalance';
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'security' | 'wallet' | 'preferences'>('profile');
   const [showPrivateKey, setShowPrivateKey] = useState(false);
+  
+  // Wallet and token balances
+  const { balance: hbarBalance, address, isConnected } = useWallet();
+  const { balance: trustBalance, loading: trustLoading } = useTrustTokenBalance();
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -233,11 +239,37 @@ const Settings: React.FC = () => {
               <CardContent className="space-y-6">
                 <div className="p-4 bg-dark-gray/30 rounded-lg">
                   <h3 className="font-semibold text-off-white mb-2">Connected Wallet</h3>
-                  <p className="text-sm text-off-white/70 mb-4">HashPack Wallet</p>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-neon-green rounded-full animate-pulse"></div>
-                    <span className="text-sm text-neon-green">Connected</span>
+                  <p className="text-sm text-off-white/70 mb-4">MetaMask Wallet</p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-neon-green animate-pulse' : 'bg-red-500'}`}></div>
+                    <span className={`text-sm ${isConnected ? 'text-neon-green' : 'text-red-500'}`}>
+                      {isConnected ? 'Connected' : 'Not Connected'}
+                    </span>
                   </div>
+                  
+                  {/* Wallet Balances */}
+                  {isConnected && (
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div className="p-3 bg-dark-gray/50 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Wallet className="w-4 h-4 text-electric-mint" />
+                          <span className="text-xs text-off-white/70">HBAR</span>
+                        </div>
+                        <p className="text-lg font-semibold text-electric-mint">
+                          {hbarBalance ? `${parseFloat(hbarBalance).toFixed(2)}` : '0.00'}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-dark-gray/50 rounded-lg">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Coins className="w-4 h-4 text-neon-green" />
+                          <span className="text-xs text-off-white/70">TRUST</span>
+                        </div>
+                        <p className="text-lg font-semibold text-neon-green">
+                          {trustLoading ? '...' : `${parseFloat(trustBalance).toFixed(2)}`}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -245,11 +277,18 @@ const Settings: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
-                      value="0x8f4e2a1b3c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2"
+                      value={address || 'Not connected'}
                       readOnly
                       className="flex-1 px-4 py-3 bg-dark-gray border border-neon-green/30 rounded-lg text-off-white font-mono text-sm"
                     />
-                    <Button variant="outline" size="sm">Copy</Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => address && navigator.clipboard.writeText(address)}
+                      disabled={!address}
+                    >
+                      Copy
+                    </Button>
                   </div>
                 </div>
 

@@ -65,7 +65,7 @@ export class TokenAssociationRequestDto {
 }
 
 @ApiTags('Hedera')
-@Controller('api/hedera')
+@Controller('hedera')
 export class HederaController {
   constructor(private readonly hederaService: HederaService) {}
 
@@ -228,6 +228,76 @@ export class HederaController {
     };
   }
 
+  @Post('create-dual-tokenization')
+  @ApiOperation({ summary: 'Create dual tokenization (ERC-721 + HTS) for an asset' })
+  @ApiResponse({ status: 201, description: 'Dual tokenization created successfully' })
+  async createDualTokenization(@Body() body: {
+    name: string;
+    symbol: string;
+    description: string;
+    imageURI: string;
+    owner: string;
+    category: string;
+    assetType: string;
+    totalValue: string;
+    erc721TokenId: string;
+    erc721AssetId: string;
+  }) {
+    const result = await this.hederaService.createDualTokenization(body);
+    return {
+      success: true,
+      data: result,
+      message: 'Dual tokenization created successfully'
+    };
+  }
+
+  @Get('user-assets/:userAddress')
+  @ApiOperation({ summary: 'Get all assets for a user using Hedera services' })
+  @ApiResponse({ status: 200, description: 'User assets retrieved successfully' })
+  async getUserAssets(@Param('userAddress') userAddress: string) {
+    const result = await this.hederaService.getUserAssets(userAddress);
+    return {
+      success: true,
+      data: result,
+      message: 'User assets retrieved successfully'
+    };
+  }
+
+  @Get('marketplace-data')
+  @ApiOperation({ summary: 'Get marketplace data using Hedera services' })
+  @ApiResponse({ status: 200, description: 'Marketplace data retrieved successfully' })
+  async getMarketplaceData() {
+    const result = await this.hederaService.getMarketplaceData();
+    return {
+      success: true,
+      data: result,
+      message: 'Marketplace data retrieved successfully'
+    };
+  }
+
+  @Post('update-dual-tokenization')
+  @ApiOperation({ summary: 'Update dual tokenization with ERC-721 data' })
+  @ApiResponse({ status: 200, description: 'Dual tokenization updated successfully' })
+  async updateDualTokenization(@Body() body: {
+    erc721TokenId: string;
+    erc721AssetId: string;
+    name: string;
+    symbol: string;
+    description: string;
+    imageURI: string;
+    owner: string;
+    category: string;
+    assetType: string;
+    totalValue: string;
+  }) {
+    const result = await this.hederaService.updateDualTokenization(body);
+    return {
+      success: true,
+      data: result,
+      message: 'Dual tokenization updated successfully'
+    };
+  }
+
   @Get('health')
   @ApiOperation({ summary: 'Health check for Hedera services' })
   @ApiResponse({ status: 200, description: 'Health status' })
@@ -238,6 +308,46 @@ export class HederaController {
       data: { healthy: isHealthy },
       message: isHealthy ? 'Hedera services are healthy' : 'Hedera services are not responding'
     };
+  }
+
+  @Post('test-hts-simple')
+  @ApiOperation({ summary: 'Test simple HTS token creation' })
+  @ApiResponse({ status: 200, description: 'HTS test completed' })
+  async testHTSSimple() {
+    try {
+      const result = await this.hederaService.testSimpleHTSToken();
+      return {
+        success: true,
+        data: result,
+        message: 'Simple HTS test completed successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Simple HTS test failed'
+      };
+    }
+  }
+
+  @Post('test-hfs-hcs')
+  @ApiOperation({ summary: 'Test HFS + HCS integration (simplest flow)' })
+  @ApiResponse({ status: 200, description: 'HFS + HCS test completed' })
+  async testHFSHCS() {
+    try {
+      const result = await this.hederaService.testHFSHCSIntegration();
+      return {
+        success: true,
+        data: result,
+        message: 'HFS + HCS test completed successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'HFS + HCS test failed'
+      };
+    }
   }
 
   // KYC Management Endpoints

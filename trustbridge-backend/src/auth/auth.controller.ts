@@ -155,7 +155,7 @@ export class UpdateKYCStatusDto {
 }
 
 @ApiTags('Authentication')
-@Controller('api/auth')
+@Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -550,6 +550,49 @@ export class AuthController {
         success: false,
         message: 'Failed to get session status',
         error: error.message,
+      };
+    }
+  }
+
+  // Onfido Attestor Verification Endpoints
+  @Post('onfido/session')
+  @ApiOperation({ summary: 'Create Onfido verification session for attestors' })
+  @ApiResponse({ status: 200, description: 'Onfido session created successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to create Onfido session' })
+  async createOnfidoSession(@Body() body: { vendorData?: string; verificationType?: string }) {
+    try {
+      const result = await this.authService.createOnfidoSession(body.vendorData, body.verificationType);
+      return {
+        success: true,
+        data: result,
+        message: 'Onfido session created successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to create Onfido session'
+      };
+    }
+  }
+
+  @Get('onfido/session/:sessionId')
+  @ApiOperation({ summary: 'Get Onfido session status' })
+  @ApiResponse({ status: 200, description: 'Session status retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Failed to get session status' })
+  async getOnfidoSessionStatus(@Param('sessionId') sessionId: string) {
+    try {
+      const result = await this.authService.getOnfidoSessionStatus(sessionId);
+      return {
+        success: true,
+        data: result,
+        message: 'Session status retrieved successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to get session status'
       };
     }
   }

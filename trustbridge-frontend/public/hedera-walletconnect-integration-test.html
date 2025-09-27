@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hedera WalletConnect Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .button.success {
+            background: #28a745;
+        }
+        .button.danger {
+            background: #dc3545;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .status.warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .account-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            display: none;
+        }
+        .tokens-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            display: none;
+        }
+        .code-block {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .token-item {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .nft-item {
+            background: #fff3cd;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #ffc107;
+        }
+        .test-section {
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .test-section h4 {
+            margin-top: 0;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Hedera WalletConnect Integration Test</h1>
+        <p>Test Hedera wallet connection using your existing WalletConnect implementation with local libraries.</p>
+        
+        <div id="status" class="status info">
+            Ready to test Hedera WalletConnect integration...
+        </div>
+        
+        <div class="test-section">
+            <h4>1. Library & Environment Tests</h4>
+            <button id="testLibrariesBtn" class="button">Test Library Loading</button>
+            <button id="testConfigBtn" class="button" disabled>Test Configuration</button>
+            <button id="testMirrorNodeBtn" class="button" disabled>Test Mirror Node</button>
+        </div>
+        
+        <div class="test-section">
+            <h4>2. WalletConnect Integration Tests</h4>
+            <button id="initWalletConnectBtn" class="button" disabled>Initialize WalletConnect</button>
+            <button id="openModalBtn" class="button" disabled>Open Wallet Modal</button>
+            <button id="testConnectionBtn" class="button" disabled>Test Connection</button>
+            <button id="disconnectBtn" class="button" disabled>Disconnect</button>
+        </div>
+        
+        <div class="test-section">
+            <h4>3. Hedera Operations Tests</h4>
+            <button id="getAccountInfoBtn" class="button" disabled>Get Account Info</button>
+            <button id="getTokenBalancesBtn" class="button" disabled>Get Token Balances</button>
+            <button id="testTransferBtn" class="button" disabled>Test HBAR Transfer</button>
+        </div>
+        
+        <div id="accountInfo" class="account-info">
+            <h3>Account Information</h3>
+            <div id="accountDetails"></div>
+        </div>
+        
+        <div id="tokensInfo" class="tokens-info">
+            <h3>Token Balances</h3>
+            <div id="tokensList"></div>
+        </div>
+        
+        <div id="logs" class="code-block">
+            <h3>Debug Logs</h3>
+            <div id="logContent"></div>
+        </div>
+    </div>
+
+    <!-- Load libraries from local node_modules -->
+    <script type="module">
+        // Import from local node_modules
+        import { Client, AccountId, AccountBalanceQuery, AccountInfoQuery, LedgerId, TransferTransaction, TokenId, TokenAssociateTransaction } from '/node_modules/@hashgraph/sdk/dist/index.js';
+        import { DAppConnector, HederaJsonRpcMethod, HederaSessionEvent, HederaChainId } from '/node_modules/@hashgraph/hedera-wallet-connect/dist/index.js';
+        import { Web3Modal } from '/node_modules/@walletconnect/modal/dist/index.js';
+        
+        // Make available globally
+        window.HederaSdk = { 
+            Client, 
+            AccountId, 
+            AccountBalanceQuery, 
+            AccountInfoQuery, 
+            LedgerId,
+            TransferTransaction,
+            TokenId,
+            TokenAssociateTransaction
+        };
+        
+        window.HederaWalletConnect = {
+            DAppConnector,
+            HederaJsonRpcMethod,
+            HederaSessionEvent,
+            HederaChainId
+        };
+        
+        window.WalletConnect = {
+            Web3Modal
+        };
+        
+        console.log('Hedera SDK loaded from local node_modules');
+        
+        // Test configuration
+        const WALLETCONNECT_PROJECT_ID = "377d75bb6f86a2ffd427d032ff6ea7d3";
+        const HEDERA_NETWORK = "testnet";
+        const MIRROR_NODE_URL = "https://testnet.mirrornode.hedera.com";
+        
+        // State
+        let hederaClient = null;
+        let walletConnectInitialized = false;
+        let isConnected = false;
+        let accountId = null;
+        let dappConnector = null;
+        
+        // DOM elements
+        const statusEl = document.getElementById('status');
+        const logsEl = document.getElementById('logs');
+        const logContentEl = document.getElementById('logContent');
+        
+        // Utility functions
+        function updateStatus(message, type) {
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function addLog(message) {
+            logsEl.style.display = 'block';
+            logContentEl.textContent += new Date().toISOString() + ': ' + message + '\n';
+            logContentEl.scrollTop = logContentEl.scrollHeight;
+        }
+        
+        function updateButtons() {
+            const buttons = {
+                testLibrariesBtn: true,
+                testConfigBtn: window.HederaSdk ? true : false,
+                testMirrorNodeBtn: window.HederaSdk ? true : false,
+                initWalletConnectBtn: window.HederaSdk ? true : false,
+                openModalBtn: walletConnectInitialized,
+                testConnectionBtn: walletConnectInitialized,
+                disconnectBtn: isConnected,
+                getAccountInfoBtn: isConnected,
+                getTokenBalancesBtn: isConnected,
+                testTransferBtn: isConnected
+            };
+            
+            Object.entries(buttons).forEach(([id, enabled]) => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    btn.disabled = !enabled;
+                }
+            });
+        }
+        
+        // Test 1: Library Loading
+        function testLibraries() {
+            addLog('Testing library loading...');
+            
+            let results = '<h4>Library Test Results:</h4>';
+            
+            // Test Hedera SDK
+            if (window.HederaSdk) {
+                results += '<p>✅ Hedera SDK: Loaded successfully</p>';
+                results += `<p>   - Client: ${typeof window.HederaSdk.Client}</p>`;
+                results += `<p>   - AccountId: ${typeof window.HederaSdk.AccountId}</p>`;
+                addLog('✅ Hedera SDK loaded successfully');
+            } else {
+                results += '<p>❌ Hedera SDK: Failed to load</p>';
+                addLog('❌ Hedera SDK failed to load');
+            }
+            
+            // Test if we can create a client
+            try {
+                hederaClient = window.HederaSdk.Client.forTestnet();
+                results += '<p>✅ Hedera Client: Created successfully</p>';
+                addLog('✅ Hedera Client created successfully');
+            } catch (error) {
+                results += `<p>❌ Hedera Client: ${error.message}</p>`;
+                addLog(`❌ Hedera Client failed: ${error.message}`);
+            }
+            
+            document.getElementById('testConfigBtn').disabled = false;
+            document.getElementById('testMirrorNodeBtn').disabled = false;
+            document.getElementById('initWalletConnectBtn').disabled = false;
+            
+            addLog('Library tests completed');
+        }
+        
+        // Test 2: Configuration
+        function testConfig() {
+            addLog('Testing configuration...');
+            
+            let results = '<h4>Configuration Test Results:</h4>';
+            
+            // Test WalletConnect Project ID
+            if (WALLETCONNECT_PROJECT_ID) {
+                results += `<p>✅ WalletConnect Project ID: ${WALLETCONNECT_PROJECT_ID}</p>`;
+                addLog(`✅ WalletConnect Project ID: ${WALLETCONNECT_PROJECT_ID}`);
+            } else {
+                results += '<p>❌ WalletConnect Project ID: Missing</p>';
+                addLog('❌ WalletConnect Project ID missing');
+            }
+            
+            // Test Hedera Network
+            if (HEDERA_NETWORK) {
+                results += `<p>✅ Hedera Network: ${HEDERA_NETWORK}</p>`;
+                addLog(`✅ Hedera Network: ${HEDERA_NETWORK}`);
+            } else {
+                results += '<p>❌ Hedera Network: Missing</p>';
+                addLog('❌ Hedera Network missing');
+            }
+            
+            // Test Mirror Node URL
+            if (MIRROR_NODE_URL) {
+                results += `<p>✅ Mirror Node URL: ${MIRROR_NODE_URL}</p>`;
+                addLog(`✅ Mirror Node URL: ${MIRROR_NODE_URL}`);
+            } else {
+                results += '<p>❌ Mirror Node URL: Missing</p>';
+                addLog('❌ Mirror Node URL missing');
+            }
+            
+            addLog('Configuration tests completed');
+        }
+        
+        // Test 3: Mirror Node API
+        async function testMirrorNode() {
+            addLog('Testing Mirror Node API...');
+            
+            try {
+                // Test with a known testnet account
+                const testAccountId = '0.0.2'; // Hedera treasury account
+                
+                addLog(`Testing Mirror Node: ${MIRROR_NODE_URL}`);
+                
+                const response = await fetch(`${MIRROR_NODE_URL}/api/v1/accounts/${testAccountId}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addLog(`✅ Mirror Node API: Working`);
+                    addLog(`   Account: ${data.account}`);
+                    addLog(`   Balance: ${data.balance?.balance || 'N/A'}`);
+                } else {
+                    addLog(`❌ Mirror Node API: HTTP ${response.status}`);
+                }
+            } catch (error) {
+                addLog(`❌ Mirror Node API: ${error.message}`);
+            }
+        }
+        
+        // Test 4: Initialize WalletConnect
+        async function initWalletConnect() {
+            try {
+                addLog('Initializing WalletConnect...');
+                
+                // Check if WalletConnect libraries are available
+                if (typeof window.WalletConnect === 'undefined') {
+                    throw new Error('WalletConnect library not available. Please install @walletconnect/modal');
+                }
+                
+                if (typeof window.HederaWalletConnect === 'undefined') {
+                    throw new Error('Hedera WalletConnect library not available. Please install @hashgraph/hedera-wallet-connect');
+                }
+                
+                // Create metadata
+                const metadata = {
+                    name: "Hedera WalletConnect Test",
+                    description: "Test application for Hedera wallet connection",
+                    url: window.location.origin,
+                    icons: [window.location.origin + "/logo192.png"],
+                };
+                
+                // Create DApp connector
+                dappConnector = new window.HederaWalletConnect.DAppConnector(
+                    metadata,
+                    window.HederaSdk.LedgerId.fromString(HEDERA_NETWORK),
+                    WALLETCONNECT_PROJECT_ID,
+                    Object.values(window.HederaWalletConnect.HederaJsonRpcMethod),
+                    [window.HederaWalletConnect.HederaSessionEvent.ChainChanged, window.HederaWalletConnect.HederaSessionEvent.AccountsChanged],
+                    [window.HederaWalletConnect.HederaChainId.Testnet]
+                );
+                
+                await dappConnector.init();
+                walletConnectInitialized = true;
+                
+                addLog('✅ WalletConnect initialized successfully');
+                updateStatus('WalletConnect initialized successfully', 'success');
+                updateButtons();
+                
+            } catch (error) {
+                addLog(`❌ WalletConnect initialization failed: ${error.message}`);
+                updateStatus(`WalletConnect initialization failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test 5: Open Wallet Modal
+        async function openWalletModal() {
+            try {
+                addLog('Opening wallet modal...');
+                updateStatus('Opening wallet modal...', 'info');
+                
+                await dappConnector.openModal();
+                addLog('✅ Wallet modal opened');
+                
+            } catch (error) {
+                addLog(`❌ Failed to open wallet modal: ${error.message}`);
+                updateStatus(`Failed to open wallet modal: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test 6: Test Connection
+        function testConnection() {
+            addLog('Testing connection...');
+            
+            if (dappConnector && dappConnector.signers.length > 0) {
+                accountId = dappConnector.signers[0].getAccountId().toString();
+                isConnected = true;
+                
+                addLog(`✅ Connected! Account: ${accountId}`);
+                updateStatus(`Connected! Account: ${accountId}`, 'success');
+                
+                document.getElementById('accountInfo').style.display = 'block';
+                document.getElementById('accountDetails').innerHTML = `<strong>Account ID:</strong> ${accountId}`;
+                
+                updateButtons();
+            } else {
+                addLog('❌ No active connection');
+                updateStatus('No active connection', 'warning');
+            }
+        }
+        
+        // Test 7: Disconnect
+        async function disconnect() {
+            try {
+                addLog('Disconnecting...');
+                updateStatus('Disconnecting...', 'info');
+                
+                await dappConnector.disconnectAll();
+                
+                isConnected = false;
+                accountId = null;
+                
+                addLog('✅ Disconnected successfully');
+                updateStatus('Disconnected from wallet', 'info');
+                
+                document.getElementById('accountInfo').style.display = 'none';
+                document.getElementById('tokensInfo').style.display = 'none';
+                
+                updateButtons();
+                
+            } catch (error) {
+                addLog(`❌ Disconnection failed: ${error.message}`);
+                updateStatus(`Disconnection failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test 8: Get Account Info
+        async function getAccountInfo() {
+            try {
+                addLog('Getting account information...');
+                
+                const accountIdObj = window.HederaSdk.AccountId.fromString(accountId);
+                
+                // Get account balance
+                const balanceQuery = new window.HederaSdk.AccountBalanceQuery()
+                    .setAccountId(accountIdObj);
+                const accountBalance = await balanceQuery.execute(hederaClient);
+                
+                // Get account info
+                const infoQuery = new window.HederaSdk.AccountInfoQuery()
+                    .setAccountId(accountIdObj);
+                const accountInfo = await infoQuery.execute(hederaClient);
+                
+                const info = `
+<strong>Account ID:</strong> ${accountId}
+<strong>Balance:</strong> ${accountBalance.hbars.toString()} HBAR
+<strong>Key:</strong> ${accountInfo.key.toString()}
+<strong>Memo:</strong> ${accountInfo.accountMemo || 'None'}
+<strong>Is Deleted:</strong> ${accountInfo.isDeleted}
+<strong>Auto Renew Period:</strong> ${accountInfo.autoRenewPeriod.toString()}
+                `;
+                
+                document.getElementById('accountDetails').innerHTML = info;
+                addLog('✅ Account information retrieved successfully');
+                
+            } catch (error) {
+                addLog(`❌ Failed to get account info: ${error.message}`);
+                updateStatus(`Failed to get account info: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test 9: Get Token Balances
+        async function getTokenBalances() {
+            try {
+                addLog('Getting token balances from Mirror Node...');
+                
+                const response = await fetch(`${MIRROR_NODE_URL}/api/v1/accounts/${accountId}/tokens?limit=100`);
+                const data = await response.json();
+                
+                if (data.tokens && data.tokens.length > 0) {
+                    document.getElementById('tokensInfo').style.display = 'block';
+                    let tokensHtml = '';
+                    
+                    for (const token of data.tokens) {
+                        // Get token info
+                        const tokenInfoResponse = await fetch(`${MIRROR_NODE_URL}/api/v1/tokens/${token.token_id}`);
+                        const tokenInfo = await tokenInfoResponse.json();
+                        
+                        const tokenHtml = `
+                            <div class="token-item">
+                                <strong>${tokenInfo.name || 'Unknown'}</strong> (${tokenInfo.symbol || 'N/A'})
+                                <br>Token ID: ${token.token_id}
+                                <br>Balance: ${token.balance}
+                                <br>Type: ${tokenInfo.type || 'Unknown'}
+                                ${tokenInfo.decimals ? `<br>Decimals: ${tokenInfo.decimals}` : ''}
+                            </div>
+                        `;
+                        tokensHtml += tokenHtml;
+                    }
+                    
+                    document.getElementById('tokensList').innerHTML = tokensHtml;
+                    addLog(`✅ Found ${data.tokens.length} tokens`);
+                } else {
+                    document.getElementById('tokensInfo').style.display = 'block';
+                    document.getElementById('tokensList').innerHTML = '<p>No tokens found for this account.</p>';
+                    addLog('No tokens found');
+                }
+                
+            } catch (error) {
+                addLog(`❌ Failed to get token balances: ${error.message}`);
+                updateStatus(`Failed to get token balances: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test 10: Test HBAR Transfer (simulation)
+        async function testTransfer() {
+            try {
+                addLog('Testing HBAR transfer (simulation)...');
+                
+                // This would be a real transfer in a production app
+                // For testing, we'll just simulate the transaction creation
+                const toAddress = window.HederaSdk.AccountId.fromString("0.0.2"); // Treasury account
+                const amount = 1; // 1 tinybar
+                
+                const transferTransaction = new window.HederaSdk.TransferTransaction()
+                    .addHbarTransfer(window.HederaSdk.AccountId.fromString(accountId), -amount)
+                    .addHbarTransfer(toAddress, amount);
+                
+                addLog(`✅ Transfer transaction created: ${amount} tinybar to ${toAddress.toString()}`);
+                addLog('Note: This is a simulation. In production, you would sign and execute the transaction.');
+                
+                updateStatus('Transfer simulation completed', 'success');
+                
+            } catch (error) {
+                addLog(`❌ Transfer test failed: ${error.message}`);
+                updateStatus(`Transfer test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Make functions available globally
+        window.testLibraries = testLibraries;
+        window.testConfig = testConfig;
+        window.testMirrorNode = testMirrorNode;
+        window.initWalletConnect = initWalletConnect;
+        window.openWalletModal = openWalletModal;
+        window.testConnection = testConnection;
+        window.disconnect = disconnect;
+        window.getAccountInfo = getAccountInfo;
+        window.getTokenBalances = getTokenBalances;
+        window.testTransfer = testTransfer;
+        
+        // Auto-run library test
+        setTimeout(testLibraries, 1000);
+    </script>
+
+    <script>
+        // Event listeners
+        document.getElementById('testLibrariesBtn').addEventListener('click', () => {
+            if (window.testLibraries) window.testLibraries();
+        });
+        
+        document.getElementById('testConfigBtn').addEventListener('click', () => {
+            if (window.testConfig) window.testConfig();
+        });
+        
+        document.getElementById('testMirrorNodeBtn').addEventListener('click', () => {
+            if (window.testMirrorNode) window.testMirrorNode();
+        });
+        
+        document.getElementById('initWalletConnectBtn').addEventListener('click', () => {
+            if (window.initWalletConnect) window.initWalletConnect();
+        });
+        
+        document.getElementById('openModalBtn').addEventListener('click', () => {
+            if (window.openWalletModal) window.openWalletModal();
+        });
+        
+        document.getElementById('testConnectionBtn').addEventListener('click', () => {
+            if (window.testConnection) window.testConnection();
+        });
+        
+        document.getElementById('disconnectBtn').addEventListener('click', () => {
+            if (window.disconnect) window.disconnect();
+        });
+        
+        document.getElementById('getAccountInfoBtn').addEventListener('click', () => {
+            if (window.getAccountInfo) window.getAccountInfo();
+        });
+        
+        document.getElementById('getTokenBalancesBtn').addEventListener('click', () => {
+            if (window.getTokenBalances) window.getTokenBalances();
+        });
+        
+        document.getElementById('testTransferBtn').addEventListener('click', () => {
+            if (window.testTransfer) window.testTransfer();
+        });
+    </script>
+</body>
+</html>

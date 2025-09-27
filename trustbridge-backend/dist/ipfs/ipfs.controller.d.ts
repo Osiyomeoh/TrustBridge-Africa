@@ -15,10 +15,7 @@ export declare class IPFSController {
     constructor(ipfsService: IPFSService);
     generatePresignedUrl(request: PresignedUrlRequestDto): Promise<{
         success: boolean;
-        data: {
-            url: string;
-            fields: Record<string, string>;
-        };
+        data: import("./ipfs.service").IPFSPresignedUrlResult;
         message: string;
         error?: undefined;
     } | {
@@ -45,12 +42,14 @@ export declare class IPFSController {
     }>;
     pinFile(request: PinFileRequestDto): Promise<{
         success: boolean;
+        data: IPFSUploadResult;
         message: string;
         error?: undefined;
     } | {
         success: boolean;
         message: string;
         error: any;
+        data?: undefined;
     }>;
     unpinFile(cid: string): Promise<{
         success: boolean;
@@ -69,7 +68,7 @@ export declare class IPFSController {
         error?: undefined;
     } | {
         success: boolean;
-        data: IPFSFileMetadata;
+        data: any;
         message: string;
         error?: undefined;
     } | {
@@ -80,7 +79,7 @@ export declare class IPFSController {
     }>;
     listPinnedFiles(): Promise<{
         success: boolean;
-        data: IPFSUploadResult[];
+        data: any[];
         message: string;
         error?: undefined;
     } | {

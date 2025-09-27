@@ -57,7 +57,7 @@ __decorate([
 ], PortfolioController.prototype, "getPortfolio", null);
 exports.PortfolioController = PortfolioController = __decorate([
     (0, swagger_1.ApiTags)('Portfolio'),
-    (0, common_1.Controller)('api/portfolio'),
+    (0, common_1.Controller)('portfolio'),
     __metadata("design:paramtypes", [portfolio_service_1.PortfolioService])
 ], PortfolioController);
 //# sourceMappingURL=portfolio.controller.js.map

@@ -75,6 +75,8 @@ export declare class AuthService {
     verifyDiditWebhookSignature(req: any): Promise<boolean>;
     createDiditSession(vendorData?: string, workflowId?: string): Promise<any>;
     getDiditSessionStatus(sessionId: string): Promise<any>;
+    createOnfidoSession(vendorData?: string, verificationType?: string): Promise<any>;
+    getOnfidoSessionStatus(sessionId: string): Promise<any>;
     generateTokenForVerifiedUser(walletAddress: string): Promise<{
         user: User;
         accessToken: string;

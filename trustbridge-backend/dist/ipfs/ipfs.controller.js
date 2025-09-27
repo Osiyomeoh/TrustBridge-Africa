@@ -30,10 +30,10 @@ let IPFSController = class IPFSController {
     }
     async generatePresignedUrl(request) {
         try {
-            const { url, fields } = await this.ipfsService.generatePresignedUrl(request.fileName, request.fileSize, request.fileType, request.metadata);
+            const result = await this.ipfsService.generatePresignedUrl(request.fileName, request.fileType, request.metadata);
             return {
                 success: true,
-                data: { url, fields },
+                data: result,
                 message: 'Presigned URL generated successfully'
             };
         }
@@ -70,19 +70,21 @@ let IPFSController = class IPFSController {
             };
         }
         catch (error) {
+            console.error('IPFS upload error in controller:', error);
             return {
                 success: false,
-                message: 'Upload failed',
+                message: `Upload failed: ${error.message}`,
                 error: error.message
             };
         }
     }
     async pinFile(request) {
         try {
-            const success = await this.ipfsService.pinFile(request.cid, request.metadata);
+            const result = await this.ipfsService.pinFile(request.cid, request.metadata?.name);
             return {
-                success,
-                message: success ? 'File pinned successfully' : 'Failed to pin file'
+                success: true,
+                data: result,
+                message: 'File pinned successfully'
             };
         }
         catch (error) {
@@ -111,7 +113,7 @@ let IPFSController = class IPFSController {
     }
     async getFile(cid, res) {
         try {
-            const fileUrl = this.ipfsService.getFileUrl(cid);
+            const fileUrl = this.ipfsService.getIPFSUrl(cid);
             res.redirect(fileUrl);
         }
         catch (error) {
@@ -143,7 +145,7 @@ let IPFSController = class IPFSController {
     }
     async listPinnedFiles() {
         try {
-            const files = await this.ipfsService.listPinnedFiles();
+            const files = await this.ipfsService.listFiles();
             return {
                 success: true,
                 data: files,
@@ -160,7 +162,7 @@ let IPFSController = class IPFSController {
     }
     async getFileUrl(cid) {
         try {
-            const url = this.ipfsService.getFileUrl(cid);
+            const url = this.ipfsService.getIPFSUrl(cid);
             return {
                 success: true,
                 data: { url },
@@ -262,7 +264,7 @@ __decorate([
 ], IPFSController.prototype, "getFileUrl", null);
 exports.IPFSController = IPFSController = __decorate([
     (0, swagger_1.ApiTags)('IPFS'),
-    (0, common_1.Controller)('api/ipfs'),
+    (0, common_1.Controller)('ipfs'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, swagger_1.ApiBearerAuth)(),
     __metadata("design:paramtypes", [ipfs_service_1.IPFSService])

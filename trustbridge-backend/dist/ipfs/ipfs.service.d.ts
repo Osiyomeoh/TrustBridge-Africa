@@ -1,17 +1,21 @@
 import { ConfigService } from '@nestjs/config';
+export interface IPFSFileMetadata {
+    name?: string;
+    description?: string;
+    location?: string;
+    [key: string]: any;
+}
 export interface IPFSUploadResult {
     cid: string;
     ipfsUrl: string;
     pinSize: number;
     timestamp: string;
 }
-export interface IPFSFileMetadata {
-    name: string;
-    type: string;
-    size: number;
-    description?: string;
-    category?: string;
-    tags?: string[];
+export interface IPFSPresignedUrlResult {
+    presignedUrl: string;
+    fields: Record<string, string>;
+    cid?: string;
+    ipfsUrl?: string;
 }
 export declare class IPFSService {
     private configService;
@@ -21,18 +25,12 @@ export declare class IPFSService {
     private readonly pinataJwt;
     private readonly pinataGatewayUrl;
     constructor(configService: ConfigService);
-    generatePresignedUrl(fileName: string, fileSize: number, fileType: string, metadata?: IPFSFileMetadata): Promise<{
-        url: string;
-        fields: Record<string, string>;
-    }>;
+    generatePresignedUrl(fileName: string, fileType: string, metadata?: IPFSFileMetadata): Promise<IPFSPresignedUrlResult>;
     uploadFile(file: Buffer, fileName: string, fileType: string, metadata?: IPFSFileMetadata): Promise<IPFSUploadResult>;
-    pinFile(cid: string, metadata?: IPFSFileMetadata): Promise<boolean>;
+    pinFile(cid: string, name?: string): Promise<IPFSUploadResult>;
     unpinFile(cid: string): Promise<boolean>;
-    getFileMetadata(cid: string): Promise<IPFSFileMetadata | null>;
-    listPinnedFiles(): Promise<IPFSUploadResult[]>;
-    getFileUrl(cid: string): string;
-    validateFile(file: Buffer, maxSize?: number): {
-        valid: boolean;
-        error?: string;
-    };
+    getFile(cid: string): Promise<Buffer>;
+    getFileMetadata(cid: string): Promise<any>;
+    listFiles(): Promise<any[]>;
+    getIPFSUrl(cid: string): string;
 }

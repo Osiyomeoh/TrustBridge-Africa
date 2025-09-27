@@ -114,12 +114,108 @@ export declare class HederaController {
         };
         message: string;
     }>;
+    createDualTokenization(body: {
+        name: string;
+        symbol: string;
+        description: string;
+        imageURI: string;
+        owner: string;
+        category: string;
+        assetType: string;
+        totalValue: string;
+        erc721TokenId: string;
+        erc721AssetId: string;
+    }): Promise<{
+        success: boolean;
+        data: {
+            erc721TokenId: string;
+            erc721AssetId: string;
+            htsTokenId: string;
+            htsTransactionId: string;
+            hcsMessageId: string;
+            hfsFileId?: string;
+        };
+        message: string;
+    }>;
+    getUserAssets(userAddress: string): Promise<{
+        success: boolean;
+        data: {
+            erc721Assets: any[];
+            htsAssets: any[];
+            totalAssets: number;
+            totalValue: number;
+        };
+        message: string;
+    }>;
+    getMarketplaceData(): Promise<{
+        success: boolean;
+        data: {
+            assets: any[];
+            totalListings: number;
+            totalValue: number;
+        };
+        message: string;
+    }>;
+    updateDualTokenization(body: {
+        erc721TokenId: string;
+        erc721AssetId: string;
+        name: string;
+        symbol: string;
+        description: string;
+        imageURI: string;
+        owner: string;
+        category: string;
+        assetType: string;
+        totalValue: string;
+    }): Promise<{
+        success: boolean;
+        data: {
+            erc721TokenId: string;
+            erc721AssetId: string;
+            htsTokenId: string;
+            htsTransactionId: string;
+            hcsMessageId: string;
+            hfsFileId?: string;
+        };
+        message: string;
+    }>;
     healthCheck(): Promise<{
         success: boolean;
         data: {
             healthy: boolean;
         };
         message: string;
+    }>;
+    testHTSSimple(): Promise<{
+        success: boolean;
+        data: {
+            tokenId: string;
+            transactionId: string;
+            balance: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    testHFSHCS(): Promise<{
+        success: boolean;
+        data: {
+            hfsFileId: string;
+            hcsMessageId: string;
+            hfsTransactionId: string;
+            hcsTransactionId: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
     }>;
     grantKYC(kycRequest: KYCRequestDto): Promise<{
         success: boolean;

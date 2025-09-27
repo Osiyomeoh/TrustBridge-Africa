@@ -2,6 +2,5 @@
 /* tslint:disable */
 /* eslint-disable */
 export type { IAssetFactory } from "./IAssetFactory";
-export type { IAttestorManager } from "./IAttestorManager";
-export type { IPolicyManager } from "./IPolicyManager";
+export type { IPoolFactory } from "./IPoolFactory";
 export type { IVerificationRegistry } from "./IVerificationRegistry";

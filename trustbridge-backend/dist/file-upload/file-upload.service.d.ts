@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { HederaService } from '../hedera/hedera.service';
 import { GoogleDriveService } from './google-drive.service';
+import { IPFSService } from '../ipfs/ipfs.service';
 export interface UploadedFile {
     id: string;
     originalName: string;
@@ -10,6 +11,8 @@ export interface UploadedFile {
     hash: string;
     uploadedAt: Date;
     hfsFileId?: string;
+    ipfsCid?: string;
+    ipfsUrl?: string;
     url?: string;
 }
 export interface FileAnalysis {
@@ -28,11 +31,12 @@ export declare class FileUploadService {
     private configService;
     private hederaService;
     private googleDriveService;
+    private ipfsService;
     private readonly logger;
     private readonly uploadDir;
     private readonly maxFileSize;
     private readonly allowedMimeTypes;
-    constructor(configService: ConfigService, hederaService: HederaService, googleDriveService: GoogleDriveService);
+    constructor(configService: ConfigService, hederaService: HederaService, googleDriveService: GoogleDriveService, ipfsService: IPFSService);
     private ensureUploadDir;
     uploadFile(file: Express.Multer.File, assetId: string, fileType: 'document' | 'photo' | 'evidence'): Promise<UploadedFile>;
     uploadMultipleFiles(files: Express.Multer.File[], assetId: string, fileType: 'documents' | 'photos' | 'evidence'): Promise<UploadedFile[]>;

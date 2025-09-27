@@ -146,7 +146,7 @@ __decorate([
 ], SmartVerificationController.prototype, "getVerificationTiers", null);
 exports.SmartVerificationController = SmartVerificationController = __decorate([
     (0, swagger_1.ApiTags)('Smart Verification'),
-    (0, common_1.Controller)('api/verification/smart'),
+    (0, common_1.Controller)('verification/smart'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, swagger_1.ApiBearerAuth)(),
     __metadata("design:paramtypes", [smart_verification_service_1.SmartVerificationService])

@@ -5,29 +5,30 @@ import { ArrowRight, TrendingUp, Shield, Globe, Users, Zap, Star, CheckCircle, M
 import { Link } from 'react-router-dom';
 import ThemeToggle from '../components/UI/ThemeToggle';
 import AnimatedBackground from '../components/UI/AnimatedBackground';
+import AuthStatus from '../components/Auth/AuthStatus';
 
 const Landing: React.FC = () => {
   console.log('Landing page rendered - user was redirected here');
   const features = [
     {
       icon: TrendingUp,
-      title: 'Asset Tokenization',
-      description: 'Convert real-world African assets into tradeable digital tokens'
+      title: 'Digital & Real-World Assets',
+      description: 'Trade digital art, NFTs, and tokenized African real estate in one platform'
     },
     {
       icon: Shield,
       title: 'Professional Verification',
-      description: 'Expert attestors verify asset authenticity and value'
+      description: 'Expert attestors verify asset authenticity and value for RWA assets'
     },
     {
       icon: Globe,
       title: 'Global Investment Access',
-      description: 'Connect African assets with international investors'
+      description: 'Connect African assets with international investors worldwide'
     },
     {
       icon: Users,
-      title: 'Real-time Analytics',
-      description: 'Track performance and market trends live'
+      title: 'Enhanced Minting',
+      description: 'Create collections, batch mint, and add rarity to your digital assets'
     }
   ];
 
@@ -41,22 +42,22 @@ const Landing: React.FC = () => {
   const steps = [
     {
       number: '01',
-      title: 'List Your Asset',
-      description: 'Asset owners submit properties for tokenization with detailed documentation'
+      title: 'Connect & Browse',
+      description: 'Connect your wallet and browse digital art, NFTs, and real-world assets'
     },
     {
       number: '02',
-      title: 'Professional Verification',
-      description: 'Expert attestors verify authenticity, location, and market value'
+      title: 'Create Digital Assets',
+      description: 'Mint digital art, NFTs, and collections instantly with enhanced minting features'
     },
     {
       number: '03',
-      title: 'Tokenization',
-      description: 'Verified assets are converted to tradeable tokens on Hedera blockchain'
+      title: 'List RWA Assets',
+      description: 'Submit real-world assets for professional verification and tokenization'
     },
     {
       number: '04',
-      title: 'Global Investment',
+      title: 'Trade & Invest',
       description: 'Investors worldwide can purchase tokens and track performance'
     }
   ];
@@ -65,6 +66,26 @@ const Landing: React.FC = () => {
     <div className="min-h-screen bg-black text-off-white relative overflow-hidden dark:bg-black light:bg-light-bg dark:text-off-white light:text-light-text">
       {/* Animated Background */}
       <AnimatedBackground />
+
+      {/* Header */}
+      <div className="bg-gray-900/50 border-b border-gray-700/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-neon-green to-emerald-500 rounded-lg flex items-center justify-center">
+                <span className="text-black font-bold text-sm">TB</span>
+              </div>
+              <span className="text-lg font-semibold text-off-white">TrustBridge</span>
+            </div>
+
+            {/* Auth Status */}
+            <div className="flex items-center space-x-4">
+              <AuthStatus />
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="relative z-10">
         {/* Navigation */}
@@ -84,7 +105,9 @@ const Landing: React.FC = () => {
             <a href="#features" className="text-off-white hover:text-neon-green transition-colors text-sm xl:text-base">Features</a>
             <a href="#how-it-works" className="text-off-white hover:text-neon-green transition-colors text-sm xl:text-base">How It Works</a>
             <ThemeToggle />
-            <Button variant="ghost" size="sm">Sign In</Button>
+            <Link to="/get-test-tokens">
+              <Button variant="ghost" size="sm">Get Test Tokens</Button>
+            </Link>
             <Link to="/auth">
               <Button variant="neon" size="sm">Get Started</Button>
             </Link>
@@ -93,7 +116,9 @@ const Landing: React.FC = () => {
           {/* Tablet Navigation */}
           <div className="hidden md:flex lg:hidden items-center gap-3">
             <ThemeToggle />
-            <Button variant="ghost" size="sm">Sign In</Button>
+            <Link to="/get-test-tokens">
+              <Button variant="ghost" size="sm">Get Test Tokens</Button>
+            </Link>
             <Link to="/auth">
               <Button variant="neon" size="sm">Get Started</Button>
             </Link>
@@ -102,7 +127,9 @@ const Landing: React.FC = () => {
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-2">
             <ThemeToggle />
-            <Button variant="ghost" size="sm">Sign In</Button>
+            <Link to="/get-test-tokens">
+              <Button variant="ghost" size="sm">Test Tokens</Button>
+            </Link>
             <Link to="/auth">
               <Button variant="neon" size="sm">Get Started</Button>
             </Link>
@@ -161,7 +188,7 @@ const Landing: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4, duration: 0.6 }}
                 >
-                  ASSETS
+                  DIGITAL & REAL-WORLD
                 </motion.span>
                 <motion.span 
                   className="block text-white outlined-text drop-shadow-2xl dark:text-white light:text-black"
@@ -169,7 +196,7 @@ const Landing: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5, duration: 0.6 }}
                 >
-                  TOKENIZED
+                  ASSETS
                 </motion.span>
               </h1>
 
@@ -179,8 +206,8 @@ const Landing: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6, duration: 0.6 }}
               >
-                Transform African farms, properties, and infrastructure into tradeable digital assets. 
-                <span className="text-neon-green font-bold dark:text-neon-green light:text-neon-green"> TrustBridge</span> connects African entrepreneurs with global investors through blockchain technology.
+                Discover, create, and trade digital art, NFTs, and real-world African assets in one unified marketplace. 
+                <span className="text-neon-green font-bold dark:text-neon-green light:text-neon-green"> TrustBridge</span> connects creators, investors, and communities through blockchain technology.
               </motion.p>
 
               <motion.div
@@ -189,16 +216,18 @@ const Landing: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.7, duration: 0.6 }}
               >
-                <Link to="/auth">
+                <Link to="/dashboard/marketplace">
                   <Button variant="primary" size="lg" className="group w-full sm:w-auto">
-                    Start Investing
+                    Launch App
                     <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
-                <Button variant="outline" size="lg" className="group w-full sm:w-auto">
-                  List Your Asset
-                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
+                <Link to="/dashboard/marketplace">
+                  <Button variant="outline" size="lg" className="group w-full sm:w-auto">
+                    Browse Assets
+                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
               </motion.div>
             </motion.div>
 

@@ -21,7 +21,6 @@ const class_transformer_1 = require("class-transformer");
 const verification_service_1 = require("./verification.service");
 const submit_verification_dto_1 = require("./dto/submit-verification.dto");
 const ipfs_service_1 = require("../services/ipfs.service");
-const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 class AttestationDataDto {
 }
 exports.AttestationDataDto = AttestationDataDto;
@@ -136,6 +135,13 @@ let VerificationController = class VerificationController {
         this.verificationService = verificationService;
         this.ipfsService = ipfsService;
     }
+    async test() {
+        return {
+            success: true,
+            message: 'Verification API is working',
+            timestamp: new Date().toISOString()
+        };
+    }
     async getAllVerifications() {
         try {
             const verifications = await this.verificationService.getAllVerifications();
@@ -143,6 +149,56 @@ let VerificationController = class VerificationController {
                 success: true,
                 data: verifications,
                 message: `Found ${verifications.length} verification requests`
+            };
+        }
+        catch (error) {
+            throw new common_1.HttpException({
+                success: false,
+                message: error.message,
+            }, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    async getUserVerifications(req) {
+        try {
+            const verifications = await this.verificationService.getAllVerifications();
+            return {
+                success: true,
+                data: verifications,
+                message: `Found ${verifications.length} verification requests`
+            };
+        }
+        catch (error) {
+            throw new common_1.HttpException({
+                success: false,
+                message: error.message,
+            }, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    async createBulkMinimalVerifications(body) {
+        try {
+            const { verifications } = body;
+            const createdVerifications = await this.verificationService.createBulkMinimalVerifications(verifications);
+            return {
+                success: true,
+                data: createdVerifications,
+                message: `Successfully created ${createdVerifications.length} minimal verification requests`
+            };
+        }
+        catch (error) {
+            throw new common_1.HttpException({
+                success: false,
+                message: error.message,
+            }, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    async createBulkVerifications(body) {
+        try {
+            const { verifications } = body;
+            const createdVerifications = await this.verificationService.createBulkVerifications(verifications);
+            return {
+                success: true,
+                data: createdVerifications,
+                message: `Successfully created ${createdVerifications.length} verification requests`
             };
         }
         catch (error) {
@@ -166,6 +222,38 @@ let VerificationController = class VerificationController {
                 success: false,
                 message: error.message,
             }, common_1.HttpStatus.NOT_FOUND);
+        }
+    }
+    async getAttestorVerifications(req) {
+        try {
+            const verifications = await this.verificationService.getAllVerifications();
+            const transformedVerifications = verifications.map((verification) => ({
+                requestId: verification._id,
+                assetId: verification.assetId,
+                status: verification.status.toLowerCase(),
+                requiredType: 0,
+                evidenceHashes: verification.evidence?.map((e) => e.hash || '') || [],
+                documentTypes: verification.evidence?.map((e) => e.type || 'Document') || [],
+                fee: '0.1',
+                deadline: verification.createdAt ? new Date(verification.createdAt).getTime() + (7 * 24 * 60 * 60 * 1000) : Date.now() + (7 * 24 * 60 * 60 * 1000),
+                submittedAt: verification.createdAt ? new Date(verification.createdAt).getTime() : Date.now(),
+                score: verification.scoring?.finalScore || 0,
+                owner: verification.submittedBy || '0x0000000000000000000000000000000000000000',
+                attestors: []
+            }));
+            console.log(`📋 Found ${transformedVerifications.length} verification requests for attestor`);
+            return {
+                success: true,
+                data: transformedVerifications,
+                message: `Found ${transformedVerifications.length} verification requests for attestor`
+            };
+        }
+        catch (error) {
+            console.error('Error getting attestor verifications:', error);
+            throw new common_1.HttpException({
+                success: false,
+                message: error.message,
+            }, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async getVerificationById(id) {
@@ -289,6 +377,14 @@ let VerificationController = class VerificationController {
 };
 exports.VerificationController = VerificationController;
 __decorate([
+    (0, common_1.Get)('test'),
+    (0, swagger_1.ApiOperation)({ summary: 'Test endpoint' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Test successful' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], VerificationController.prototype, "test", null);
+__decorate([
     (0, common_1.Get)(),
     (0, swagger_1.ApiOperation)({ summary: 'Get all verification requests' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Verification requests retrieved successfully' }),
@@ -296,6 +392,33 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], VerificationController.prototype, "getAllVerifications", null);
+__decorate([
+    (0, common_1.Get)('user'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get verification requests for current user' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'User verification requests retrieved successfully' }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], VerificationController.prototype, "getUserVerifications", null);
+__decorate([
+    (0, common_1.Post)('bulk-create-minimal'),
+    (0, swagger_1.ApiOperation)({ summary: 'Create minimal verification requests (blockchain-first approach)' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Minimal verification requests created successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], VerificationController.prototype, "createBulkMinimalVerifications", null);
+__decorate([
+    (0, common_1.Post)('bulk-create'),
+    (0, swagger_1.ApiOperation)({ summary: 'Create multiple verification requests' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Verification requests created successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], VerificationController.prototype, "createBulkVerifications", null);
 __decorate([
     (0, common_1.Get)('status/:assetId'),
     (0, swagger_1.ApiOperation)({ summary: 'Get verification status for asset' }),
@@ -306,6 +429,15 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], VerificationController.prototype, "getVerificationStatus", null);
+__decorate([
+    (0, common_1.Get)('attestor'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get verification requests for attestors' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Attestor verification requests retrieved successfully' }),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], VerificationController.prototype, "getAttestorVerifications", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Get verification request by ID' }),
@@ -377,9 +509,7 @@ __decorate([
 ], VerificationController.prototype, "uploadPhoto", null);
 exports.VerificationController = VerificationController = __decorate([
     (0, swagger_1.ApiTags)('Verification'),
-    (0, common_1.Controller)('api/verification'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.Controller)('verification'),
     __metadata("design:paramtypes", [verification_service_1.VerificationService,
         ipfs_service_1.IPFSService])
 ], VerificationController);

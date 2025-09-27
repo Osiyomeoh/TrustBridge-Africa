@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/
 import { AttestorsService, ExternalPartyData, AttestationData, PerformanceData } from './attestors.service';
 
 @ApiTags('Attestors')
-@Controller('api/attestors')
+@Controller('attestors')
 export class AttestorsController {
   constructor(private readonly attestorsService: AttestorsService) {}
 
@@ -43,6 +43,105 @@ export class AttestorsController {
         success: false,
         error: error.message,
         message: 'Failed to register external party'
+      };
+    }
+  }
+
+  @Post('apply')
+  @ApiOperation({ summary: 'Apply to become an attestor (manual or automated verification)' })
+  @ApiResponse({ status: 201, description: 'Attestor application submitted successfully' })
+  async applyAsAttestor(@Body() applicationData: any) {
+    try {
+      // Check if this is a manual verification application
+      if (applicationData.verificationType === 'manual_verification') {
+        const result = await this.attestorsService.processManualAttestorApplication(applicationData);
+        return {
+          success: true,
+          data: result.data,
+          message: result.message
+        };
+      } else {
+        // Use the existing hybrid verification process
+        const result = await this.attestorsService.processAttestorApplication(applicationData);
+        return {
+          success: true,
+          data: result,
+          message: 'Attestor application submitted successfully and pending verification'
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to submit attestor application'
+      };
+    }
+  }
+
+  @Get('applications')
+  @ApiOperation({ summary: 'Get all attestor applications for admin review' })
+  @ApiResponse({ status: 200, description: 'List of attestor applications' })
+  async getAttestorApplications() {
+    try {
+      const applications = await this.attestorsService.getAllAttestorApplications();
+      return {
+        success: true,
+        data: applications,
+        message: `Found ${applications.length} attestor applications`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to get attestor applications'
+      };
+    }
+  }
+
+  @Put('applications/:id/approve')
+  @ApiOperation({ summary: 'Approve attestor application' })
+  @ApiParam({ name: 'id', description: 'Application ID' })
+  @ApiResponse({ status: 200, description: 'Application approved successfully' })
+  async approveAttestorApplication(
+    @Param('id') id: string,
+    @Body() body: { reviewerNotes?: string }
+  ) {
+    try {
+      const result = await this.attestorsService.approveAttestorApplication(id, body.reviewerNotes);
+      return {
+        success: true,
+        data: result,
+        message: 'Attestor application approved successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to approve application'
+      };
+    }
+  }
+
+  @Put('applications/:id/reject')
+  @ApiOperation({ summary: 'Reject attestor application' })
+  @ApiParam({ name: 'id', description: 'Application ID' })
+  @ApiResponse({ status: 200, description: 'Application rejected successfully' })
+  async rejectAttestorApplication(
+    @Param('id') id: string,
+    @Body() body: { reviewerNotes?: string }
+  ) {
+    try {
+      const result = await this.attestorsService.rejectAttestorApplication(id, body.reviewerNotes);
+      return {
+        success: true,
+        data: result,
+        message: 'Attestor application rejected'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to reject application'
       };
     }
   }

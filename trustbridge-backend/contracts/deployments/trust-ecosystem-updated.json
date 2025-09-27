@@ -1,0 +1,31 @@
+{
+  "network": "hedera_testnet",
+  "timestamp": "2025-09-26T07:09:43.037Z",
+  "deployer": "0xA6e8bf8E89Bd2c2BD37e308F275C4f52284a911F",
+  "trustTokenAddress": "0x170B35e97C217dBf63a500EaB884392F7BF6Ec34",
+  "assetNFTAddress": "0x42be9627C970D40248690F010b3c2a7F8C68576C",
+  "feeRecipient": "0xA6e8bf8E89Bd2c2BD37e308F275C4f52284a911F",
+  "contracts": {
+    "coreAssetFactory": "0xF743D30062Bc04c69fC2F07F216C0357F0bDdb76",
+    "trustMarketplace": "0x44C2e6BCAc1E91e3107616F4D0e03692fb853610",
+    "poolManager": "0x4F863bDAaE4611dF7df5C5eBa2fd42aAaA984646",
+    "tradingEngine": "0xc326cF6Ab5EF03B2Df5390463634Db9d778e01E7",
+    "attestorVerificationSystem": "0x5a109F8e0405Fa0034fFC41Dab805E1DBc84aE56",
+    "batchMinting": "0xF91BBA338533895852cF7108182cb4FF58E817f9",
+    "advancedMinting": "0x1A3bf7392234484D73727a5b7CE90832D4124128",
+    "assetNFT": "0x42be9627C970D40248690F010b3c2a7F8C68576C",
+    "verificationRegistry": "0xC2e5D63Da10A3139857D18Cf43eB93CE0133Ca4B",
+    "feeDistribution": "0xa00343B86a5531155F22d91899229124e6619843",
+    "spvManager": "0x10D7EfA83A38A8e37Bad40ac40aDDf7906c0cB43",
+    "timelock": "0x0000000000000000000000000000000000000000",
+    "governance": "0x0000000000000000000000000000000000000000"
+  },
+  "configuration": {
+    "tokenEconomy": "TRUST",
+    "gasCurrency": "HBAR",
+    "feeRecipient": "0xA6e8bf8E89Bd2c2BD37e308F275C4f52284a911F",
+    "totalSupply": "200000100.0",
+    "maxSupply": "1000000000.0"
+  },
+  "note": "Redeployed with new TrustToken address supporting public minting"
+}

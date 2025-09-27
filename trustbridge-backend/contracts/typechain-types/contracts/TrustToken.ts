@@ -42,6 +42,7 @@ export interface TrustTokenInterface extends Interface {
       | "hasRole"
       | "lockPeriods"
       | "mint"
+      | "mintTestTokens"
       | "name"
       | "pause"
       | "paused"
@@ -130,6 +131,10 @@ export interface TrustTokenInterface extends Interface {
     functionFragment: "mint",
     values: [AddressLike, BigNumberish]
   ): string;
+  encodeFunctionData(
+    functionFragment: "mintTestTokens",
+    values: [BigNumberish]
+  ): string;
   encodeFunctionData(functionFragment: "name", values?: undefined): string;
   encodeFunctionData(functionFragment: "pause", values?: undefined): string;
   encodeFunctionData(functionFragment: "paused", values?: undefined): string;
@@ -210,6 +215,10 @@ export interface TrustTokenInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "mint", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "mintTestTokens",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "name", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "pause", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "paused", data: BytesLike): Result;
@@ -494,6 +503,12 @@ export interface TrustToken extends BaseContract {
     "nonpayable"
   >;
 
+  mintTestTokens: TypedContractMethod<
+    [amount: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   name: TypedContractMethod<[], [string], "view">;
 
   pause: TypedContractMethod<[], [void], "nonpayable">;
@@ -620,6 +635,9 @@ export interface TrustToken extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "mintTestTokens"
+  ): TypedContractMethod<[amount: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "name"
   ): TypedContractMethod<[], [string], "view">;

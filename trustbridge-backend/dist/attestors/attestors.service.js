@@ -526,6 +526,233 @@ let AttestorsService = AttestorsService_1 = class AttestorsService {
             reason,
         });
     }
+    async processManualAttestorApplication(applicationData) {
+        try {
+            this.logger.log('Processing manual attestor application:', applicationData);
+            const { walletAddress, email, name, specializations, licenseNumber, licenseType, experience, organization, selectedTier, tierRequirements, uploadedDocuments, references, portfolio, verificationType, status } = applicationData;
+            if (!walletAddress || !email || !name || !specializations || !selectedTier) {
+                throw new common_1.BadRequestException('Missing required fields for attestor application');
+            }
+            const existingAttestor = await this.attestorModel.findOne({ address: walletAddress });
+            if (existingAttestor) {
+                throw new common_1.BadRequestException('Attestor with this wallet address already exists');
+            }
+            const attestor = new this.attestorModel({
+                address: walletAddress,
+                organizationName: organization || name,
+                type: 'APPRAISER',
+                organizationType: 'APPRAISER',
+                country: 'US',
+                region: 'Global',
+                specialties: specializations,
+                credentials: {
+                    licenseNumber,
+                    certifications: [licenseType],
+                    yearsExperience: experience || 1,
+                    registrationProof: 'manual_verification_pending',
+                },
+                contactInfo: {
+                    email,
+                    name,
+                    organization: organization || name,
+                },
+                verificationStatus: 'PENDING',
+                tier: selectedTier,
+                tierRequirements: tierRequirements,
+                uploadedDocuments: uploadedDocuments || [],
+                references: references || [],
+                portfolio: portfolio || [],
+                verificationType: verificationType || 'manual_verification',
+                status: status || 'pending_review',
+                submittedAt: new Date(),
+                createdAt: new Date(),
+                updatedAt: new Date()
+            });
+            await attestor.save();
+            this.logger.log(`Manual attestor application created: ${attestor._id}`);
+            return {
+                success: true,
+                data: {
+                    id: attestor._id,
+                    walletAddress: attestor.address,
+                    email: attestor.contactInfo.email,
+                    name: attestor.organizationName,
+                    tier: attestor.type,
+                    status: attestor.isActive ? 'active' : 'inactive',
+                    submittedAt: attestor.createdAt || new Date()
+                },
+                message: 'Attestor application submitted for manual review'
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to process manual attestor application:', error);
+            throw error;
+        }
+    }
+    async getAllAttestorApplications() {
+        try {
+            const applications = await this.attestorModel.find({
+                verificationType: 'manual_verification'
+            }).sort({ submittedAt: -1 });
+            return applications.map(app => ({
+                id: app._id,
+                walletAddress: app.address,
+                email: app.contactInfo.email,
+                name: app.organizationName,
+                specializations: app.specialties,
+                licenseNumber: app.credentials.licenseNumber,
+                licenseType: app.credentials.certifications[0],
+                experience: app.credentials.yearsExperience,
+                organization: app.organizationName,
+                selectedTier: app.type,
+                tierRequirements: app.credentials,
+                uploadedDocuments: [],
+                references: [],
+                portfolio: [],
+                status: app.isActive ? 'active' : 'inactive',
+                submittedAt: app.createdAt || new Date(),
+                reviewedAt: app.lastActivity,
+                reviewerNotes: app.rejectionReason
+            }));
+        }
+        catch (error) {
+            this.logger.error('Failed to get attestor applications:', error);
+            throw error;
+        }
+    }
+    async approveAttestorApplication(applicationId, reviewerNotes) {
+        try {
+            const application = await this.attestorModel.findById(applicationId);
+            if (!application) {
+                throw new common_1.BadRequestException('Application not found');
+            }
+            application.isActive = true;
+            application.lastActivity = new Date();
+            await application.save();
+            this.logger.log(`Attestor application approved: ${applicationId}`);
+            return {
+                id: application._id,
+                status: application.isActive ? 'active' : 'inactive',
+                reviewedAt: application.lastActivity,
+                reviewerNotes: reviewerNotes
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to approve attestor application:', error);
+            throw error;
+        }
+    }
+    async rejectAttestorApplication(applicationId, reviewerNotes) {
+        try {
+            const application = await this.attestorModel.findById(applicationId);
+            if (!application) {
+                throw new common_1.BadRequestException('Application not found');
+            }
+            application.isActive = false;
+            application.rejectionReason = reviewerNotes;
+            application.lastActivity = new Date();
+            await application.save();
+            this.logger.log(`Attestor application rejected: ${applicationId}`);
+            return {
+                id: application._id,
+                status: application.isActive ? 'active' : 'inactive',
+                reviewedAt: application.lastActivity,
+                reviewerNotes: application.rejectionReason
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to reject attestor application:', error);
+            throw error;
+        }
+    }
+    async processAttestorApplication(applicationData) {
+        try {
+            this.logger.log('Processing attestor application:', applicationData);
+            const { walletAddress, email, name, specializations, licenseNumber, licenseType, experience, organization, onfidoSessionId, onfidoVerificationData, verificationTier, requirements } = applicationData;
+            if (!walletAddress || !email || !name || !specializations || !licenseNumber) {
+                throw new common_1.BadRequestException('Missing required fields for attestor application');
+            }
+            const existingAttestor = await this.attestorModel.findOne({ address: walletAddress });
+            if (existingAttestor) {
+                throw new common_1.BadRequestException('Attestor with this wallet address already exists');
+            }
+            const attestor = new this.attestorModel({
+                address: walletAddress,
+                organizationName: organization || name,
+                type: 'APPRAISER',
+                organizationType: 'APPRAISER',
+                country: 'US',
+                region: 'Global',
+                specialties: specializations,
+                credentials: {
+                    licenseNumber,
+                    certifications: [licenseType],
+                    yearsExperience: experience || 1,
+                    registrationProof: onfidoSessionId,
+                },
+                contactInfo: {
+                    email,
+                    phone: '',
+                    address: '',
+                },
+                contactEmail: email,
+                contactPhone: '',
+                stakeAmount: requirements?.trustTokenStake || 10000,
+                reputation: 50,
+                isActive: false,
+                totalAttestations: 0,
+                successfulAttestations: 0,
+                averageResponseTime: 0,
+                lastActivity: new Date(),
+                verificationTier: verificationTier || 'tier1_enhanced_kyc',
+                verificationStatus: {
+                    basicKycCompleted: requirements?.kycCompleted || false,
+                    enhancedKycCompleted: requirements?.enhancedKycCompleted || false,
+                    professionalDocsVerified: requirements?.professionalDocsVerified || false,
+                    tier2ProfessionalReview: false,
+                    tier3InterviewCompleted: false,
+                    onfidoVerification: {
+                        sessionId: onfidoSessionId,
+                        verificationData: onfidoVerificationData,
+                        verifiedAt: new Date(),
+                    }
+                }
+            });
+            const savedAttestor = await attestor.save();
+            this.eventEmitter.emit('attestor.application.submitted', {
+                attestorId: savedAttestor._id,
+                walletAddress,
+                name,
+                email,
+                specializations,
+                verificationTier,
+                onfidoSessionId,
+            });
+            this.logger.log(`Attestor application submitted: ${savedAttestor._id} - Tier: ${verificationTier}`);
+            return {
+                attestorId: savedAttestor._id,
+                status: 'TIER1_COMPLETED',
+                verificationTier: 'tier1_enhanced_kyc',
+                message: 'Tier 1 (Enhanced KYC) completed successfully. Awaiting Tier 2 (Professional Review).',
+                nextSteps: [
+                    'Complete 10,000 TRUST token staking + $100 registration fee',
+                    'Wait for Tier 2 professional review (manual verification)',
+                    'Prepare for Tier 3 interview process',
+                    'Start receiving verification requests after full approval'
+                ],
+                requirements: {
+                    trustTokenStake: 10000,
+                    registrationFee: 100,
+                    tier2ProfessionalReview: true,
+                    tier3Interview: true
+                }
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to process attestor application:', error);
+            throw error;
+        }
+    }
 };
 exports.AttestorsService = AttestorsService;
 exports.AttestorsService = AttestorsService = AttestorsService_1 = __decorate([

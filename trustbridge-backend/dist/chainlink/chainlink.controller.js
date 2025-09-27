@@ -314,7 +314,7 @@ __decorate([
 ], ChainlinkController.prototype, "getHistoricalPrice", null);
 exports.ChainlinkController = ChainlinkController = __decorate([
     (0, swagger_1.ApiTags)('Chainlink'),
-    (0, common_1.Controller)('api/chainlink'),
+    (0, common_1.Controller)('chainlink'),
     __metadata("design:paramtypes", [chainlink_service_1.ChainlinkService,
         chainlink_hedera_service_1.ChainlinkHederaService,
         chainlink_external_service_1.ChainlinkExternalService])

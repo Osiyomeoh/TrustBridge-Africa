@@ -7,14 +7,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-neon-green text-black hover:bg-electric-mint",
-        destructive: "bg-error text-white hover:bg-red-700",
-        outline: "border border-neon-green text-neon-green hover:bg-neon-green hover:text-black",
-        secondary: "bg-dark-gray text-off-white hover:bg-medium-gray",
-        ghost: "hover:bg-dark-gray hover:text-off-white",
+        default: "bg-neon-green text-text-inverse hover:bg-electric-mint shadow-md",
+        destructive: "bg-error text-text-inverse hover:bg-red-700 shadow-md",
+        outline: "border border-neon-green text-neon-green hover:bg-neon-green hover:text-text-inverse shadow-sm",
+        secondary: "bg-background-tertiary text-text-primary hover:bg-background-tertiary/80 shadow-sm",
+        ghost: "hover:bg-background-tertiary hover:text-text-primary",
         link: "underline-offset-4 hover:underline text-neon-green",
-        neon: "bg-transparent border-2 border-neon-green text-neon-green hover:bg-neon-green hover:text-black font-semibold uppercase tracking-wider transition-all duration-300 relative overflow-hidden",
-        primary: "bg-gradient-to-r from-neon-green to-electric-mint text-black font-semibold hover:from-electric-mint hover:to-neon-green shadow-lg hover:shadow-neon"
+        neon: "bg-transparent border-2 border-neon-green text-neon-green hover:bg-neon-green hover:text-text-inverse font-semibold uppercase tracking-wider transition-all duration-300 relative overflow-hidden shadow-md",
+        primary: "bg-gradient-to-r from-neon-green to-electric-mint text-text-inverse font-semibold hover:from-electric-mint hover:to-neon-green shadow-lg hover:shadow-neon"
       },
       size: {
         xs: "h-8 px-2 text-xs",

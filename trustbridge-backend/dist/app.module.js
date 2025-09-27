@@ -28,16 +28,24 @@ const file_upload_module_1 = require("./file-upload/file-upload.module");
 const notifications_module_1 = require("./notifications/notifications.module");
 const websocket_module_1 = require("./websocket/websocket.module");
 const admin_module_1 = require("./admin/admin.module");
+const public_module_1 = require("./public/public.module");
 const mobile_module_1 = require("./mobile/mobile.module");
 const payments_module_1 = require("./payments/payments.module");
 const external_apis_module_1 = require("./external-apis/external-apis.module");
 const tokenomics_module_1 = require("./tokenomics/tokenomics.module");
 const ipfs_module_1 = require("./ipfs/ipfs.module");
+const pools_module_1 = require("./pools/pools.module");
+const health_module_1 = require("./health/health.module");
+const trading_module_1 = require("./trading/trading.module");
+const amc_module_1 = require("./amc/amc.module");
+const api_module_1 = require("./api/api.module");
+const app_controller_1 = require("./app.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
+        controllers: [app_controller_1.AppController],
         imports: [
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
@@ -72,11 +80,17 @@ exports.AppModule = AppModule = __decorate([
             notifications_module_1.NotificationsModule,
             websocket_module_1.WebSocketModule,
             admin_module_1.AdminModule,
+            public_module_1.PublicModule,
             mobile_module_1.MobileModule,
             payments_module_1.PaymentsModule,
             external_apis_module_1.ExternalApisModule,
             tokenomics_module_1.TokenomicsModule,
             ipfs_module_1.IPFSModule,
+            pools_module_1.PoolsModule,
+            health_module_1.HealthModule,
+            trading_module_1.TradingModule,
+            amc_module_1.AMCModule,
+            api_module_1.ApiModule,
         ],
     })
 ], AppModule);

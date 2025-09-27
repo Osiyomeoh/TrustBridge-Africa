@@ -309,7 +309,7 @@ __decorate([
 ], MobileController.prototype, "healthCheck", null);
 exports.MobileController = MobileController = __decorate([
     (0, swagger_1.ApiTags)('Mobile API'),
-    (0, common_1.Controller)('api/mobile'),
+    (0, common_1.Controller)('mobile'),
     __metadata("design:paramtypes", [mobile_service_1.MobileService])
 ], MobileController);
 //# sourceMappingURL=mobile.controller.js.map

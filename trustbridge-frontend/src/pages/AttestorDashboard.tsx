@@ -6,321 +6,184 @@ import {
   Shield, 
   Clock, 
   CheckCircle, 
-  X, 
+  XCircle, 
   Eye, 
-  MapPin, 
-  Calendar,
-  Star,
-  TrendingUp,
+  Download, 
+  Image as ImageIcon,
   FileText,
-  Camera,
+  Calendar,
+  User,
   AlertCircle,
   Loader2,
-  Filter,
-  Search,
-  SortAsc,
-  SortDesc
+  ExternalLink,
+  Share2,
+  Copy
 } from 'lucide-react';
+import { hederaAssetService } from '../services/hederaAssetService';
 import { useToast } from '../hooks/useToast';
 
 interface VerificationRequest {
-  id: string;
+  requestId: string;
   assetId: string;
-  assetName: string;
-  assetType: string;
-  ownerName: string;
-  location: {
-    address: string;
-    city: string;
-    state: string;
-    country: string;
-  };
-  estimatedValue: {
-    amount: number;
-    currency: string;
-  };
-  status: 'pending' | 'in_progress' | 'completed' | 'rejected';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  submittedAt: string;
-  dueDate: string;
-  documents: number;
-  photos: number;
-  automatedScore?: number;
-  attestorNotes?: string;
-  evidence: {
-    documents: Array<{
-      id: string;
-      name: string;
-      type: string;
-      url: string;
-    }>;
-    photos: Array<{
-      id: string;
-      name: string;
-      url: string;
-      description: string;
-    }>;
-  };
-}
-
-interface AttestorStats {
-  totalAssignments: number;
-  completedVerifications: number;
-  pendingVerifications: number;
-  averageScore: number;
-  reputationScore: number;
-  monthlyEarnings: number;
+  assetOwner: string;
+  requiredType: number;
+  status: number;
+  requestedAt: string;
+  deadline: string;
+  fee: string;
+  assignedAttestor: string;
+  evidenceHashes: string[];
+  documentTypes: string[];
+  comments: string;
 }
 
 const AttestorDashboard: React.FC = () => {
   const { toast } = useToast();
   const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<VerificationRequest | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
-  const [sortBy, setSortBy] = useState<'date' | 'priority' | 'value'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [showModal, setShowModal] = useState(false);
 
-  const [attestorStats] = useState<AttestorStats>({
-    totalAssignments: 24,
-    completedVerifications: 18,
-    pendingVerifications: 6,
-    averageScore: 87.5,
-    reputationScore: 4.8,
-    monthlyEarnings: 12500
-  });
-
-  // Mock data - replace with API calls
   useEffect(() => {
-    const mockRequests: VerificationRequest[] = [
-      {
-        id: '1',
-        assetId: 'AST-001',
-        assetName: 'Luxury Apartment Complex',
-        assetType: 'real_estate',
-        ownerName: 'John Adebayo',
-        location: {
-          address: '123 Victoria Island',
-          city: 'Lagos',
-          state: 'Lagos',
-          country: 'Nigeria'
-        },
-        estimatedValue: {
-          amount: 250000000,
-          currency: 'NGN'
-        },
-        status: 'pending',
-        priority: 'high',
-        submittedAt: '2024-01-15T10:30:00Z',
-        dueDate: '2024-01-22T17:00:00Z',
-        documents: 5,
-        photos: 12,
-        automatedScore: 78,
-        evidence: {
-          documents: [
-            { id: '1', name: 'Title Deed.pdf', type: 'ownership', url: '#' },
-            { id: '2', name: 'Survey Plan.pdf', type: 'survey', url: '#' },
-            { id: '3', name: 'Valuation Report.pdf', type: 'valuation', url: '#' }
-          ],
-          photos: [
-            { id: '1', name: 'exterior_1.jpg', url: '#', description: 'Front view of the building' },
-            { id: '2', name: 'interior_1.jpg', url: '#', description: 'Living room' }
-          ]
-        }
-      },
-      {
-        id: '2',
-        assetId: 'AST-002',
-        assetName: 'Agricultural Farm Land',
-        assetType: 'agricultural',
-        ownerName: 'Mary Okafor',
-        location: {
-          address: 'Farm Road, Ogun State',
-          city: 'Abeokuta',
-          state: 'Ogun',
-          country: 'Nigeria'
-        },
-        estimatedValue: {
-          amount: 45000000,
-          currency: 'NGN'
-        },
-        status: 'in_progress',
-        priority: 'medium',
-        submittedAt: '2024-01-14T14:20:00Z',
-        dueDate: '2024-01-21T17:00:00Z',
-        documents: 3,
-        photos: 8,
-        automatedScore: 65,
-        attestorNotes: 'Need to verify soil quality and crop yield data',
-        evidence: {
-          documents: [
-            { id: '1', name: 'Land Certificate.pdf', type: 'ownership', url: '#' },
-            { id: '2', name: 'Soil Test Report.pdf', type: 'other', url: '#' }
-          ],
-          photos: [
-            { id: '1', name: 'farm_overview.jpg', url: '#', description: 'Aerial view of the farm' },
-            { id: '2', name: 'crops.jpg', url: '#', description: 'Current crop cultivation' }
-          ]
-        }
-      },
-      {
-        id: '3',
-        assetId: 'AST-003',
-        assetName: 'Industrial Warehouse',
-        assetType: 'industrial',
-        ownerName: 'Ahmed Hassan',
-        location: {
-          address: 'Industrial Area, Kano',
-          city: 'Kano',
-          state: 'Kano',
-          country: 'Nigeria'
-        },
-        estimatedValue: {
-          amount: 180000000,
-          currency: 'NGN'
-        },
-        status: 'completed',
-        priority: 'low',
-        submittedAt: '2024-01-10T09:15:00Z',
-        dueDate: '2024-01-17T17:00:00Z',
-        documents: 7,
-        photos: 15,
-        automatedScore: 92,
-        attestorNotes: 'Verified - Excellent condition, all documents in order',
-        evidence: {
-          documents: [
-            { id: '1', name: 'Property Deed.pdf', type: 'ownership', url: '#' },
-            { id: '2', name: 'Building Permit.pdf', type: 'other', url: '#' }
-          ],
-          photos: [
-            { id: '1', name: 'warehouse_exterior.jpg', url: '#', description: 'External view' },
-            { id: '2', name: 'warehouse_interior.jpg', url: '#', description: 'Internal structure' }
-          ]
-        }
-      }
-    ];
-
-    setTimeout(() => {
-      setVerificationRequests(mockRequests);
-      setIsLoading(false);
-    }, 1000);
+    fetchAllVerificationRequests();
   }, []);
 
-  const filteredRequests = verificationRequests
-    .filter(request => {
-      if (filter !== 'all' && request.status !== filter) return false;
-      if (searchTerm && !request.assetName.toLowerCase().includes(searchTerm.toLowerCase()) && 
-          !request.ownerName.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-      return true;
-    })
-    .sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case 'date':
-          comparison = new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime();
-          break;
-        case 'priority':
-          const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-          comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
-          break;
-        case 'value':
-          comparison = a.estimatedValue.amount - b.estimatedValue.amount;
-          break;
-      }
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="w-4 h-4 text-yellow-400" />;
-      case 'in_progress':
-        return <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />;
-      case 'completed':
-        return <CheckCircle className="w-4 h-4 text-neon-green" />;
-      case 'rejected':
-        return <X className="w-4 h-4 text-red-400" />;
-      default:
-        return <AlertCircle className="w-4 h-4 text-gray-400" />;
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'bg-red-500 text-white';
-      case 'high':
-        return 'bg-orange-500 text-white';
-      case 'medium':
-        return 'bg-yellow-500 text-black';
-      case 'low':
-        return 'bg-green-500 text-white';
-      default:
-        return 'bg-gray-500 text-white';
-    }
-  };
-
-  const getAssetTypeIcon = (type: string) => {
-    switch (type) {
-      case 'real_estate':
-        return '🏢';
-      case 'agricultural':
-        return '🌾';
-      case 'industrial':
-        return '🏭';
-      case 'residential':
-        return '🏠';
-      default:
-        return '📦';
-    }
-  };
-
-  const handleStartVerification = (request: VerificationRequest) => {
-    setSelectedRequest(request);
-    toast({
-      variant: "success",
-      title: "Verification Started",
-      description: `You are now reviewing ${request.assetName}. Please complete your assessment.`
-    });
-  };
-
-  const handleCompleteVerification = async (requestId: string, approved: boolean, notes: string, score: number) => {
+  const fetchAllVerificationRequests = async () => {
     try {
-      // TODO: Implement API call to submit verification result
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setLoading(true);
+      console.log('🔍 Fetching all verification requests for attestors...');
       
-      setVerificationRequests(prev => 
-        prev.map(req => 
-          req.id === requestId 
-            ? { ...req, status: approved ? 'completed' : 'rejected', attestorNotes: notes }
-            : req
-        )
-      );
+      if (!window.ethereum) {
+        console.warn('Wallet not connected');
+        setVerificationRequests([]);
+        return;
+      }
+
+      const provider = new (await import('ethers')).BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const userAddress = await signer.getAddress();
       
-      setSelectedRequest(null);
+      // For now, we'll get all verification requests from the smart contract
+      // In a real implementation, this would be filtered by attestor role
+      const allRequests = await hederaAssetService.getSmartContractVerificationRequests(userAddress);
       
-      toast({
-        variant: approved ? "success" : "destructive",
-        title: approved ? "Verification Approved" : "Verification Rejected",
-        description: `Your verification has been submitted successfully.`
-      });
+      console.log('📊 Found verification requests:', allRequests.length);
+      setVerificationRequests(allRequests);
+      
     } catch (error) {
+      console.error('❌ Error fetching verification requests:', error);
       toast({
-        variant: "destructive",
-        title: "Submission Failed",
-        description: "There was an error submitting your verification. Please try again."
+        title: "Error",
+        description: "Failed to load verification requests",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusInfo = (status: number) => {
+    switch (status) {
+      case 0:
+        return { label: 'Pending', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', icon: Clock };
+      case 1:
+        return { label: 'Approved', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: CheckCircle };
+      case 2:
+        return { label: 'Rejected', color: 'bg-red-500/20 text-red-400 border-red-500/30', icon: XCircle };
+      case 3:
+        return { label: 'Suspended', color: 'bg-gray-500/20 text-gray-400 border-gray-500/30', icon: AlertCircle };
+      default:
+        return { label: 'Unknown', color: 'bg-gray-500/20 text-gray-400 border-gray-500/30', icon: AlertCircle };
+    }
+  };
+
+  const openRequestDetails = (request: VerificationRequest) => {
+    setSelectedRequest(request);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setSelectedRequest(null);
+    setShowModal(false);
+  };
+
+  const approveRequest = async (requestId: string) => {
+    try {
+      // TODO: Implement approval logic with smart contract
+      console.log('Approving request:', requestId);
+      toast({
+        title: "Success",
+        description: "Verification request approved",
+        variant: "default"
+      });
+      // Refresh the list
+      fetchAllVerificationRequests();
+    } catch (error) {
+      console.error('Error approving request:', error);
+    toast({
+        title: "Error",
+        description: "Failed to approve request",
+        variant: "destructive"
       });
     }
   };
 
-  if (isLoading) {
+  const rejectRequest = async (requestId: string) => {
+    try {
+      // TODO: Implement rejection logic with smart contract
+      console.log('Rejecting request:', requestId);
+      toast({
+        title: "Success",
+        description: "Verification request rejected",
+        variant: "default"
+      });
+      // Refresh the list
+      fetchAllVerificationRequests();
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject request",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const shareAsset = (assetId: string) => {
+    const url = `${window.location.origin}/asset/${assetId}`;
+    if (navigator.share) {
+      navigator.share({
+        title: `Asset Verification`,
+        text: `View this asset verification on TrustBridge`,
+        url: url
+      });
+    } else {
+      navigator.clipboard.writeText(url);
+      toast({
+        title: "Copied!",
+        description: "Asset link copied to clipboard",
+        variant: "default"
+      });
+    }
+  };
+
+  const copyAssetId = (assetId: string) => {
+    navigator.clipboard.writeText(assetId);
+    toast({
+      title: "Copied!",
+      description: "Asset ID copied to clipboard",
+      variant: "default"
+    });
+  };
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-black text-off-white font-secondary relative overflow-hidden dark:bg-black light:bg-light-bg dark:text-off-white light:text-light-text">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-electric-mint mx-auto mb-4" />
-            <p className="text-lg text-off-white/70">Loading verification requests...</p>
+      <div className="min-h-screen bg-dark-gray p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <Loader2 className="w-12 h-12 text-neon-green mx-auto mb-4 animate-spin" />
+            <h3 className="text-lg font-semibold text-white mb-2">Loading Verification Requests...</h3>
+            <p className="text-gray-400">Fetching requests from blockchain</p>
           </div>
         </div>
       </div>
@@ -328,55 +191,26 @@ const AttestorDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black text-off-white font-secondary relative overflow-hidden dark:bg-black light:bg-light-bg dark:text-off-white light:text-light-text">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,255,0.1),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(0,255,255,0.05),transparent_50%)]" />
-      </div>
-
-      <div className="relative z-10 container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-dark-gray p-6">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <motion.h1
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-4xl font-bold text-off-white mb-4"
-          >
-            Attestor Dashboard
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-lg text-off-white/70"
-          >
-            Review and verify asset tokenization requests
-          </motion.p>
+          <h1 className="text-3xl font-bold text-off-white mb-2">Attestor Dashboard</h1>
+          <p className="text-off-white/70">
+            Review and manage asset verification requests
+          </p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card className="bg-gray-900/50 border-gray-700/50 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-off-white/70">Total Assignments</p>
-                  <p className="text-2xl font-bold text-off-white">{attestorStats.totalAssignments}</p>
+                  <p className="text-sm text-off-white/70">Total Requests</p>
+                  <p className="text-2xl font-bold text-off-white">{verificationRequests.length}</p>
                 </div>
-                <Shield className="w-8 h-8 text-electric-mint" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-900/50 border-gray-700/50 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-off-white/70">Completed</p>
-                  <p className="text-2xl font-bold text-neon-green">{attestorStats.completedVerifications}</p>
-                </div>
-                <CheckCircle className="w-8 h-8 text-neon-green" />
+                <Shield className="w-8 h-8 text-neon-green" />
               </div>
             </CardContent>
           </Card>
@@ -386,7 +220,9 @@ const AttestorDashboard: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-off-white/70">Pending</p>
-                  <p className="text-2xl font-bold text-yellow-400">{attestorStats.pendingVerifications}</p>
+                  <p className="text-2xl font-bold text-yellow-400">
+                    {verificationRequests.filter(r => r.status === 0).length}
+                  </p>
                 </div>
                 <Clock className="w-8 h-8 text-yellow-400" />
               </div>
@@ -397,410 +233,317 @@ const AttestorDashboard: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-off-white/70">Reputation Score</p>
-                  <p className="text-2xl font-bold text-off-white">{attestorStats.reputationScore}/5.0</p>
+                  <p className="text-sm text-off-white/70">Approved</p>
+                  <p className="text-2xl font-bold text-green-400">
+                    {verificationRequests.filter(r => r.status === 1).length}
+                  </p>
                 </div>
-                <Star className="w-8 h-8 text-yellow-400" />
+                <CheckCircle className="w-8 h-8 text-green-400" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-900/50 border-gray-700/50 backdrop-blur-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-off-white/70">Rejected</p>
+                  <p className="text-2xl font-bold text-red-400">
+                    {verificationRequests.filter(r => r.status === 2).length}
+                  </p>
+                </div>
+                <XCircle className="w-8 h-8 text-red-400" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filters and Search */}
-        <Card className="bg-gray-900/50 border-gray-700/50 backdrop-blur-sm mb-6">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-off-white/50" />
-                  <input
-                    type="text"
-                    placeholder="Search by asset name or owner..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-dark-gray border border-medium-gray rounded-md text-off-white placeholder:text-off-white/50 focus:outline-none focus:ring-2 focus:ring-neon-green focus:border-transparent"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                <select
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value as any)}
-                  className="px-3 py-2 bg-dark-gray border border-medium-gray rounded-md text-off-white"
-                >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                </select>
-                
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="px-3 py-2 bg-dark-gray border border-medium-gray rounded-md text-off-white"
-                >
-                  <option value="date">Sort by Date</option>
-                  <option value="priority">Sort by Priority</option>
-                  <option value="value">Sort by Value</option>
-                </select>
-                
-                <Button
-                  variant="outline"
-                  onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                  className="px-3"
-                >
-                  {sortOrder === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
-                </Button>
-              </div>
-            </div>
+        {/* Verification Requests List */}
+        <div className="space-y-6">
+          {verificationRequests.length === 0 ? (
+            <Card className="bg-gray-900/50 border-gray-700/50 backdrop-blur-sm">
+              <CardContent className="p-12 text-center">
+                <Shield className="w-16 h-16 text-off-white/30 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-off-white mb-2">No Verification Requests</h3>
+                <p className="text-off-white/70">
+                  No verification requests are currently available for review.
+                </p>
           </CardContent>
         </Card>
+          ) : (
+            verificationRequests.map((request, index) => {
+              const statusInfo = getStatusInfo(request.status);
+              const StatusIcon = statusInfo.icon;
 
-        {/* Verification Requests */}
-        <div className="space-y-4">
-          {filteredRequests.map((request) => (
+              return (
             <motion.div
-              key={request.id}
+                  key={request.requestId}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              whileHover={{ scale: 1.02 }}
-              transition={{ duration: 0.2 }}
+                  transition={{ delay: index * 0.1 }}
             >
-              <Card className="bg-gray-900/50 border-gray-700/50 backdrop-blur-sm hover:border-neon-green/30 transition-all duration-200">
+                  <Card className="bg-gray-900/50 border-gray-700/50 backdrop-blur-sm hover:bg-gray-800/50 transition-colors">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <span className="text-2xl">{getAssetTypeIcon(request.assetType)}</span>
-                        <div>
-                          <h3 className="text-lg font-semibold text-off-white">{request.assetName}</h3>
-                          <p className="text-sm text-off-white/70">Asset ID: {request.assetId}</p>
-                        </div>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(request.priority)}`}>
-                          {request.priority.toUpperCase()}
+                          <div className="flex items-center gap-3 mb-4">
+                            <h3 className="text-lg font-semibold text-off-white">
+                              Asset {request.assetId.slice(0, 8)}...{request.assetId.slice(-4)}
+                            </h3>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 border ${statusInfo.color}`}>
+                              <StatusIcon className="w-3 h-3" />
+                              {statusInfo.label}
                         </span>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div className="flex items-center space-x-2">
-                          <MapPin className="w-4 h-4 text-electric-mint" />
-                          <span className="text-sm text-off-white/70">
-                            {request.location.city}, {request.location.state}
-                          </span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-off-white/70 mb-4">
+                            <div>
+                              <span className="font-medium">Asset Owner:</span>
+                              <p className="font-mono text-xs">{request.assetOwner}</p>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <TrendingUp className="w-4 h-4 text-electric-mint" />
-                          <span className="text-sm text-off-white/70">
-                            {request.estimatedValue.amount.toLocaleString()} {request.estimatedValue.currency}
-                          </span>
+                            <div>
+                              <span className="font-medium">Submitted:</span>
+                              <p>{new Date(request.requestedAt).toLocaleDateString()}</p>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="w-4 h-4 text-electric-mint" />
-                          <span className="text-sm text-off-white/70">
-                            Due: {new Date(request.dueDate).toLocaleDateString()}
-                          </span>
+                            <div>
+                              <span className="font-medium">Deadline:</span>
+                              <p>{new Date(request.deadline).toLocaleDateString()}</p>
                         </div>
+                            <div>
+                              <span className="font-medium">Documents:</span>
+                              <p>{request.evidenceHashes.length} files</p>
                       </div>
-                      
-                      <div className="flex items-center space-x-4 text-sm text-off-white/70">
-                        <div className="flex items-center space-x-1">
-                          <FileText className="w-4 h-4" />
-                          <span>{request.documents} docs</span>
+                            <div>
+                              <span className="font-medium">Fee:</span>
+                              <p>{request.fee} HBAR</p>
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Camera className="w-4 h-4" />
-                          <span>{request.photos} photos</span>
-                        </div>
-                        {request.automatedScore && (
-                          <div className="flex items-center space-x-1">
-                            <Shield className="w-4 h-4" />
-                            <span>Auto Score: {request.automatedScore}%</span>
-                          </div>
-                        )}
+                            <div>
+                              <span className="font-medium">Type:</span>
+                              <p>{request.documentTypes.join(', ')}</p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(request.status)}
-                        <span className="text-sm font-medium text-off-white capitalize">
-                          {request.status.replace('_', ' ')}
+                          {/* Document Preview */}
+                          {request.evidenceHashes.length > 0 && (
+                            <div className="mb-4">
+                              <span className="font-medium text-off-white mb-2 block">Submitted Documents:</span>
+                              <div className="flex gap-2 flex-wrap">
+                                {request.evidenceHashes.map((hash, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="flex items-center gap-2 bg-gray-800/50 px-3 py-2 rounded-lg"
+                                  >
+                                    <ImageIcon className="w-4 h-4 text-neon-green" />
+                                    <span className="text-xs font-mono text-off-white/70">
+                                      {hash.slice(0, 8)}...{hash.slice(-4)}
                         </span>
-                      </div>
-                      
-                      <div className="flex space-x-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setSelectedRequest(request)}
+                                      onClick={() => window.open(`https://ipfs.io/ipfs/${hash}`, '_blank')}
+                                      className="px-2 py-1 h-6 text-xs"
                         >
-                          <Eye className="w-4 h-4 mr-2" />
-                          View
+                                      <Eye className="w-3 h-3" />
                         </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         
-                        {request.status === 'pending' && (
+                        <div className="flex flex-col gap-2 ml-4">
                           <Button
-                            size="sm"
-                            onClick={() => handleStartVerification(request)}
+                            variant="outline"
+                            onClick={() => openRequestDetails(request)}
+                            className="bg-dark-gray hover:bg-medium-gray text-off-white"
                           >
-                            Start Verification
+                            <Eye className="w-4 h-4 mr-2" />
+                            Review
                           </Button>
-                        )}
-                      </div>
+                          
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => shareAsset(request.assetId)}
+                              variant="outline"
+                              className="flex-1 bg-dark-gray hover:bg-medium-gray text-off-white text-xs"
+                            >
+                              <Share2 className="w-3 h-3 mr-1" />
+                              Share
+                            </Button>
+                            <Button
+                              onClick={() => window.open(`/asset/${request.assetId}`, '_blank')}
+                              variant="outline"
+                              className="flex-1 bg-dark-gray hover:bg-medium-gray text-off-white text-xs"
+                            >
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              Public
+                            </Button>
+                            <Button
+                              onClick={() => copyAssetId(request.assetId)}
+                              variant="outline"
+                              className="px-3 bg-dark-gray hover:bg-medium-gray text-off-white"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          
+                          {request.status === 0 && (
+                            <div className="flex gap-2">
+                              <Button
+                                onClick={() => approveRequest(request.requestId)}
+                                className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1"
+                              >
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                onClick={() => rejectRequest(request.requestId)}
+                                className="bg-red-600 hover:bg-red-700 text-white text-sm px-3 py-1"
+                              >
+                                <XCircle className="w-3 h-3 mr-1" />
+                                Reject
+                              </Button>
+                            </div>
+                          )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </motion.div>
-          ))}
+              );
+            })
+          )}
         </div>
 
-        {filteredRequests.length === 0 && (
-          <Card className="bg-gray-900/50 border-gray-700/50 backdrop-blur-sm">
-            <CardContent className="p-12 text-center">
-              <Shield className="w-16 h-16 text-off-white/30 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-off-white mb-2">No Verification Requests</h3>
-              <p className="text-off-white/70">
-                {filter === 'all' 
-                  ? "You don't have any verification requests assigned to you yet."
-                  : `No ${filter} verification requests found.`
-                }
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* Verification Detail Modal */}
-      {selectedRequest && (
-        <VerificationDetailModal
-          request={selectedRequest}
-          onClose={() => setSelectedRequest(null)}
-          onComplete={handleCompleteVerification}
-        />
-      )}
-    </div>
-  );
-};
-
-// Verification Detail Modal Component
-interface VerificationDetailModalProps {
-  request: VerificationRequest;
-  onClose: () => void;
-  onComplete: (requestId: string, approved: boolean, notes: string, score: number) => void;
-}
-
-const VerificationDetailModal: React.FC<VerificationDetailModalProps> = ({
-  request,
-  onClose,
-  onComplete
-}) => {
-  const [notes, setNotes] = useState(request.attestorNotes || '');
-  const [score, setScore] = useState(75);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (approved: boolean) => {
-    setIsSubmitting(true);
-    try {
-      await onComplete(request.id, approved, notes, score);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        {/* Modal for detailed view */}
+        {showModal && selectedRequest && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-4xl max-h-[90vh] overflow-y-auto"
-      >
-        <Card className="bg-gray-900/95 border-gray-700/50 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl font-bold text-off-white">
-                {request.assetName}
-              </CardTitle>
-              <p className="text-off-white/70">Asset ID: {request.assetId}</p>
-            </div>
-            <Button variant="ghost" onClick={onClose}>
-              <X className="w-5 h-5" />
+              className="bg-gray-900 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold text-off-white">Verification Request Details</h2>
+                  <Button
+                    variant="outline"
+                    onClick={closeModal}
+                    className="bg-dark-gray hover:bg-medium-gray text-off-white"
+                  >
+                    Close
             </Button>
-          </CardHeader>
-          
-          <CardContent className="space-y-6">
-            {/* Asset Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-lg font-semibold text-off-white mb-3">Asset Details</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-off-white/70">Type:</span>
-                    <span className="text-off-white capitalize">{request.assetType.replace('_', ' ')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-off-white/70">Owner:</span>
-                    <span className="text-off-white">{request.ownerName}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-off-white/70">Location:</span>
-                    <span className="text-off-white">{request.location.address}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-off-white/70">Value:</span>
-                    <span className="text-off-white">
-                      {request.estimatedValue.amount.toLocaleString()} {request.estimatedValue.currency}
-                    </span>
-                  </div>
-                </div>
               </div>
               
+                <div className="space-y-6">
+                  {/* Asset Information */}
+                  <Card className="bg-gray-800/50">
+                    <CardHeader>
+                      <CardTitle className="text-off-white">Asset Information</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h3 className="text-lg font-semibold text-off-white mb-3">Verification Details</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-off-white/70">Status:</span>
-                    <span className="text-off-white capitalize">{request.status.replace('_', ' ')}</span>
+                          <span className="font-medium text-off-white/70">Asset ID:</span>
+                          <p className="font-mono text-sm text-off-white">{selectedRequest.assetId}</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-off-white/70">Priority:</span>
-                    <span className="text-off-white capitalize">{request.priority}</span>
+                        <div>
+                          <span className="font-medium text-off-white/70">Owner:</span>
+                          <p className="font-mono text-sm text-off-white">{selectedRequest.assetOwner}</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-off-white/70">Due Date:</span>
-                    <span className="text-off-white">
-                      {new Date(request.dueDate).toLocaleDateString()}
-                    </span>
+                        <div>
+                          <span className="font-medium text-off-white/70">Request ID:</span>
+                          <p className="font-mono text-sm text-off-white">{selectedRequest.requestId}</p>
+            </div>
+            <div>
+                          <span className="font-medium text-off-white/70">Fee:</span>
+                          <p className="text-sm text-off-white">{selectedRequest.fee} HBAR</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Documents */}
+                  <Card className="bg-gray-800/50">
+                    <CardHeader>
+                      <CardTitle className="text-off-white">Submitted Documents</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {selectedRequest.evidenceHashes.map((hash, idx) => (
+                          <div key={idx} className="bg-gray-700/50 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <ImageIcon className="w-5 h-5 text-neon-green" />
+                              <span className="text-sm font-medium text-off-white">
+                                Document {idx + 1}
+                              </span>
+                            </div>
+                            <p className="text-xs font-mono text-off-white/70 mb-3 break-all">
+                              {hash}
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(`https://ipfs.io/ipfs/${hash}`, '_blank')}
+                                className="flex-1"
+                              >
+                                <Eye className="w-3 h-3 mr-1" />
+                                View
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const link = document.createElement('a');
+                                  link.href = `https://ipfs.io/ipfs/${hash}`;
+                                  link.download = `document-${idx + 1}`;
+                                  link.click();
+                                }}
+                                className="flex-1"
+                              >
+                                <Download className="w-3 h-3 mr-1" />
+                                Download
+                              </Button>
                   </div>
-                  {request.automatedScore && (
-                    <div className="flex justify-between">
-                      <span className="text-off-white/70">Auto Score:</span>
-                      <span className="text-off-white">{request.automatedScore}%</span>
-                    </div>
+                </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Action Buttons */}
+                  {selectedRequest.status === 0 && (
+                    <div className="flex gap-4 justify-end">
+                      <Button
+                        onClick={() => {
+                          rejectRequest(selectedRequest.requestId);
+                          closeModal();
+                        }}
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        <XCircle className="w-4 h-4 mr-2" />
+                        Reject Request
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          approveRequest(selectedRequest.requestId);
+                          closeModal();
+                        }}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Approve Request
+                      </Button>
+                  </div>
                   )}
                 </div>
               </div>
-            </div>
-
-            {/* Evidence Review */}
-            <div>
-              <h3 className="text-lg font-semibold text-off-white mb-3">Evidence Review</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium text-off-white mb-2">Documents ({request.evidence.documents.length})</h4>
-                  <div className="space-y-2">
-                    {request.evidence.documents.map((doc) => (
-                      <div key={doc.id} className="flex items-center justify-between p-2 bg-dark-gray rounded">
-                        <div className="flex items-center space-x-2">
-                          <FileText className="w-4 h-4 text-electric-mint" />
-                          <span className="text-sm text-off-white">{doc.name}</span>
-                        </div>
-                        <Button variant="ghost" size="sm">
-                          View
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-off-white mb-2">Photos ({request.evidence.photos.length})</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {request.evidence.photos.map((photo) => (
-                      <div key={photo.id} className="aspect-square bg-dark-gray rounded overflow-hidden">
-                        <img
-                          src={photo.url}
-                          alt={photo.description}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            </motion.div>
               </div>
-            </div>
-
-            {/* Verification Form */}
-            {request.status === 'pending' && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-off-white">Verification Assessment</h3>
-                
-                <div>
-                  <label className="block text-sm font-medium text-off-white/80 mb-2">
-                    Confidence Score (0-100)
-                  </label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={score}
-                    onChange={(e) => setScore(Number(e.target.value))}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-xs text-off-white/70 mt-1">
-                    <span>0%</span>
-                    <span className="font-medium">{score}%</span>
-                    <span>100%</span>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-off-white/80 mb-2">
-                    Verification Notes
-                  </label>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add your verification notes and observations..."
-                    rows={4}
-                    className="w-full px-3 py-2 bg-dark-gray border border-medium-gray rounded-md text-off-white placeholder:text-off-white/50 focus:outline-none focus:ring-2 focus:ring-neon-green focus:border-transparent"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-700">
-              <Button variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              
-              {request.status === 'pending' && (
-                <>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleSubmit(false)}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Rejecting...
-                      </>
-                    ) : (
-                      'Reject Verification'
-                    )}
-                  </Button>
-                  <Button
-                    onClick={() => handleSubmit(true)}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Approving...
-                      </>
-                    ) : (
-                      'Approve Verification'
-                    )}
-                  </Button>
-                </>
               )}
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
     </div>
   );
 };

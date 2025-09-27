@@ -21,7 +21,7 @@ interface SidebarProviderProps {
 }
 
 export const SidebarProvider: React.FC<SidebarProviderProps> = ({ children }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true); // Start collapsed by default (overlay style)
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);

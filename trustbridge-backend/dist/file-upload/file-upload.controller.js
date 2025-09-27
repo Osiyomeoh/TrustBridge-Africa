@@ -230,7 +230,7 @@ __decorate([
 ], FileUploadController.prototype, "cleanupOldFiles", null);
 exports.FileUploadController = FileUploadController = __decorate([
     (0, swagger_1.ApiTags)('File Upload'),
-    (0, common_1.Controller)('api/files'),
+    (0, common_1.Controller)('files'),
     __metadata("design:paramtypes", [file_upload_service_1.FileUploadService])
 ], FileUploadController);
 //# sourceMappingURL=file-upload.controller.js.map

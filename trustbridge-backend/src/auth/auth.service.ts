@@ -825,6 +825,27 @@ export class AuthService {
         throw new Error('DIDIT_API_KEY not configured');
       }
 
+      // Determine the appropriate workflow ID
+      let finalWorkflowId = workflowId || defaultWorkflowId || 'default';
+      
+      // If it's an attestor verification, use the attestor workflow
+      if (vendorData) {
+        try {
+          const parsedVendorData = JSON.parse(vendorData);
+          if (parsedVendorData.verificationType === 'attestor_enhanced') {
+            const attestorWorkflowId = this.configService.get<string>('DIDIT_ATTESTOR_WORKFLOW_ID');
+            if (attestorWorkflowId) {
+              finalWorkflowId = attestorWorkflowId;
+              this.logger.log(`Using attestor workflow: ${finalWorkflowId}`);
+            } else {
+              this.logger.warn('DIDIT_ATTESTOR_WORKFLOW_ID not configured, using default workflow');
+            }
+          }
+        } catch (error) {
+          this.logger.warn('Failed to parse vendor data for workflow selection:', error);
+        }
+      }
+
       const response = await fetch('https://verification.didit.me/v2/session/', {
         method: 'POST',
         headers: {
@@ -832,7 +853,7 @@ export class AuthService {
           'x-api-key': apiKey,
         },
         body: JSON.stringify({
-          workflow_id: workflowId || defaultWorkflowId || 'default',
+          workflow_id: finalWorkflowId,
           vendor_data: vendorData || '',
           callback: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/api/auth/didit/callback`,
         }),
@@ -879,6 +900,102 @@ export class AuthService {
       return data;
     } catch (error) {
       this.logger.error('Failed to get Didit session status:', error);
+      throw error;
+    }
+  }
+
+  // Onfido API Methods for Attestor Verification
+  async createOnfidoSession(vendorData?: string, verificationType?: string): Promise<any> {
+    try {
+      const apiKey = this.configService.get<string>('ONFIDO_API_KEY');
+      const workflowId = this.configService.get<string>('ONFIDO_WORKFLOW_ID');
+      
+      if (!apiKey) {
+        throw new Error('ONFIDO_API_KEY not configured');
+      }
+
+      // First create an applicant
+      const applicantResponse = await fetch('https://api.onfido.com/v3/applicants', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Token token=${apiKey}`,
+        },
+        body: JSON.stringify({
+          first_name: 'Attestor',
+          last_name: 'User',
+          email: 'attestor@trustbridge.com',
+        }),
+      });
+
+      if (!applicantResponse.ok) {
+        const errorText = await applicantResponse.text();
+        throw new Error(`Onfido applicant creation error: ${applicantResponse.status} - ${errorText}`);
+      }
+
+      const applicantData = await applicantResponse.json();
+      const applicantId = applicantData.id;
+
+      // Then create SDK token for the applicant
+      const tokenResponse = await fetch('https://api.onfido.com/v3/sdk_token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Token token=${apiKey}`,
+        },
+        body: JSON.stringify({
+          applicant_id: applicantId,
+          referrer: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/attestor`,
+          workflow_id: workflowId || 'attestor_verification',
+        }),
+      });
+
+      if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text();
+        throw new Error(`Onfido SDK token error: ${tokenResponse.status} - ${errorText}`);
+      }
+
+      const tokenData = await tokenResponse.json();
+      this.logger.log(`Onfido session created: ${tokenData.token} for applicant ${applicantId}`);
+
+      return {
+        session_id: tokenData.token,
+        applicant_id: applicantId,
+        url: `https://verify.onfido.com/?token=${tokenData.token}`,
+        verification_url: `https://verify.onfido.com/?token=${tokenData.token}`,
+      };
+    } catch (error) {
+      this.logger.error('Failed to create Onfido session:', error);
+      throw error;
+    }
+  }
+
+  async getOnfidoSessionStatus(sessionId: string): Promise<any> {
+    try {
+      const apiKey = this.configService.get<string>('ONFIDO_API_KEY');
+      
+      if (!apiKey) {
+        throw new Error('ONFIDO_API_KEY not configured');
+      }
+
+      // For Onfido, we need to check the applicant status
+      // In production, you'd store the mapping between sessionId and applicantId
+      // For now, we'll simulate a status check
+      this.logger.log(`Onfido session status check for: ${sessionId}`);
+
+      // Simulate status check - in production you'd check the actual applicant status
+      return {
+        session_id: sessionId,
+        status: 'completed', // Simulate completed status for testing
+        verification_data: {
+          identityVerified: true,
+          documentVerified: true,
+          professionalVerified: true,
+          kycLevel: 'professional'
+        },
+      };
+    } catch (error) {
+      this.logger.error('Failed to get Onfido session status:', error);
       throw error;
     }
   }

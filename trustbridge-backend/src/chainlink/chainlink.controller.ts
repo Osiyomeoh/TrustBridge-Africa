@@ -5,7 +5,7 @@ import { ChainlinkHederaService } from './chainlink-hedera.service';
 import { ChainlinkExternalService } from './chainlink-external.service';
 
 @ApiTags('Chainlink')
-@Controller('api/chainlink')
+@Controller('chainlink')
 export class ChainlinkController {
   constructor(
     private readonly chainlinkService: ChainlinkService,

@@ -36,6 +36,7 @@ interface FileUploadProps {
   category?: string;
   description?: string;
   className?: string;
+  showUploadButton?: boolean; // Whether to show individual upload button
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({
@@ -47,7 +48,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
   allowMultiple = true,
   category = 'general',
   description = 'Upload files',
-  className = ''
+  className = '',
+  showUploadButton = true
 }) => {
   const { toast } = useToast();
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -115,7 +117,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       
       if (validation.valid) {
         validFiles.push({
-          id: Math.random().toString(36).substr(2, 9),
+          id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${file.name}`,
           file,
           status: 'pending',
           metadata: {
@@ -142,7 +144,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
     if (validFiles.length > 0) {
       setFiles(prev => {
         const updated = [...prev, ...validFiles];
-        onFilesChange(updated);
+        // Use setTimeout to avoid state update during render
+        setTimeout(() => onFilesChange(updated), 0);
         return updated;
       });
     }
@@ -237,7 +240,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
   const removeFile = (fileId: string) => {
     setFiles(prev => {
       const updated = prev.filter(f => f.id !== fileId);
-      onFilesChange(updated);
+      // Use setTimeout to avoid state update during render
+      setTimeout(() => onFilesChange(updated), 0);
       return updated;
     });
   };
@@ -324,7 +328,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
             <h4 className="text-lg font-semibold text-off-white">
               Files ({files.length})
             </h4>
-            {pendingFiles.length > 0 && (
+            {pendingFiles.length > 0 && showUploadButton && (
               <button
                 onClick={uploadAllFiles}
                 disabled={isUploading}

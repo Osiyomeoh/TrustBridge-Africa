@@ -24,6 +24,54 @@ export declare class AttestorsController {
         message: string;
         data?: undefined;
     }>;
+    applyAsAttestor(applicationData: any): Promise<{
+        success: boolean;
+        data: any;
+        message: any;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    getAttestorApplications(): Promise<{
+        success: boolean;
+        data: any[];
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    approveAttestorApplication(id: string, body: {
+        reviewerNotes?: string;
+    }): Promise<{
+        success: boolean;
+        data: any;
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    rejectAttestorApplication(id: string, body: {
+        reviewerNotes?: string;
+    }): Promise<{
+        success: boolean;
+        data: any;
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
     getAttestorsByLocation(country: string, region?: string): Promise<{
         success: boolean;
         data: import("../schemas/attestor.schema").Attestor[];

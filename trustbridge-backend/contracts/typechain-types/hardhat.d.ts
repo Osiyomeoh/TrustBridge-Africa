@@ -22,6 +22,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IAccessControl__factory>;
     getContractFactory(
+      name: "Ownable",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Ownable__factory>;
+    getContractFactory(
       name: "IERC1155Errors",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC1155Errors__factory>;
@@ -46,6 +50,26 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC20__factory>;
     getContractFactory(
+      name: "ERC721",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ERC721__factory>;
+    getContractFactory(
+      name: "IERC721Metadata",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC721Metadata__factory>;
+    getContractFactory(
+      name: "IERC721",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC721__factory>;
+    getContractFactory(
+      name: "IERC721Receiver",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC721Receiver__factory>;
+    getContractFactory(
+      name: "MerkleProof",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MerkleProof__factory>;
+    getContractFactory(
       name: "ERC165",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ERC165__factory>;
@@ -53,6 +77,10 @@ declare module "hardhat/types/runtime" {
       name: "IERC165",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IERC165__factory>;
+    getContractFactory(
+      name: "SafeCast",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.SafeCast__factory>;
     getContractFactory(
       name: "Pausable",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -62,57 +90,89 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ReentrancyGuard__factory>;
     getContractFactory(
-      name: "AssetFactory",
+      name: "Strings",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.AssetFactory__factory>;
+    ): Promise<Contracts.Strings__factory>;
     getContractFactory(
-      name: "AssetToken",
+      name: "AdvancedMinting",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.AssetToken__factory>;
+    ): Promise<Contracts.AdvancedMinting__factory>;
     getContractFactory(
-      name: "AttestorManager",
+      name: "AMCManager",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.AttestorManager__factory>;
+    ): Promise<Contracts.AMCManager__factory>;
     getContractFactory(
-      name: "Counter",
+      name: "AssetNFT",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.Counter__factory>;
+    ): Promise<Contracts.AssetNFT__factory>;
+    getContractFactory(
+      name: "AttestorVerificationSystem",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.AttestorVerificationSystem__factory>;
+    getContractFactory(
+      name: "BatchMinting",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.BatchMinting__factory>;
+    getContractFactory(
+      name: "CoreAssetFactory",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.CoreAssetFactory__factory>;
     getContractFactory(
       name: "FeeDistribution",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.FeeDistribution__factory>;
     getContractFactory(
+      name: "Governance",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Governance__factory>;
+    getContractFactory(
       name: "IAssetFactory",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IAssetFactory__factory>;
     getContractFactory(
-      name: "IAttestorManager",
+      name: "IPoolFactory",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IAttestorManager__factory>;
-    getContractFactory(
-      name: "IPolicyManager",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.IPolicyManager__factory>;
+    ): Promise<Contracts.IPoolFactory__factory>;
     getContractFactory(
       name: "IVerificationRegistry",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IVerificationRegistry__factory>;
     getContractFactory(
-      name: "PolicyManager",
+      name: "NFTMarketplace",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.PolicyManager__factory>;
+    ): Promise<Contracts.NFTMarketplace__factory>;
     getContractFactory(
-      name: "SettlementEngine",
+      name: "PoolManager",
       signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.SettlementEngine__factory>;
+    ): Promise<Contracts.PoolManager__factory>;
+    getContractFactory(
+      name: "PoolToken",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.PoolToken__factory>;
+    getContractFactory(
+      name: "SPVManager",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.SPVManager__factory>;
+    getContractFactory(
+      name: "TradingEngine",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TradingEngine__factory>;
+    getContractFactory(
+      name: "TRUSTAssetFactory",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TRUSTAssetFactory__factory>;
+    getContractFactory(
+      name: "TRUSTFaucet",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TRUSTFaucet__factory>;
+    getContractFactory(
+      name: "TRUSTMarketplace",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TRUSTMarketplace__factory>;
     getContractFactory(
       name: "TrustToken",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TrustToken__factory>;
-    getContractFactory(
-      name: "VerificationBuffer",
-      signerOrOptions?: ethers.Signer | FactoryOptions
-    ): Promise<Contracts.VerificationBuffer__factory>;
     getContractFactory(
       name: "VerificationRegistry",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -129,6 +189,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IAccessControl>;
     getContractAt(
+      name: "Ownable",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Ownable>;
+    getContractAt(
       name: "IERC1155Errors",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -159,6 +224,31 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IERC20>;
     getContractAt(
+      name: "ERC721",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ERC721>;
+    getContractAt(
+      name: "IERC721Metadata",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC721Metadata>;
+    getContractAt(
+      name: "IERC721",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC721>;
+    getContractAt(
+      name: "IERC721Receiver",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC721Receiver>;
+    getContractAt(
+      name: "MerkleProof",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MerkleProof>;
+    getContractAt(
       name: "ERC165",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -168,6 +258,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.IERC165>;
+    getContractAt(
+      name: "SafeCast",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.SafeCast>;
     getContractAt(
       name: "Pausable",
       address: string | ethers.Addressable,
@@ -179,70 +274,110 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.ReentrancyGuard>;
     getContractAt(
-      name: "AssetFactory",
+      name: "Strings",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.AssetFactory>;
+    ): Promise<Contracts.Strings>;
     getContractAt(
-      name: "AssetToken",
+      name: "AdvancedMinting",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.AssetToken>;
+    ): Promise<Contracts.AdvancedMinting>;
     getContractAt(
-      name: "AttestorManager",
+      name: "AMCManager",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.AttestorManager>;
+    ): Promise<Contracts.AMCManager>;
     getContractAt(
-      name: "Counter",
+      name: "AssetNFT",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.Counter>;
+    ): Promise<Contracts.AssetNFT>;
+    getContractAt(
+      name: "AttestorVerificationSystem",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.AttestorVerificationSystem>;
+    getContractAt(
+      name: "BatchMinting",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.BatchMinting>;
+    getContractAt(
+      name: "CoreAssetFactory",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.CoreAssetFactory>;
     getContractAt(
       name: "FeeDistribution",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.FeeDistribution>;
     getContractAt(
+      name: "Governance",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Governance>;
+    getContractAt(
       name: "IAssetFactory",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.IAssetFactory>;
     getContractAt(
-      name: "IAttestorManager",
+      name: "IPoolFactory",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.IAttestorManager>;
-    getContractAt(
-      name: "IPolicyManager",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.IPolicyManager>;
+    ): Promise<Contracts.IPoolFactory>;
     getContractAt(
       name: "IVerificationRegistry",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.IVerificationRegistry>;
     getContractAt(
-      name: "PolicyManager",
+      name: "NFTMarketplace",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.PolicyManager>;
+    ): Promise<Contracts.NFTMarketplace>;
     getContractAt(
-      name: "SettlementEngine",
+      name: "PoolManager",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
-    ): Promise<Contracts.SettlementEngine>;
+    ): Promise<Contracts.PoolManager>;
+    getContractAt(
+      name: "PoolToken",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.PoolToken>;
+    getContractAt(
+      name: "SPVManager",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.SPVManager>;
+    getContractAt(
+      name: "TradingEngine",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TradingEngine>;
+    getContractAt(
+      name: "TRUSTAssetFactory",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TRUSTAssetFactory>;
+    getContractAt(
+      name: "TRUSTFaucet",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TRUSTFaucet>;
+    getContractAt(
+      name: "TRUSTMarketplace",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TRUSTMarketplace>;
     getContractAt(
       name: "TrustToken",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.TrustToken>;
-    getContractAt(
-      name: "VerificationBuffer",
-      address: string | ethers.Addressable,
-      signer?: ethers.Signer
-    ): Promise<Contracts.VerificationBuffer>;
     getContractAt(
       name: "VerificationRegistry",
       address: string | ethers.Addressable,
@@ -258,6 +393,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IAccessControl>;
     deployContract(
+      name: "Ownable",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Ownable>;
+    deployContract(
       name: "IERC1155Errors",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC1155Errors>;
@@ -282,6 +421,26 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC20>;
     deployContract(
+      name: "ERC721",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC721>;
+    deployContract(
+      name: "IERC721Metadata",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC721Metadata>;
+    deployContract(
+      name: "IERC721",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC721>;
+    deployContract(
+      name: "IERC721Receiver",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC721Receiver>;
+    deployContract(
+      name: "MerkleProof",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MerkleProof>;
+    deployContract(
       name: "ERC165",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ERC165>;
@@ -289,6 +448,10 @@ declare module "hardhat/types/runtime" {
       name: "IERC165",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC165>;
+    deployContract(
+      name: "SafeCast",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SafeCast>;
     deployContract(
       name: "Pausable",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -298,57 +461,89 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ReentrancyGuard>;
     deployContract(
-      name: "AssetFactory",
+      name: "Strings",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.AssetFactory>;
+    ): Promise<Contracts.Strings>;
     deployContract(
-      name: "AssetToken",
+      name: "AdvancedMinting",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.AssetToken>;
+    ): Promise<Contracts.AdvancedMinting>;
     deployContract(
-      name: "AttestorManager",
+      name: "AMCManager",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.AttestorManager>;
+    ): Promise<Contracts.AMCManager>;
     deployContract(
-      name: "Counter",
+      name: "AssetNFT",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.Counter>;
+    ): Promise<Contracts.AssetNFT>;
+    deployContract(
+      name: "AttestorVerificationSystem",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.AttestorVerificationSystem>;
+    deployContract(
+      name: "BatchMinting",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.BatchMinting>;
+    deployContract(
+      name: "CoreAssetFactory",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.CoreAssetFactory>;
     deployContract(
       name: "FeeDistribution",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.FeeDistribution>;
     deployContract(
+      name: "Governance",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Governance>;
+    deployContract(
       name: "IAssetFactory",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IAssetFactory>;
     deployContract(
-      name: "IAttestorManager",
+      name: "IPoolFactory",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IAttestorManager>;
-    deployContract(
-      name: "IPolicyManager",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IPolicyManager>;
+    ): Promise<Contracts.IPoolFactory>;
     deployContract(
       name: "IVerificationRegistry",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IVerificationRegistry>;
     deployContract(
-      name: "PolicyManager",
+      name: "NFTMarketplace",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.PolicyManager>;
+    ): Promise<Contracts.NFTMarketplace>;
     deployContract(
-      name: "SettlementEngine",
+      name: "PoolManager",
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.SettlementEngine>;
+    ): Promise<Contracts.PoolManager>;
+    deployContract(
+      name: "PoolToken",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.PoolToken>;
+    deployContract(
+      name: "SPVManager",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SPVManager>;
+    deployContract(
+      name: "TradingEngine",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TradingEngine>;
+    deployContract(
+      name: "TRUSTAssetFactory",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TRUSTAssetFactory>;
+    deployContract(
+      name: "TRUSTFaucet",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TRUSTFaucet>;
+    deployContract(
+      name: "TRUSTMarketplace",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TRUSTMarketplace>;
     deployContract(
       name: "TrustToken",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TrustToken>;
-    deployContract(
-      name: "VerificationBuffer",
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.VerificationBuffer>;
     deployContract(
       name: "VerificationRegistry",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -365,6 +560,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IAccessControl>;
     deployContract(
+      name: "Ownable",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Ownable>;
+    deployContract(
       name: "IERC1155Errors",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -395,6 +595,31 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC20>;
     deployContract(
+      name: "ERC721",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ERC721>;
+    deployContract(
+      name: "IERC721Metadata",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC721Metadata>;
+    deployContract(
+      name: "IERC721",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC721>;
+    deployContract(
+      name: "IERC721Receiver",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC721Receiver>;
+    deployContract(
+      name: "MerkleProof",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MerkleProof>;
+    deployContract(
       name: "ERC165",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -404,6 +629,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IERC165>;
+    deployContract(
+      name: "SafeCast",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SafeCast>;
     deployContract(
       name: "Pausable",
       args: any[],
@@ -415,70 +645,110 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ReentrancyGuard>;
     deployContract(
-      name: "AssetFactory",
+      name: "Strings",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.AssetFactory>;
+    ): Promise<Contracts.Strings>;
     deployContract(
-      name: "AssetToken",
+      name: "AdvancedMinting",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.AssetToken>;
+    ): Promise<Contracts.AdvancedMinting>;
     deployContract(
-      name: "AttestorManager",
+      name: "AMCManager",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.AttestorManager>;
+    ): Promise<Contracts.AMCManager>;
     deployContract(
-      name: "Counter",
+      name: "AssetNFT",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.Counter>;
+    ): Promise<Contracts.AssetNFT>;
+    deployContract(
+      name: "AttestorVerificationSystem",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.AttestorVerificationSystem>;
+    deployContract(
+      name: "BatchMinting",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.BatchMinting>;
+    deployContract(
+      name: "CoreAssetFactory",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.CoreAssetFactory>;
     deployContract(
       name: "FeeDistribution",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.FeeDistribution>;
     deployContract(
+      name: "Governance",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Governance>;
+    deployContract(
       name: "IAssetFactory",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IAssetFactory>;
     deployContract(
-      name: "IAttestorManager",
+      name: "IPoolFactory",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IAttestorManager>;
-    deployContract(
-      name: "IPolicyManager",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.IPolicyManager>;
+    ): Promise<Contracts.IPoolFactory>;
     deployContract(
       name: "IVerificationRegistry",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IVerificationRegistry>;
     deployContract(
-      name: "PolicyManager",
+      name: "NFTMarketplace",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.PolicyManager>;
+    ): Promise<Contracts.NFTMarketplace>;
     deployContract(
-      name: "SettlementEngine",
+      name: "PoolManager",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.SettlementEngine>;
+    ): Promise<Contracts.PoolManager>;
+    deployContract(
+      name: "PoolToken",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.PoolToken>;
+    deployContract(
+      name: "SPVManager",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.SPVManager>;
+    deployContract(
+      name: "TradingEngine",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TradingEngine>;
+    deployContract(
+      name: "TRUSTAssetFactory",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TRUSTAssetFactory>;
+    deployContract(
+      name: "TRUSTFaucet",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TRUSTFaucet>;
+    deployContract(
+      name: "TRUSTMarketplace",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TRUSTMarketplace>;
     deployContract(
       name: "TrustToken",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TrustToken>;
-    deployContract(
-      name: "VerificationBuffer",
-      args: any[],
-      signerOrOptions?: ethers.Signer | DeployContractOptions
-    ): Promise<Contracts.VerificationBuffer>;
     deployContract(
       name: "VerificationRegistry",
       args: any[],

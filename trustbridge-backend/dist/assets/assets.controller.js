@@ -50,13 +50,13 @@ let AssetsController = class AssetsController {
     }
     async createAssetWithTokenization(createAssetDto) {
         try {
-            const result = await this.assetsService.createAssetWithTokenization(createAssetDto);
+            const result = await this.assetsService.createAsset(createAssetDto);
             return {
                 success: true,
-                data: result.asset,
-                tokenId: result.tokenId,
-                transactionId: result.transactionId,
-                message: 'Asset created and tokenized successfully on Hedera network'
+                data: result,
+                tokenId: undefined,
+                transactionId: `legacy_${Date.now()}`,
+                message: 'Asset created successfully (legacy method - use /digital or /rwa endpoints)'
             };
         }
         catch (error) {
@@ -80,6 +80,65 @@ let AssetsController = class AssetsController {
             success: true,
             data: assets,
         };
+    }
+    async createDigitalAsset(createDigitalAssetDto) {
+        try {
+            const result = await this.assetsService.createDigitalAsset(createDigitalAssetDto);
+            return {
+                success: true,
+                data: result.asset,
+                assetId: result.assetId,
+                transactionId: result.transactionId,
+                message: 'Digital asset created successfully on blockchain'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                data: null,
+                assetId: '',
+                transactionId: '',
+                message: error.message
+            };
+        }
+    }
+    async createRWAAsset(createRWAAssetDto) {
+        try {
+            const result = await this.assetsService.createRWAAsset(createRWAAssetDto);
+            return {
+                success: true,
+                data: result.asset,
+                assetId: result.assetId,
+                transactionId: result.transactionId,
+                message: 'RWA asset created successfully on blockchain'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                data: null,
+                assetId: '',
+                transactionId: '',
+                message: error.message
+            };
+        }
+    }
+    async verifyAsset(assetId, body) {
+        try {
+            const result = await this.assetsService.verifyAsset(assetId, body.verificationLevel);
+            return {
+                success: true,
+                transactionId: result.transactionId,
+                message: `Asset verified to level ${body.verificationLevel}`
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                transactionId: '',
+                message: error.message
+            };
+        }
     }
 };
 exports.AssetsController = AssetsController;
@@ -120,10 +179,10 @@ __decorate([
 ], AssetsController.prototype, "createAsset", null);
 __decorate([
     (0, common_1.Post)('create-with-tokenization'),
-    (0, swagger_1.ApiOperation)({ summary: 'Create new asset with Hedera tokenization' }),
-    (0, swagger_1.ApiResponse)({ status: 201, description: 'Asset created and tokenized successfully' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Create new asset with Hedera tokenization (DEPRECATED)' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Asset created successfully' }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Validation error' }),
-    (0, swagger_1.ApiResponse)({ status: 500, description: 'Tokenization failed' }),
+    (0, swagger_1.ApiResponse)({ status: 500, description: 'Creation failed' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [create_asset_dto_1.CreateAssetDto]),
@@ -147,9 +206,40 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], AssetsController.prototype, "getAssetsByOwner", null);
+__decorate([
+    (0, common_1.Post)('digital'),
+    (0, swagger_1.ApiOperation)({ summary: 'Create digital asset' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Digital asset created successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Validation error' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AssetsController.prototype, "createDigitalAsset", null);
+__decorate([
+    (0, common_1.Post)('rwa'),
+    (0, swagger_1.ApiOperation)({ summary: 'Create RWA asset' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'RWA asset created successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Validation error' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AssetsController.prototype, "createRWAAsset", null);
+__decorate([
+    (0, common_1.Post)('verify/:assetId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Verify asset' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Asset verified successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: 'Verification failed' }),
+    __param(0, (0, common_1.Param)('assetId')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AssetsController.prototype, "verifyAsset", null);
 exports.AssetsController = AssetsController = __decorate([
     (0, swagger_1.ApiTags)('Assets'),
-    (0, common_1.Controller)('api/assets'),
+    (0, common_1.Controller)('assets'),
     __metadata("design:paramtypes", [assets_service_1.AssetsService])
 ], AssetsController);
 //# sourceMappingURL=assets.controller.js.map

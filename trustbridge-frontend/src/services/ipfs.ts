@@ -56,13 +56,19 @@ class IPFSService {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 401) {
+          throw new Error('Authentication required. Please log in to upload files.');
+        }
         throw new Error(`Upload failed: ${errorData.message || response.statusText}`);
       }
 
       const result = await response.json();
       
+      console.log('IPFS upload response:', result);
+      
       if (!result.success) {
-        throw new Error(`Upload failed: ${result.message}`);
+        console.error('IPFS upload failed:', result);
+        throw new Error(`Upload failed: ${result.message || 'Unknown error'}`);
       }
 
       return result.data;

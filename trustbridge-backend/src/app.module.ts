@@ -28,13 +28,21 @@ import { FileUploadModule } from './file-upload/file-upload.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { WebSocketModule } from './websocket/websocket.module';
 import { AdminModule } from './admin/admin.module';
+import { PublicModule } from './public/public.module';
 import { MobileModule } from './mobile/mobile.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ExternalApisModule } from './external-apis/external-apis.module';
 import { TokenomicsModule } from './tokenomics/tokenomics.module';
 import { IPFSModule } from './ipfs/ipfs.module';
+import { PoolsModule } from './pools/pools.module';
+import { HealthModule } from './health/health.module';
+import { TradingModule } from './trading/trading.module';
+import { AMCModule } from './amc/amc.module';
+import { ApiModule } from './api/api.module';
+import { AppController } from './app.controller';
 
 @Module({
+  controllers: [AppController],
   imports: [
     // Configuration
     ConfigModule.forRoot({
@@ -100,11 +108,17 @@ import { IPFSModule } from './ipfs/ipfs.module';
     NotificationsModule,
     WebSocketModule,
     AdminModule,
+    PublicModule,
     MobileModule,
     PaymentsModule,
     ExternalApisModule,
     TokenomicsModule,
     IPFSModule,
+    PoolsModule,
+    HealthModule,
+    TradingModule,
+    AMCModule,
+    ApiModule,
   ],
 })
 export class AppModule {}

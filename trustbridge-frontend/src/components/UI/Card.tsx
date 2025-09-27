@@ -7,11 +7,11 @@ const cardVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-dark-gray border-medium-gray text-off-white texture-pattern",
-        floating: "bg-dark-gray/50 border-neon-green/30 text-off-white backdrop-blur-sm hover:border-neon-green/50 hover:shadow-lg hover:shadow-neon-green/10 texture-pattern",
-        neon: "bg-dark-gray border-neon-green text-off-white shadow-lg shadow-neon-green/20 hover:shadow-neon-green/30 texture-pattern",
-        glass: "bg-dark-gray/30 border-medium-gray/30 text-off-white backdrop-blur-md texture-pattern",
-        glow: "bg-dark-gray border-neon-green/50 text-off-white shadow-lg shadow-neon-green/20 texture-pattern"
+        default: "bg-background-secondary border-border-primary text-text-primary shadow-sm",
+        floating: "bg-background-secondary/80 border-border-accent/30 text-text-primary backdrop-blur-sm hover:border-border-accent/50 hover:shadow-lg hover:shadow-neon-green/10 shadow-md",
+        neon: "bg-background-secondary border-border-accent text-text-primary shadow-lg shadow-neon-green/20 hover:shadow-neon-green/30",
+        glass: "bg-background-secondary/50 border-border-primary/30 text-text-primary backdrop-blur-md",
+        glow: "bg-background-secondary border-border-accent/50 text-text-primary shadow-lg shadow-neon-green/20"
       },
       padding: {
         default: "p-6",
@@ -63,7 +63,7 @@ const CardTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h3
     ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+    className={cn("text-sm font-medium leading-none tracking-tight", className)}
     {...props}
   />
 ));
@@ -75,7 +75,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-off-white/70", className)}
+    className={cn("text-sm text-off-white/70 dark:text-off-white/70 light:text-light-text-secondary", className)}
     {...props}
   />
 ));

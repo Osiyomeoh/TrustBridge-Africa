@@ -3,13 +3,21 @@
 /* eslint-disable */
 import type * as interfaces from "./interfaces";
 export type { interfaces };
-export type { AssetFactory } from "./AssetFactory";
-export type { AssetToken } from "./AssetToken";
-export type { AttestorManager } from "./AttestorManager";
-export type { Counter } from "./Counter";
+export type { AMCManager } from "./AMCManager";
+export type { AdvancedMinting } from "./AdvancedMinting";
+export type { AssetNFT } from "./AssetNFT";
+export type { AttestorVerificationSystem } from "./AttestorVerificationSystem";
+export type { BatchMinting } from "./BatchMinting";
+export type { CoreAssetFactory } from "./CoreAssetFactory";
 export type { FeeDistribution } from "./FeeDistribution";
-export type { PolicyManager } from "./PolicyManager";
-export type { SettlementEngine } from "./SettlementEngine";
+export type { Governance } from "./Governance";
+export type { NFTMarketplace } from "./NFTMarketplace";
+export type { PoolManager } from "./PoolManager";
+export type { PoolToken } from "./PoolToken";
+export type { SPVManager } from "./SPVManager";
+export type { TRUSTAssetFactory } from "./TRUSTAssetFactory";
+export type { TRUSTFaucet } from "./TRUSTFaucet";
+export type { TRUSTMarketplace } from "./TRUSTMarketplace";
+export type { TradingEngine } from "./TradingEngine";
 export type { TrustToken } from "./TrustToken";
-export type { VerificationBuffer } from "./VerificationBuffer";
 export type { VerificationRegistry } from "./VerificationRegistry";

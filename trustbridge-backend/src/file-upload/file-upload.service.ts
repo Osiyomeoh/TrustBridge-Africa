@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HederaService } from '../hedera/hedera.service';
 import { GoogleDriveService } from './google-drive.service';
+import { IPFSService } from '../ipfs/ipfs.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
@@ -15,6 +16,8 @@ export interface UploadedFile {
   hash: string;
   uploadedAt: Date;
   hfsFileId?: string;
+  ipfsCid?: string;
+  ipfsUrl?: string;
   url?: string;
 }
 
@@ -42,6 +45,7 @@ export class FileUploadService {
     private configService: ConfigService,
     private hederaService: HederaService,
     private googleDriveService: GoogleDriveService,
+    private ipfsService: IPFSService
   ) {
     this.uploadDir = this.configService.get<string>('UPLOAD_DIR', './uploads');
     this.maxFileSize = this.configService.get<number>('MAX_FILE_SIZE', 10 * 1024 * 1024); // 10MB
@@ -85,7 +89,29 @@ export class FileUploadService {
       // Calculate file hash
       const hash = this.calculateFileHash(file.buffer);
 
-      // Store file on Hedera File Service (HFS)
+      // Store file on IPFS using Pinata
+      let ipfsCid: string | undefined;
+      let ipfsUrl: string | undefined;
+      try {
+        const ipfsResult = await this.ipfsService.uploadFile(
+          file.buffer,
+          fileName,
+          file.mimetype,
+          {
+            name: fileName,
+            description: `Document uploaded for asset ${assetId}`,
+            location: assetId,
+            fileType: fileType
+          }
+        );
+        ipfsCid = ipfsResult.cid;
+        ipfsUrl = ipfsResult.ipfsUrl;
+        this.logger.log(`File stored on IPFS with CID: ${ipfsCid}`);
+      } catch (error) {
+        this.logger.warn('Failed to store file on IPFS:', error);
+      }
+
+      // Also store file on Hedera File Service (HFS) as backup
       let hfsFileId: string | undefined;
       try {
         hfsFileId = await this.hederaService.storeFileOnHFS(file.buffer, fileName);
@@ -103,7 +129,9 @@ export class FileUploadService {
         hash,
         uploadedAt: new Date(),
         hfsFileId,
-        url: `/uploads/${fileName}`,
+        ipfsCid,
+        ipfsUrl,
+        url: ipfsUrl || `/uploads/${fileName}`,
       };
 
       this.logger.log(`File uploaded successfully: ${uploadedFile.id}`);

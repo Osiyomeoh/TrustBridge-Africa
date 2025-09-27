@@ -272,7 +272,7 @@ __decorate([
 ], PaymentsController.prototype, "getFeeStructure", null);
 exports.PaymentsController = PaymentsController = __decorate([
     (0, swagger_1.ApiTags)('Payments'),
-    (0, common_1.Controller)('api/payments'),
+    (0, common_1.Controller)('payments'),
     __metadata("design:paramtypes", [payments_service_1.PaymentsService])
 ], PaymentsController);
 //# sourceMappingURL=payments.controller.js.map

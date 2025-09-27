@@ -18,12 +18,157 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const asset_schema_1 = require("../schemas/asset.schema");
-const hedera_service_1 = require("../hedera/hedera.service");
+const asset_v2_schema_1 = require("../schemas/asset-v2.schema");
+const api_service_1 = require("../api/api.service");
 let AssetsService = AssetsService_1 = class AssetsService {
-    constructor(assetModel, hederaService) {
+    constructor(assetModel, assetV2Model, apiService) {
         this.assetModel = assetModel;
-        this.hederaService = hederaService;
+        this.assetV2Model = assetV2Model;
+        this.apiService = apiService;
         this.logger = new common_1.Logger(AssetsService_1.name);
+    }
+    async createDigitalAsset(createDigitalAssetDto) {
+        try {
+            const apiResult = await this.apiService.createDigitalAsset({
+                category: createDigitalAssetDto.category,
+                assetType: createDigitalAssetDto.assetType,
+                name: createDigitalAssetDto.name,
+                location: createDigitalAssetDto.location,
+                totalValue: createDigitalAssetDto.totalValue,
+                imageURI: createDigitalAssetDto.imageURI,
+                description: createDigitalAssetDto.description,
+                owner: createDigitalAssetDto.owner,
+                assetId: createDigitalAssetDto.assetId,
+                transactionId: createDigitalAssetDto.transactionId,
+            });
+            const asset = new this.assetV2Model({
+                assetId: apiResult.assetId,
+                type: asset_v2_schema_1.AssetTypeV2.DIGITAL,
+                category: this.getCategoryName(createDigitalAssetDto.category),
+                assetType: createDigitalAssetDto.assetType,
+                name: createDigitalAssetDto.name,
+                location: createDigitalAssetDto.location,
+                totalValue: parseFloat(createDigitalAssetDto.totalValue),
+                owner: createDigitalAssetDto.owner,
+                status: asset_v2_schema_1.AssetStatusV2.DIGITAL_ACTIVE,
+                tokenizedAmount: parseFloat(createDigitalAssetDto.totalValue),
+                verificationScore: 100,
+                verificationLevel: asset_v2_schema_1.VerificationLevel.MASTER,
+                imageURI: createDigitalAssetDto.imageURI,
+                description: createDigitalAssetDto.description,
+                isTradeable: true,
+                operations: [`Digital asset created: ${apiResult.transactionId}`],
+                createdAt: new Date(),
+                verifiedAt: new Date(),
+            });
+            const savedAsset = await asset.save();
+            this.logger.log(`Created digital asset: ${savedAsset.assetId}`);
+            return {
+                asset: savedAsset,
+                assetId: apiResult.assetId,
+                transactionId: apiResult.transactionId
+            };
+        }
+        catch (error) {
+            this.logger.error(`Failed to create digital asset: ${error.message}`);
+            throw new Error(`Digital asset creation failed: ${error.message}`);
+        }
+    }
+    async createRWAAsset(createRWAAssetDto) {
+        try {
+            const apiResult = await this.apiService.createRWAAsset({
+                category: createRWAAssetDto.category,
+                assetType: createRWAAssetDto.assetType,
+                name: createRWAAssetDto.name,
+                location: createRWAAssetDto.location,
+                totalValue: createRWAAssetDto.totalValue,
+                maturityDate: createRWAAssetDto.maturityDate,
+                evidenceHashes: createRWAAssetDto.evidenceHashes,
+                documentTypes: createRWAAssetDto.documentTypes,
+                imageURI: createRWAAssetDto.imageURI,
+                documentURI: createRWAAssetDto.documentURI,
+                description: createRWAAssetDto.description,
+                owner: createRWAAssetDto.owner,
+                assetId: createRWAAssetDto.assetId,
+                transactionId: createRWAAssetDto.transactionId,
+            });
+            const asset = new this.assetV2Model({
+                assetId: apiResult.assetId,
+                type: asset_v2_schema_1.AssetTypeV2.RWA,
+                category: this.getCategoryName(createRWAAssetDto.category),
+                assetType: createRWAAssetDto.assetType,
+                name: createRWAAssetDto.name,
+                location: createRWAAssetDto.location,
+                totalValue: parseFloat(createRWAAssetDto.totalValue),
+                owner: createRWAAssetDto.owner,
+                status: asset_v2_schema_1.AssetStatusV2.PENDING,
+                tokenizedAmount: 0,
+                verificationScore: 0,
+                verificationLevel: asset_v2_schema_1.VerificationLevel.BASIC,
+                maturityDate: new Date(createRWAAssetDto.maturityDate * 1000),
+                evidenceHashes: createRWAAssetDto.evidenceHashes,
+                documentTypes: createRWAAssetDto.documentTypes,
+                imageURI: createRWAAssetDto.imageURI,
+                documentURI: createRWAAssetDto.documentURI,
+                description: createRWAAssetDto.description,
+                isTradeable: false,
+                operations: [`RWA asset created: ${apiResult.transactionId}`],
+                createdAt: new Date(),
+            });
+            const savedAsset = await asset.save();
+            this.logger.log(`Created RWA asset: ${savedAsset.assetId}`);
+            return {
+                asset: savedAsset,
+                assetId: apiResult.assetId,
+                transactionId: apiResult.transactionId
+            };
+        }
+        catch (error) {
+            this.logger.error(`Failed to create RWA asset: ${error.message}`);
+            throw new Error(`RWA asset creation failed: ${error.message}`);
+        }
+    }
+    async verifyAsset(assetId, verificationLevel) {
+        try {
+            const apiResult = await this.apiService.verifyAsset(assetId, verificationLevel);
+            const verificationLevels = [asset_v2_schema_1.VerificationLevel.BASIC, asset_v2_schema_1.VerificationLevel.PROFESSIONAL, asset_v2_schema_1.VerificationLevel.EXPERT, asset_v2_schema_1.VerificationLevel.MASTER];
+            const updatedAsset = await this.assetV2Model.findOneAndUpdate({ assetId }, {
+                $set: {
+                    status: verificationLevel >= 1 ? asset_v2_schema_1.AssetStatusV2.VERIFIED : asset_v2_schema_1.AssetStatusV2.PENDING,
+                    verificationScore: verificationLevel * 25,
+                    verificationLevel: verificationLevels[verificationLevel],
+                    verifiedAt: new Date(),
+                    operations: [...(await this.getAssetOperations(assetId)), `Asset verified to ${verificationLevels[verificationLevel]} level: ${apiResult.transactionId}`]
+                }
+            }, { new: true });
+            if (!updatedAsset) {
+                throw new common_1.NotFoundException('Asset not found');
+            }
+            this.logger.log(`Verified asset ${assetId} to level ${verificationLevel}`);
+            return { transactionId: apiResult.transactionId };
+        }
+        catch (error) {
+            this.logger.error(`Failed to verify asset: ${error.message}`);
+            throw new Error(`Asset verification failed: ${error.message}`);
+        }
+    }
+    getCategoryName(category) {
+        const categories = {
+            0: 'REAL_ESTATE',
+            1: 'COMMODITY',
+            2: 'AGRICULTURE',
+            3: 'MINING',
+            4: 'ENERGY',
+            5: 'INFRASTRUCTURE',
+            6: 'DIGITAL_ART',
+            7: 'NFT',
+            8: 'DIGITAL_COLLECTIBLE'
+        };
+        return categories[category] || 'UNKNOWN';
+    }
+    async getAssetOperations(assetId) {
+        const asset = await this.assetModel.findOne({ assetId });
+        return asset?.operations || [];
     }
     async createAsset(createAssetDto) {
         const assetId = `${createAssetDto.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -37,56 +182,6 @@ let AssetsService = AssetsService_1 = class AssetsService {
             operations: [],
         });
         return asset.save();
-    }
-    async createAssetWithTokenization(createAssetDto) {
-        try {
-            const asset = await this.createAsset(createAssetDto);
-            this.logger.log(`Created asset ${asset.assetId} in database`);
-            const tokenizationRequest = {
-                assetId: asset.assetId,
-                owner: createAssetDto.owner,
-                tokenName: `${createAssetDto.name} Token`,
-                tokenSymbol: this.generateTokenSymbol(createAssetDto.name, createAssetDto.type),
-                totalSupply: createAssetDto.tokenSupply,
-                enableKyc: true,
-                enableFreeze: true,
-                metadata: {
-                    assetType: createAssetDto.type,
-                    location: createAssetDto.location,
-                    totalValue: createAssetDto.totalValue,
-                    expectedAPY: createAssetDto.expectedAPY,
-                    maturityDate: createAssetDto.maturityDate,
-                }
-            };
-            const tokenizationResult = await this.hederaService.createAssetToken(tokenizationRequest);
-            this.logger.log(`Created Hedera token ${tokenizationResult.tokenId} for asset ${asset.assetId}`);
-            const updatedAsset = await this.assetModel.findByIdAndUpdate(asset._id, {
-                $set: {
-                    tokenId: tokenizationResult.tokenId,
-                    status: asset_schema_1.AssetStatus.ACTIVE,
-                    tokenizedAmount: createAssetDto.tokenSupply,
-                    operations: [`Token created on Hedera: ${tokenizationResult.transactionId}`]
-                }
-            }, { new: true });
-            return {
-                asset: updatedAsset,
-                tokenId: tokenizationResult.tokenId,
-                transactionId: tokenizationResult.transactionId
-            };
-        }
-        catch (error) {
-            this.logger.error(`Failed to create asset with tokenization: ${error.message}`);
-            const asset = await this.assetModel.findById(asset._id);
-            if (asset) {
-                await this.assetModel.findByIdAndUpdate(asset._id, {
-                    $set: {
-                        status: asset_schema_1.AssetStatus.PENDING,
-                        operations: [`Tokenization failed: ${error.message}`]
-                    }
-                });
-            }
-            throw new Error(`Asset created but tokenization failed: ${error.message}`);
-        }
     }
     generateTokenSymbol(name, type) {
         const typePrefix = type.substring(0, 2).toUpperCase();
@@ -194,7 +289,9 @@ exports.AssetsService = AssetsService;
 exports.AssetsService = AssetsService = AssetsService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(asset_schema_1.Asset.name)),
+    __param(1, (0, mongoose_1.InjectModel)(asset_v2_schema_1.AssetV2.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
-        hedera_service_1.HederaService])
+        mongoose_2.Model,
+        api_service_1.ApiService])
 ], AssetsService);
 //# sourceMappingURL=assets.service.js.map

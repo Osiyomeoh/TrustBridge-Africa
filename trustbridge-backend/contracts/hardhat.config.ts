@@ -1,4 +1,4 @@
-import { HardhatUserConfig } from "hardhat/config";
+import { HardhatUserConfig } from "hardhat/config.js";
 import "@nomicfoundation/hardhat-toolbox";
 import "dotenv/config";
 
@@ -24,7 +24,7 @@ const config: HardhatUserConfig = {
     hedera_testnet: {
       url: "https://testnet.hashio.io/api",
       chainId: 296,
-      accounts: process.env.HEDERA_TESTNET_PRIVATE_KEY ? [process.env.HEDERA_TESTNET_PRIVATE_KEY] : [],
+      accounts: process.env.HEDERA_TESTNET_PRIVATE_KEY_2 ? [process.env.HEDERA_TESTNET_PRIVATE_KEY_2] : [],
       gas: "auto",
       gasPrice: "auto",
     },

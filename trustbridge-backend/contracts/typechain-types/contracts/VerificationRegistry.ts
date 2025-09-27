@@ -23,27 +23,63 @@ import type {
   TypedContractMethod,
 } from "../common";
 
+export declare namespace IVerificationRegistry {
+  export type VerificationRecordStruct = {
+    assetId: BytesLike;
+    assetType: BytesLike;
+    owner: AddressLike;
+    score: BigNumberish;
+    evidenceRoot: BytesLike;
+    status: BigNumberish;
+    createdAt: BigNumberish;
+    expiresAt: BigNumberish;
+    attestors: AddressLike[];
+  };
+
+  export type VerificationRecordStructOutput = [
+    assetId: string,
+    assetType: string,
+    owner: string,
+    score: bigint,
+    evidenceRoot: string,
+    status: bigint,
+    createdAt: bigint,
+    expiresAt: bigint,
+    attestors: string[]
+  ] & {
+    assetId: string;
+    assetType: string;
+    owner: string;
+    score: bigint;
+    evidenceRoot: string;
+    status: bigint;
+    createdAt: bigint;
+    expiresAt: bigint;
+    attestors: string[];
+  };
+}
+
 export interface VerificationRegistryInterface extends Interface {
   getFunction(
     nameOrSignature:
       | "DEFAULT_ADMIN_ROLE"
       | "GATEWAY_ROLE"
-      | "attestorManager"
       | "attestorSigned"
+      | "getAllVerifications"
       | "getRoleAdmin"
+      | "getVerificationCount"
       | "getVerificationStatus"
       | "grantRole"
       | "hasAttestorSigned"
       | "hasRole"
-      | "policyManager"
       | "renounceRole"
       | "reviewVerification"
       | "revokeRole"
       | "revokeVerification"
-      | "setAttestorManager"
-      | "setPolicyManager"
       | "submitVerification"
       | "supportsInterface"
+      | "verificationExists"
+      | "verificationIds"
       | "verifications"
   ): FunctionFragment;
 
@@ -66,16 +102,20 @@ export interface VerificationRegistryInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "attestorManager",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
     functionFragment: "attestorSigned",
     values: [BytesLike, AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "getAllVerifications",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "getRoleAdmin",
     values: [BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getVerificationCount",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "getVerificationStatus",
@@ -94,10 +134,6 @@ export interface VerificationRegistryInterface extends Interface {
     values: [BytesLike, AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "policyManager",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
     functionFragment: "renounceRole",
     values: [BytesLike, AddressLike]
   ): string;
@@ -112,14 +148,6 @@ export interface VerificationRegistryInterface extends Interface {
   encodeFunctionData(
     functionFragment: "revokeVerification",
     values: [BytesLike, string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setAttestorManager",
-    values: [AddressLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setPolicyManager",
-    values: [AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "submitVerification",
@@ -139,6 +167,14 @@ export interface VerificationRegistryInterface extends Interface {
     values: [BytesLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "verificationExists",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "verificationIds",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "verifications",
     values: [BytesLike]
   ): string;
@@ -152,15 +188,19 @@ export interface VerificationRegistryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "attestorManager",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "attestorSigned",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "getAllVerifications",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "getRoleAdmin",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getVerificationCount",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -173,10 +213,6 @@ export interface VerificationRegistryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "hasRole", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "policyManager",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "renounceRole",
     data: BytesLike
@@ -191,19 +227,19 @@ export interface VerificationRegistryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "setAttestorManager",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "setPolicyManager",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "submitVerification",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "supportsInterface",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "verificationExists",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "verificationIds",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -368,15 +404,21 @@ export interface VerificationRegistry extends BaseContract {
 
   GATEWAY_ROLE: TypedContractMethod<[], [string], "view">;
 
-  attestorManager: TypedContractMethod<[], [string], "view">;
-
   attestorSigned: TypedContractMethod<
     [arg0: BytesLike, arg1: AddressLike],
     [boolean],
     "view"
   >;
 
+  getAllVerifications: TypedContractMethod<
+    [],
+    [IVerificationRegistry.VerificationRecordStructOutput[]],
+    "view"
+  >;
+
   getRoleAdmin: TypedContractMethod<[role: BytesLike], [string], "view">;
+
+  getVerificationCount: TypedContractMethod<[], [bigint], "view">;
 
   getVerificationStatus: TypedContractMethod<
     [assetId: BytesLike],
@@ -409,8 +451,6 @@ export interface VerificationRegistry extends BaseContract {
     "view"
   >;
 
-  policyManager: TypedContractMethod<[], [string], "view">;
-
   renounceRole: TypedContractMethod<
     [role: BytesLike, callerConfirmation: AddressLike],
     [void],
@@ -435,18 +475,6 @@ export interface VerificationRegistry extends BaseContract {
     "nonpayable"
   >;
 
-  setAttestorManager: TypedContractMethod<
-    [_attestorManager: AddressLike],
-    [void],
-    "nonpayable"
-  >;
-
-  setPolicyManager: TypedContractMethod<
-    [_policyManager: AddressLike],
-    [void],
-    "nonpayable"
-  >;
-
   submitVerification: TypedContractMethod<
     [
       assetId: BytesLike,
@@ -467,6 +495,10 @@ export interface VerificationRegistry extends BaseContract {
     [boolean],
     "view"
   >;
+
+  verificationExists: TypedContractMethod<[arg0: BytesLike], [boolean], "view">;
+
+  verificationIds: TypedContractMethod<[arg0: BigNumberish], [string], "view">;
 
   verifications: TypedContractMethod<
     [arg0: BytesLike],
@@ -496,9 +528,6 @@ export interface VerificationRegistry extends BaseContract {
     nameOrSignature: "GATEWAY_ROLE"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
-    nameOrSignature: "attestorManager"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
     nameOrSignature: "attestorSigned"
   ): TypedContractMethod<
     [arg0: BytesLike, arg1: AddressLike],
@@ -506,8 +535,18 @@ export interface VerificationRegistry extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "getAllVerifications"
+  ): TypedContractMethod<
+    [],
+    [IVerificationRegistry.VerificationRecordStructOutput[]],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "getRoleAdmin"
   ): TypedContractMethod<[role: BytesLike], [string], "view">;
+  getFunction(
+    nameOrSignature: "getVerificationCount"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "getVerificationStatus"
   ): TypedContractMethod<
@@ -544,9 +583,6 @@ export interface VerificationRegistry extends BaseContract {
     "view"
   >;
   getFunction(
-    nameOrSignature: "policyManager"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
     nameOrSignature: "renounceRole"
   ): TypedContractMethod<
     [role: BytesLike, callerConfirmation: AddressLike],
@@ -575,12 +611,6 @@ export interface VerificationRegistry extends BaseContract {
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "setAttestorManager"
-  ): TypedContractMethod<[_attestorManager: AddressLike], [void], "nonpayable">;
-  getFunction(
-    nameOrSignature: "setPolicyManager"
-  ): TypedContractMethod<[_policyManager: AddressLike], [void], "nonpayable">;
-  getFunction(
     nameOrSignature: "submitVerification"
   ): TypedContractMethod<
     [
@@ -599,6 +629,12 @@ export interface VerificationRegistry extends BaseContract {
   getFunction(
     nameOrSignature: "supportsInterface"
   ): TypedContractMethod<[interfaceId: BytesLike], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "verificationExists"
+  ): TypedContractMethod<[arg0: BytesLike], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "verificationIds"
+  ): TypedContractMethod<[arg0: BigNumberish], [string], "view">;
   getFunction(
     nameOrSignature: "verifications"
   ): TypedContractMethod<

@@ -1,0 +1,159 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_trustToken",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_assetNFT",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_feeRecipient",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "AccessControlBadConfirmation",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "neededRole",
+          "type": "bytes32"
+        }
+      ],
+      "name": "AccessControlUnauthorizedAccount",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "EnforcedPause",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ExpectedPause",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ReentrancyGuardReentrantCall",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "assetId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum CoreAssetFactory.AssetCategory",
+          "name": "category",
+          "type": "uint8"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "assetType",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "totalValue",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "enum CoreAssetFactory.AssetStatus",
+          "name": "status",
+          "type": "uint8"
+        }
+      ],
+      "name": "AssetCreated",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "enum CoreAssetFactory.AssetCategory",
+          "name": "_category",
+          "type": "uint8"
+        },
+        {
+          "internalType": "string",
+          "name": "_assetTypeString",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_name",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_location",
+          "type": "string"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_totalValue",
+          "type": "uint256"
+        },
+        {
+          "internalType": "string",
+          "name": "_imageURI",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_description",
+          "type": "string"
+        }
+      ],
+      "name": "createDigitalAsset",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}

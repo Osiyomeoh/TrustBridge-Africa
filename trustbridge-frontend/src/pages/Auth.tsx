@@ -9,13 +9,19 @@ import ProfileCompletion from '../components/Auth/ProfileCompletion';
 import EmailVerification from '../components/Auth/EmailVerification';
 import KYCVerification from '../components/Auth/KYCVerification';
 import AnimatedBackground from '../components/UI/AnimatedBackground';
+import AuthStatus from '../components/Auth/AuthStatus';
 
 const Auth: React.FC = () => {
   const { authStep, isAuthenticated, user } = useAuth();
   const { isConnected, address } = useWallet();
   const navigate = useNavigate();
 
-  console.log('Auth page render - authStep:', authStep, 'isAuthenticated:', isAuthenticated);
+  console.log('Auth page render - authStep:', authStep, 'isAuthenticated:', isAuthenticated, 'user:', user);
+  
+  // Debug: Log when user changes
+  React.useEffect(() => {
+    console.log('Auth.tsx - User changed:', user);
+  }, [user]);
 
   // Add timeout to prevent getting stuck on loading screen
   React.useEffect(() => {
@@ -40,7 +46,6 @@ const Auth: React.FC = () => {
 
   // Debug: Log current location and prevent unwanted redirects
   console.log('Auth page - Current location:', window.location.pathname);
-  console.log('Auth page - Wallet connected:', isConnected, 'Address:', address);
 
   // Show loading screen when wallet is connected but we're still checking authentication
   if (isConnected && address && !isAuthenticated && authStep === 'wallet') {
@@ -145,6 +150,26 @@ const Auth: React.FC = () => {
       <AnimatedBackground />
       
       {/* Header */}
+      <div className="bg-gray-900/50 border-b border-gray-700/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-neon-green to-emerald-500 rounded-lg flex items-center justify-center">
+                <span className="text-black font-bold text-sm">TB</span>
+              </div>
+              <span className="text-lg font-semibold text-off-white">TrustBridge</span>
+            </div>
+
+            {/* Auth Status */}
+            <div className="flex items-center space-x-4">
+              <AuthStatus />
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Page Header */}
       <div className="relative z-10 pt-8 pb-4">
         <div className="container mx-auto px-4">
           <motion.div

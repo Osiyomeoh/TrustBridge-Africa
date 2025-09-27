@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Pinata Image</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: white;
+        }
+        .image-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .url-display {
+            background-color: #2a2a2a;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background-color: #2d5a2d;
+            border: 1px solid #4a7c4a;
+        }
+        .error {
+            background-color: #5a2d2d;
+            border: 1px solid #7c4a4a;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pinata Image Test</h1>
+    <p>Testing the Pinata IPFS image URL from asset creation:</p>
+    
+    <div class="url-display">
+        <strong>Image URL:</strong><br>
+        https://indigo-recent-clam-436.mypinata.cloud/ipfs/QmXhdruyi4dkoxd24twjodfchbcl2ksjjt72agpdtatmfhctbygy
+    </div>
+    
+    <div class="image-container">
+        <img 
+            id="testImage" 
+            src="https://indigo-recent-clam-436.mypinata.cloud/ipfs/QmXhdruyi4dkoxd24twjodfchbcl2ksjjt72agpdtatmfhctbygy" 
+            alt="Test Pinata Image"
+            onload="showSuccess()"
+            onerror="showError()"
+        />
+    </div>
+    
+    <div id="status"></div>
+    
+    <script>
+        function showSuccess() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '<div class="status success">✅ Image loaded successfully from Pinata IPFS!</div>';
+        }
+        
+        function showError() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = '<div class="status error">❌ Failed to load image from Pinata IPFS</div>';
+        }
+        
+        // Test if the image loads
+        const img = document.getElementById('testImage');
+        img.addEventListener('load', showSuccess);
+        img.addEventListener('error', showError);
+    </script>
+</body>
+</html>

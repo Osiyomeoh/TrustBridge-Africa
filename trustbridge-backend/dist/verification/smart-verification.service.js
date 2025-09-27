@@ -262,11 +262,11 @@ let SmartVerificationService = SmartVerificationService_1 = class SmartVerificat
         return {
             assetId,
             status: asset.status,
-            tier: verification.metadata?.tier || 'STANDARD',
+            tier: 'STANDARD',
             confidence: verification.scoring?.finalScore || 0,
-            processingTime: verification.metadata?.processingTime || 0,
-            reasons: verification.scoring?.breakdown?.reasons || [],
-            nextSteps: verification.metadata?.nextSteps || []
+            processingTime: 0,
+            reasons: [],
+            nextSteps: []
         };
     }
 };

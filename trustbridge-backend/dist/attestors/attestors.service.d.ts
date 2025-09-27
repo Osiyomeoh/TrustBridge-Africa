@@ -95,4 +95,9 @@ export declare class AttestorsService {
     getAttestorsBySpecialty(specialty: string): Promise<Attestor[]>;
     approveAttestor(attestorId: string): Promise<void>;
     rejectAttestor(attestorId: string, reason: string): Promise<void>;
+    processManualAttestorApplication(applicationData: any): Promise<any>;
+    getAllAttestorApplications(): Promise<any[]>;
+    approveAttestorApplication(applicationId: string, reviewerNotes?: string): Promise<any>;
+    rejectAttestorApplication(applicationId: string, reviewerNotes?: string): Promise<any>;
+    processAttestorApplication(applicationData: any): Promise<any>;
 }

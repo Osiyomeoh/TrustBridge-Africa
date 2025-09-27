@@ -1,0 +1,125 @@
+# 🗑️ FILES TO DELETE - TrustBridge Cleanup List
+
+## 📋 OLD DEPLOYMENT FILES
+- deployments/fresh-deployment.json
+- deployments/working-addresses-reference.json
+- (Keep: trust-ecosystem.json, LATEST_DEPLOYMENTS_REFERENCE.json)
+
+## 📋 OLD DEPLOYMENT SCRIPTS
+- scripts/deploy-fresh.js
+- scripts/deploy-enhanced-system.js
+- scripts/deploy-enhanced-minting.js
+- scripts/deploy-mandatory-amc.js
+
+## 📋 OLD TEST SCRIPTS (Keep only essential ones)
+- scripts/test-existing-assets-flow.js
+- scripts/test-real-user-flow.js
+- scripts/test-business-economics-100.js
+- scripts/test-fixed-upgrade-flow.js
+- scripts/check-current-state.js
+- scripts/decode-verification-error.js
+- scripts/check-asset-nft-roles.js
+- scripts/test-asset-creation-only.js
+- scripts/test-digital-user-flow.js
+- scripts/test-trust-ecosystem.js
+- scripts/check-current-allowance.js
+- scripts/test-rwa-flow-100.js
+- scripts/test-final-system-status.js
+- scripts/test-simple-flow.js
+- scripts/check-core-asset-factory.js
+- scripts/test-complete-asset-flow.js
+
+## 📋 OLD CONTRACT FILES (NOT DEPLOYED)
+- contracts/UniversalAssetFactory.sol
+- contracts/HederaAssetFactory.sol
+- contracts/AssetManagementCompany.sol
+- contracts/EnhancedTRUSTAssetFactory.sol
+- contracts/MandatoryAMCFactory.sol
+
+## ✅ ACTIVE CONTRACTS (DO NOT DELETE)
+- contracts/CoreAssetFactory.sol (ACTIVE: 0x27A5705717294a481338193E9Cb5F33A40169401)
+- contracts/AMCManager.sol (ACTIVE: 0xeDdEA0d8332e332382136feB27FbeAa2f0301250)
+- contracts/BatchMinting.sol (ACTIVE: 0xD02fA53B407E2eCBf920Ed683D82d85b3F68E32f)
+- contracts/AdvancedMinting.sol (ACTIVE: 0xac1E822296e6485449163EE9DAB0eAE3138565e7)
+
+## 📋 OLD ABI FILES (FRONTEND)
+- ../trustbridge-frontend/src/contracts/UniversalAssetFactory.json
+- ../trustbridge-frontend/src/contracts/HederaAssetFactory.json
+- ../trustbridge-frontend/src/contracts/AssetManagementCompany.json
+- ../trustbridge-frontend/src/contracts/EnhancedTRUSTAssetFactory.json
+- ../trustbridge-frontend/src/contracts/MandatoryAMCFactory.json
+
+## ✅ ACTIVE ABI FILES (DO NOT DELETE)
+- ../trustbridge-frontend/src/contracts/CoreAssetFactory.json (ACTIVE)
+- ../trustbridge-frontend/src/contracts/AMCManager.json (ACTIVE)
+- ../trustbridge-frontend/src/contracts/BatchMinting.json (ACTIVE)
+- ../trustbridge-frontend/src/contracts/AdvancedMinting.json (ACTIVE)
+
+## 📋 OLD DEBUGGING FILES (ALL .md files in deployments/)
+- deployments/ABI_SYNC_FIX.md
+- deployments/ADMIN_DASHBOARD_FIX.md
+- deployments/ADMIN_TAB_FIX.md
+- deployments/ASSET_CREATION_DEBUG.md
+- deployments/ASSET_CREATION_FINAL_FIX.md
+- deployments/ASSET_CREATION_FIX.md
+- deployments/ASSET_CREATION_SUCCESS_FIX.md
+- deployments/ASSET_CREATION_SUCCESS.md
+- deployments/ASSET_VERIFICATION_FIX.md
+- deployments/ASSET_VERIFICATION_STATUS_FIX.md
+- deployments/ATTESTOR_APPROVAL_FUNCTIONS_ADDED.md
+- deployments/BIGINT_SERIALIZATION_FIX.md
+- deployments/COMPREHENSIVE_BIGINT_FIX.md
+- deployments/DETAILED_DEBUGGING.md
+- deployments/ECOSYSTEM_FLOW_STATUS.md
+- deployments/ENHANCED_DEBUGGING.md
+- deployments/FILE_UPLOAD_ACCEPTED_TYPES_FIX.md
+- deployments/FRONTEND_INTEGRATION_COMPLETE.md
+- deployments/FRONTEND_NULL_CONTRACT_FIX.md
+- deployments/MISSING_RENDER_FUNCTIONS_FIX.md
+- deployments/NAVIGATION_REFRESH_FIX.md
+- deployments/REQUEST_VERIFICATION_BUTTON_FIX.md
+- deployments/ROUTE_PATH_FIX.md
+- deployments/TRUST_TOKEN_BALANCE_FIX.md
+- deployments/VERIFICATION_ALLOWANCE_FIX.md
+- deployments/VERIFICATION_ALWAYS_APPROVE_FIX.md
+- deployments/VERIFICATION_ASSET_ID_FIX.md
+- deployments/VERIFICATION_DEBUGGING_ADDED.md
+- deployments/VERIFICATION_FRESH_DATA_FIX.md
+- deployments/VERIFICATION_LEVEL_ENUM_FIX.md
+- deployments/VERIFICATION_MODE_IMPROVEMENT.md
+- deployments/VERIFICATION_PROVIDER_REFRESH_FIX.md
+- deployments/VERIFICATION_SKIP_DOCUMENTS_FIX.md
+- deployments/VERIFICATION_SKIP_DOCUMENTS_FIX.md
+- deployments/WALLET_ADDRESS_FIX.md
+
+## 📋 OLD ARTIFACTS (IF ANY)
+- artifacts/contracts/UniversalAssetFactory.sol/
+- artifacts/contracts/HederaAssetFactory.sol/
+- artifacts/contracts/AssetManagementCompany.sol/
+- artifacts/contracts/EnhancedTRUSTAssetFactory.sol/
+- artifacts/contracts/MandatoryAMCFactory.sol/
+
+## ✅ ACTIVE ARTIFACTS (DO NOT DELETE)
+- artifacts/contracts/CoreAssetFactory.sol/ (ACTIVE)
+- artifacts/contracts/AMCManager.sol/ (ACTIVE)
+- artifacts/contracts/BatchMinting.sol/ (ACTIVE)
+- artifacts/contracts/AdvancedMinting.sol/ (ACTIVE)
+
+## ✅ FILES TO KEEP (ESSENTIAL)
+- deployments/LATEST_DEPLOYMENTS_REFERENCE.json (comprehensive reference)
+- deployments/CONTRACT_ADDRESSES_QUICK_REFERENCE.md (quick lookup)
+- deployments/trust-ecosystem.json (deployment record)
+- scripts/test-final-100-success.js (comprehensive test)
+- scripts/test-complete-business-flow.js (business flow test)
+- All active contract .sol files (TRUSTAssetFactory, AssetNFT, etc.)
+- All active ABI .json files in frontend
+
+## 🎯 SUMMARY
+- **Total files to delete**: ~50+ files
+- **Space saved**: Significant cleanup
+- **Risk**: Low (only deleting old/unused files)
+- **Benefit**: Cleaner codebase, easier maintenance
+
+## 🚀 TO EXECUTE CLEANUP
+Run: `bash CLEANUP_DELETE_FILES.sh` from the contracts directory
+yes

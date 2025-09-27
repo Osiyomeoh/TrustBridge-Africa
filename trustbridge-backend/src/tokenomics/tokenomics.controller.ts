@@ -7,7 +7,7 @@ import { StakingService, StakingType } from './staking.service';
 import { RevenueService } from './revenue.service';
 
 @ApiTags('Tokenomics')
-@Controller('api/tokenomics')
+@Controller('tokenomics')
 export class TokenomicsController {
   constructor(
     private readonly tokenomicsService: TokenomicsService,

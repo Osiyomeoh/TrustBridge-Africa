@@ -1,0 +1,11 @@
+{
+  "network": "hedera_testnet",
+  "timestamp": "2025-09-26T07:01:38.896Z",
+  "deployer": "0xA6e8bf8E89Bd2c2BD37e308F275C4f52284a911F",
+  "trustTokenAddress": "0x170B35e97C217dBf63a500EaB884392F7BF6Ec34",
+  "features": [
+    "Public minting for testing (mintTestTokens)",
+    "Up to 1000 TRUST tokens per mint",
+    "No MINTER_ROLE required for test minting"
+  ]
+}

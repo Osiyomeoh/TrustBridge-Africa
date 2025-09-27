@@ -373,11 +373,11 @@ export class SmartVerificationService {
     return {
       assetId,
       status: asset.status,
-      tier: verification.metadata?.tier || 'STANDARD',
+      tier: 'STANDARD', // Default tier
       confidence: verification.scoring?.finalScore || 0,
-      processingTime: verification.metadata?.processingTime || 0,
-      reasons: verification.scoring?.breakdown?.reasons || [],
-      nextSteps: verification.metadata?.nextSteps || []
+      processingTime: 0, // Default processing time
+      reasons: [], // Default empty reasons
+      nextSteps: [] // Default empty next steps
     };
   }
 }

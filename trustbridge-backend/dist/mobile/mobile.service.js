@@ -43,18 +43,25 @@ let MobileService = MobileService_1 = class MobileService {
     }
     async getMobileDashboard(userId) {
         try {
-            const user = await this.userModel.findById(userId).select('-password');
+            let user;
+            if (userId.match(/^[0-9a-fA-F]{24}$/)) {
+                user = await this.userModel.findById(userId).select('-password');
+            }
+            else {
+                user = await this.userModel.findOne({ walletAddress: userId }).select('-password');
+            }
             if (!user) {
                 throw new Error('User not found');
             }
-            const assets = await this.assetModel.find({ owner: userId })
+            const actualUserId = user._id.toString();
+            const assets = await this.assetModel.find({ owner: actualUserId })
                 .sort({ createdAt: -1 })
                 .limit(10);
-            const investments = await this.getUserInvestments(userId);
-            const operations = await this.getUserOperations(userId);
-            const notifications = await this.getUserNotifications(userId);
+            const investments = await this.getUserInvestments(actualUserId);
+            const operations = await this.getUserOperations(actualUserId);
+            const notifications = await this.getUserNotifications(actualUserId);
             const stats = {
-                totalAssets: await this.assetModel.countDocuments({ owner: userId }),
+                totalAssets: await this.assetModel.countDocuments({ owner: actualUserId }),
                 totalInvestments: investments.length,
                 totalValue: assets.reduce((sum, asset) => sum + asset.totalValue, 0),
                 pendingOperations: operations.filter(op => op.status === 'pending' || op.status === 'in_progress').length,

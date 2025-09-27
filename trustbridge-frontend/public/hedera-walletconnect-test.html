@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hedera WalletConnect Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .account-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            display: none;
+        }
+        .code-block {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            display: none;
+        }
+        .token-item {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .nft-item {
+            background: #fff3cd;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Hedera WalletConnect Test</h1>
+        <p>Test Hedera wallet connection using WalletConnect protocol. Supports HashPack, Blade, Kabila, and MetaMask.</p>
+        
+        <div id="status" class="status info">
+            Ready to connect to Hedera wallet...
+        </div>
+        
+        <div>
+            <button id="connectBtn" class="button">Connect Wallet</button>
+            <button id="disconnectBtn" class="button" disabled>Disconnect</button>
+            <button id="getTokensBtn" class="button" disabled>Get Token Balances</button>
+            <button id="getAccountBtn" class="button" disabled>Get Account Info</button>
+        </div>
+        
+        <div id="accountInfo" class="account-info">
+            <h3>Account Information</h3>
+            <div id="accountDetails"></div>
+        </div>
+        
+        <div id="tokensInfo" class="account-info">
+            <h3>Token Balances</h3>
+            <div id="tokensList"></div>
+        </div>
+        
+        <div id="logs" class="code-block">
+            <h3>Debug Logs</h3>
+            <div id="logContent"></div>
+        </div>
+    </div>
+
+    <!-- Load WalletConnect and Hedera SDK -->
+    <script src="https://unpkg.com/@walletconnect/modal@2.6.2/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@hashgraph/hedera-wallet-connect@1.0.6/dist/index.umd.js"></script>
+    <script src="https://unpkg.com/@hashgraph/sdk@2.40.0/dist/index.js"></script>
+    
+    <script>
+        // WalletConnect configuration
+        const WALLETCONNECT_PROJECT_ID = "377d75bb6f86a2ffd427d032ff6ea7d3";
+        const HEDERA_NETWORK = "testnet";
+        
+        // State
+        let dappConnector = null;
+        let isConnected = false;
+        let accountId = null;
+        let hederaClient = null;
+
+        // DOM elements
+        const statusEl = document.getElementById('status');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const getTokensBtn = document.getElementById('getTokensBtn');
+        const getAccountBtn = document.getElementById('getAccountBtn');
+        const accountInfoEl = document.getElementById('accountInfo');
+        const accountDetailsEl = document.getElementById('accountDetails');
+        const tokensInfoEl = document.getElementById('tokensInfo');
+        const tokensListEl = document.getElementById('tokensList');
+        const logsEl = document.getElementById('logs');
+        const logContentEl = document.getElementById('logContent');
+
+        // Utility functions
+        function updateStatus(message, type) {
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        function addLog(message) {
+            logsEl.style.display = 'block';
+            logContentEl.textContent += new Date().toISOString() + ': ' + message + '\n';
+        }
+
+        function updateButtons(connected) {
+            connectBtn.disabled = connected;
+            disconnectBtn.disabled = !connected;
+            getTokensBtn.disabled = !connected;
+            getAccountBtn.disabled = !connected;
+        }
+
+        // Initialize WalletConnect
+        async function initializeWalletConnect() {
+            try {
+                addLog('Initializing WalletConnect...');
+                
+                if (typeof window.HederaWalletConnect === 'undefined') {
+                    throw new Error('Hedera WalletConnect library not loaded');
+                }
+
+                // Create DApp connector
+                const metadata = {
+                    name: "Hedera WalletConnect Test",
+                    description: "Test application for Hedera wallet connection",
+                    url: window.location.origin,
+                    icons: [window.location.origin + "/logo192.png"],
+                };
+
+                dappConnector = new window.HederaWalletConnect.DAppConnector(
+                    metadata,
+                    window.HederaSdk.LedgerId.fromString(HEDERA_NETWORK),
+                    WALLETCONNECT_PROJECT_ID,
+                    Object.values(window.HederaWalletConnect.HederaJsonRpcMethod),
+                    [window.HederaWalletConnect.HederaSessionEvent.ChainChanged, window.HederaWalletConnect.HederaSessionEvent.AccountsChanged],
+                    [window.HederaWalletConnect.HederaChainId.Testnet]
+                );
+
+                await dappConnector.init();
+                addLog('WalletConnect initialized successfully');
+                
+                // Set up event listeners
+                dappConnector.walletConnectClient.on('session_update', () => {
+                    addLog('Session updated');
+                    checkConnection();
+                });
+
+                dappConnector.walletConnectClient.on('session_delete', () => {
+                    addLog('Session deleted');
+                    handleDisconnect();
+                });
+
+                // Check if already connected
+                checkConnection();
+                
+            } catch (error) {
+                addLog('WalletConnect initialization failed: ' + error.message);
+                updateStatus('Failed to initialize WalletConnect: ' + error.message, 'error');
+            }
+        }
+
+        // Check connection status
+        function checkConnection() {
+            if (dappConnector && dappConnector.signers.length > 0) {
+                accountId = dappConnector.signers[0].getAccountId().toString();
+                isConnected = true;
+                updateStatus(`Connected! Account: ${accountId}`, 'success');
+                updateButtons(true);
+                accountInfoEl.style.display = 'block';
+                accountDetailsEl.innerHTML = `<strong>Account ID:</strong> ${accountId}`;
+            } else {
+                handleDisconnect();
+            }
+        }
+
+        // Connect wallet
+        async function connectWallet() {
+            try {
+                updateStatus('Opening wallet connection...', 'info');
+                addLog('Opening WalletConnect modal...');
+                
+                await dappConnector.openModal();
+                addLog('WalletConnect modal opened');
+                
+            } catch (error) {
+                addLog('Connection failed: ' + error.message);
+                updateStatus(`Connection failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Disconnect wallet
+        async function disconnectWallet() {
+            try {
+                updateStatus('Disconnecting...', 'info');
+                addLog('Disconnecting wallet...');
+                
+                await dappConnector.disconnectAll();
+                handleDisconnect();
+                
+            } catch (error) {
+                addLog('Disconnection failed: ' + error.message);
+                updateStatus(`Disconnection failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Handle disconnect
+        function handleDisconnect() {
+            isConnected = false;
+            accountId = null;
+            updateStatus('Disconnected from wallet', 'info');
+            updateButtons(false);
+            accountInfoEl.style.display = 'none';
+            tokensInfoEl.style.display = 'none';
+        }
+
+        // Get account information
+        async function getAccountInfo() {
+            try {
+                addLog('Getting account information...');
+                
+                if (!hederaClient) {
+                    hederaClient = window.HederaSdk.Client.forName(HEDERA_NETWORK);
+                }
+
+                const accountIdObj = window.HederaSdk.AccountId.fromString(accountId);
+                
+                // Get account balance
+                const balanceQuery = new window.HederaSdk.AccountBalanceQuery()
+                    .setAccountId(accountIdObj);
+                const accountBalance = await balanceQuery.execute(hederaClient);
+                
+                // Get account info
+                const infoQuery = new window.HederaSdk.AccountInfoQuery()
+                    .setAccountId(accountIdObj);
+                const accountInfo = await infoQuery.execute(hederaClient);
+                
+                const info = `
+<strong>Account ID:</strong> ${accountId}
+<strong>Balance:</strong> ${accountBalance.hbars.toString()} HBAR
+<strong>Key:</strong> ${accountInfo.key.toString()}
+<strong>Memo:</strong> ${accountInfo.accountMemo || 'None'}
+<strong>Is Deleted:</strong> ${accountInfo.isDeleted}
+<strong>Auto Renew Period:</strong> ${accountInfo.autoRenewPeriod.toString()}
+                `;
+                
+                accountDetailsEl.innerHTML = info;
+                addLog('Account information retrieved successfully');
+                
+            } catch (error) {
+                addLog('Failed to get account info: ' + error.message);
+                updateStatus(`Failed to get account info: ${error.message}`, 'error');
+            }
+        }
+
+        // Get token balances using Mirror Node API
+        async function getTokenBalances() {
+            try {
+                addLog('Getting token balances from Mirror Node...');
+                
+                const mirrorNodeUrl = 'https://testnet.mirrornode.hedera.com';
+                const response = await fetch(`${mirrorNodeUrl}/api/v1/accounts/${accountId}/tokens?limit=100`);
+                const data = await response.json();
+                
+                if (data.tokens && data.tokens.length > 0) {
+                    tokensInfoEl.style.display = 'block';
+                    let tokensHtml = '';
+                    
+                    for (const token of data.tokens) {
+                        // Get token info
+                        const tokenInfoResponse = await fetch(`${mirrorNodeUrl}/api/v1/tokens/${token.token_id}`);
+                        const tokenInfo = await tokenInfoResponse.json();
+                        
+                        const tokenHtml = `
+                            <div class="token-item">
+                                <strong>${tokenInfo.name || 'Unknown'}</strong> (${tokenInfo.symbol || 'N/A'})
+                                <br>Token ID: ${token.token_id}
+                                <br>Balance: ${token.balance}
+                                <br>Type: ${tokenInfo.type || 'Unknown'}
+                                ${tokenInfo.decimals ? `<br>Decimals: ${tokenInfo.decimals}` : ''}
+                            </div>
+                        `;
+                        tokensHtml += tokenHtml;
+                    }
+                    
+                    tokensListEl.innerHTML = tokensHtml;
+                    addLog(`Found ${data.tokens.length} tokens`);
+                } else {
+                    tokensInfoEl.style.display = 'block';
+                    tokensListEl.innerHTML = '<p>No tokens found for this account.</p>';
+                    addLog('No tokens found');
+                }
+                
+            } catch (error) {
+                addLog('Failed to get token balances: ' + error.message);
+                updateStatus(`Failed to get token balances: ${error.message}`, 'error');
+            }
+        }
+
+        // Event listeners
+        connectBtn.addEventListener('click', connectWallet);
+        disconnectBtn.addEventListener('click', disconnectWallet);
+        getAccountBtn.addEventListener('click', getAccountInfo);
+        getTokensBtn.addEventListener('click', getTokenBalances);
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            addLog('Page loaded, initializing WalletConnect...');
+            initializeWalletConnect();
+        });
+    </script>
+</body>
+</html>

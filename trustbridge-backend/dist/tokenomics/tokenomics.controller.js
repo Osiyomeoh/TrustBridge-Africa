@@ -395,7 +395,7 @@ __decorate([
 ], TokenomicsController.prototype, "calculateRevenue", null);
 exports.TokenomicsController = TokenomicsController = __decorate([
     (0, swagger_1.ApiTags)('Tokenomics'),
-    (0, common_1.Controller)('api/tokenomics'),
+    (0, common_1.Controller)('tokenomics'),
     __metadata("design:paramtypes", [tokenomics_service_1.TokenomicsService,
         governance_service_1.GovernanceService,
         staking_service_1.StakingService,

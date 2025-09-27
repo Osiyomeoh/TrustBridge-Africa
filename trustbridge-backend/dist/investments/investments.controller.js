@@ -75,7 +75,7 @@ __decorate([
 ], InvestmentsController.prototype, "createInvestment", null);
 exports.InvestmentsController = InvestmentsController = __decorate([
     (0, swagger_1.ApiTags)('Investments'),
-    (0, common_1.Controller)('api/investments'),
+    (0, common_1.Controller)('investments'),
     __metadata("design:paramtypes", [investments_service_1.InvestmentsService])
 ], InvestmentsController);
 //# sourceMappingURL=investments.controller.js.map
