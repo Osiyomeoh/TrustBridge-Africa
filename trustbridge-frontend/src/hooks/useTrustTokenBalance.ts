@@ -1,22 +1,16 @@
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
+import { TrustTokenService } from '../services/trust-token.service';
 import { useWallet } from '../contexts/WalletContext';
-import { CONTRACT_ADDRESSES } from '../config/contracts';
-import TrustTokenABI from '../contracts/TrustToken.json';
-
-// Use the correct TRUST Token address and ABI
-const TRUST_TOKEN_ADDRESS = CONTRACT_ADDRESSES.trustToken;
-const TRUST_TOKEN_ABI = TrustTokenABI.abi;
 
 export const useTrustTokenBalance = () => {
-  const { isConnected, address, provider } = useWallet();
-  const [balance, setBalance] = useState<string>("0");
-  const [loading, setLoading] = useState<boolean>(false);
+  const [balance, setBalance] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchTrustTokenBalance = async () => {
-    if (!isConnected || !address || !provider) {
-      setBalance("0");
+  const { accountId, isConnected } = useWallet();
+  
+  const fetchBalance = async () => {
+    if (!accountId || !isConnected) {
+      setBalance(0);
       return;
     }
 
@@ -24,36 +18,29 @@ export const useTrustTokenBalance = () => {
     setError(null);
 
     try {
-      console.log('Fetching TRUST token balance for address:', address);
-      console.log('Using TRUST token address:', TRUST_TOKEN_ADDRESS);
-      
-      const contract = new ethers.Contract(TRUST_TOKEN_ADDRESS, TRUST_TOKEN_ABI, provider);
-      const balance = await contract.balanceOf(address);
-      const formattedBalance = ethers.formatEther(balance);
-      console.log('TRUST token balance:', formattedBalance);
-      setBalance(formattedBalance);
-    } catch (err: any) {
+      const trustBalance = await TrustTokenService.hybridGetTrustTokenBalance(accountId);
+      setBalance(trustBalance);
+    } catch (err) {
       console.error('Failed to fetch TRUST token balance:', err);
-      console.error('Error details:', {
-        message: err.message,
-        code: err.code,
-        data: err.data
-      });
-      setError(err.message);
-      setBalance("0");
+      setError('Failed to fetch TRUST token balance');
+      setBalance(0);
     } finally {
       setLoading(false);
     }
   };
 
+  const refreshBalance = () => {
+    fetchBalance();
+  };
+
   useEffect(() => {
-    fetchTrustTokenBalance();
-  }, [isConnected, address, provider]);
+    fetchBalance();
+  }, [accountId, isConnected]);
 
   return {
     balance,
     loading,
     error,
-    refetch: fetchTrustTokenBalance
+    refreshBalance
   };
 };

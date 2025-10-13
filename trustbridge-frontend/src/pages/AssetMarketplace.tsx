@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { 
-  Search,
   TrendingUp, 
   Star, 
   Heart, 
   Package, 
-  Zap,
   Building2,
-  Palette,
   Globe,
   Users,
   DollarSign,
@@ -19,17 +15,14 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Loader2,
-  RefreshCw
+  RefreshCw,
+  Layers
 } from 'lucide-react';
 import { Card, CardContent } from '../components/UI/Card';
 import Button from '../components/UI/Button';
-import Input from '../components/UI/Input';
-import { useWallet } from '../contexts/WalletContext';
-import { useAuth } from '../contexts/AuthContext';
-import { useToast } from '../hooks/useToast';
-import { contractService } from '../services/contractService';
-import AuthStatus from '../components/Auth/AuthStatus';
+import MarketplaceAssetModal from '../components/Assets/MarketplaceAssetModal';
+import ActivityFeed from '../components/Activity/ActivityFeed';
+import { getAllCollectionStats, CollectionStats } from '../utils/collectionUtils';
 
 // TrustBridge categories matching our contract flow
 const CATEGORIES = [
@@ -62,63 +55,219 @@ const SORT_OPTIONS = [
 ];
 
 const AssetMarketplace: React.FC = () => {
-  const navigate = useNavigate();
-  const { isConnected } = useWallet();
-  const { user } = useAuth();
-  const { toast } = useToast();
-  
   // State
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedTimeFilter, setSelectedTimeFilter] = useState('1d');
   const [sortBy, setSortBy] = useState('floor');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchQuery, setSearchQuery] = useState('');
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [showAssetDetail, setShowAssetDetail] = useState(false);
+  const [priceFilter, setPriceFilter] = useState({ min: '', max: '' });
+  const [statusFilter, setStatusFilter] = useState<'all' | 'listed' | 'unlisted'>('all');
+  const [viewType, setViewType] = useState<'assets' | 'collections'>('assets');
+  const [collections, setCollections] = useState<CollectionStats[]>([]);
 
-  // Enhanced: Fetch marketplace data using Hedera services for consistency
+  // Fetch ALL assets from Hedera network - NO localStorage!
   const fetchMarketplaceData = async () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔄 Fetching marketplace data from Hedera services...');
+      console.log('🔄 Fetching ALL NFTs from Hedera Mirror Node (NO localStorage)...');
       
-      // Try Hedera services first for consistent data
-      try {
-        const hederaMarketplaceData = await contractService.getMarketplaceDataFromHedera();
-        
-        if (hederaMarketplaceData.totalListings > 0) {
-          console.log('✅ Using Hedera marketplace data:', hederaMarketplaceData);
-          setAssets(hederaMarketplaceData.assets);
-          setLoading(false);
-          return;
+      // Query Hedera Mirror Node for ALL NFTs from all known accounts
+      const mirrorNodeUrl = 'https://testnet.mirrornode.hedera.com';
+      
+      // Query multiple accounts to get all marketplace NFTs
+      const accounts = [
+        '0.0.6916959', // Marketplace/Treasury account
+        '0.0.6923405', // Seller account 1
+        '0.0.7028303', // Seller account 2 (your account)
+      ];
+      
+      const allNFTs = [];
+      
+      for (const accountId of accounts) {
+        try {
+          console.log(`🔍 Querying NFTs for account ${accountId}...`);
+          const response = await fetch(`${mirrorNodeUrl}/api/v1/accounts/${accountId}/nfts?limit=100`);
+          const data = await response.json();
+          
+          if (data.nfts && data.nfts.length > 0) {
+            console.log(`✅ Found ${data.nfts.length} NFTs for ${accountId}`);
+            allNFTs.push(...data.nfts);
+          } else {
+            console.log(`⏭️  No NFTs found for ${accountId}`);
+          }
+        } catch (error) {
+          console.warn(`⚠️ Failed to query account ${accountId}:`, error);
         }
-      } catch (hederaError) {
-        console.warn('⚠️ Hedera service failed, falling back to contract calls:', hederaError.message);
       }
       
-      // Fallback: Use existing contract calls
-      console.log('🔍 Fetching marketplace data from contracts... [v2.1 - NO MOCK FALLBACK]');
-      console.warn('🚨 FILTERING FIX APPLIED - If you see mock data, please hard refresh (Ctrl+Shift+R)');
-      console.log('🕐 Timestamp:', new Date().toISOString());
-      console.log('🚨 CACHE BUSTER:', Date.now());
-      console.log('🚨 FILTERING FIX v2.8 - NETWORK ERROR FIX - ALL LISTINGS INVALID');
-      console.warn('🔥 CACHE CLEAR REQUIRED - Normal browser needs hard refresh!');
-      console.log('📱 Incognito works = Code is correct, browser cache is the issue');
+      console.log(`📊 Total NFTs found across all accounts: ${allNFTs.length}`);
       
-      const marketplaceAssets = await contractService.getAllActiveListings();
-      console.log('📊 Marketplace assets fetched:', marketplaceAssets.length);
-      console.log('🔍 Assets data:', marketplaceAssets);
+      // Process each NFT and extract metadata
+      const nftPromises = allNFTs.map(async (nft: any) => {
+        try {
+          const tokenId = nft.token_id;
+          const serialNumber = nft.serial_number;
+          
+          // Parse metadata
+          let metadata: any = {};
+          let metadataString = '';
+          let imageUrl = '';
+          
+          if (nft.metadata) {
+            metadataString = atob(nft.metadata); // Decode base64
+            console.log(`📦 NFT ${tokenId}-${serialNumber} metadata:`, metadataString.substring(0, 200));
+            
+            try {
+              // Try JSON parse first (if metadata is stored directly)
+              metadata = JSON.parse(metadataString);
+              imageUrl = metadata.image || metadata.imageURI || metadata.imageUrl || '';
+              console.log(`🖼️ Parsed JSON - Image URL:`, imageUrl);
+            } catch {
+              // If not JSON, check if it's an IPFS CID or URL
+              let ipfsUrlToFetch = metadataString;
+              
+              // If it's just a CID (starts with 'baf'), reconstruct the URL
+              if (metadataString.startsWith('baf') && !metadataString.includes('/')) {
+                ipfsUrlToFetch = `https://indigo-recent-clam-436.mypinata.cloud/ipfs/${metadataString}`;
+                console.log(`📦 Detected IPFS CID - reconstructed URL: ${ipfsUrlToFetch}`);
+              } else if (metadataString.startsWith('http')) {
+                console.log(`📡 Detected IPFS URL: ${ipfsUrlToFetch}`);
+              }
+              
+              if (ipfsUrlToFetch.startsWith('http')) {
+                console.log(`📡 Fetching metadata from IPFS...`);
+                try {
+                  // Fetch the metadata JSON from IPFS
+                  const metadataResponse = await fetch(ipfsUrlToFetch);
+                  if (metadataResponse.ok) {
+                    const fetchedMetadata = await metadataResponse.json();
+                    metadata = fetchedMetadata;
+                    imageUrl = metadata.image || metadata.imageURI || metadata.imageUrl || '';
+                    console.log(`✅ Fetched metadata from IPFS - Image URL:`, imageUrl);
+                  } else {
+                    // If it fails, assume it's a direct image URL (for old truncated URLs)
+                    imageUrl = metadataString;
+                    metadata = { 
+                      imageURI: metadataString,
+                      image: metadataString,
+                      name: `NFT ${tokenId.slice(-6)}`
+                    };
+                    console.log(`⚠️ IPFS fetch failed (${metadataResponse.status}), using as direct image URL`);
+                  }
+                } catch (fetchError) {
+                  console.warn(`⚠️ Error fetching IPFS metadata:`, fetchError);
+                  // Fallback: treat as direct image URL
+                  imageUrl = metadataString;
+                  metadata = { 
+                    imageURI: metadataString,
+                    image: metadataString,
+                    name: `NFT ${tokenId.slice(-6)}`
+                  };
+                }
+              } else {
+                // Try to extract minimal info (NFT:priceT or NFT:name format)
+                const priceMatch = metadataString.match(/NFT:(\d+)T/);
+                const nameMatch = metadataString.match(/NFT:(.+)/);
+                
+                if (priceMatch) {
+                  metadata.price = priceMatch[1];
+                }
+                if (nameMatch && !priceMatch) {
+                  metadata.name = nameMatch[1];
+                }
+                console.log(`📝 Minimal metadata - price:`, metadata.price, 'name:', metadata.name);
+              }
+            }
+          }
+          
+          // Use simple SVG placeholder if no valid image
+          if (!imageUrl) {
+            const placeholderText = metadata.name || 'NFT';
+            imageUrl = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Arial" font-size="24" fill="%2300ff88" text-anchor="middle" dy=".3em">${encodeURIComponent(placeholderText)}</text></svg>`;
+            console.log(`🎨 Using SVG placeholder for ${tokenId}`);
+          }
+          
+          // Verify blockchain state for this NFT
+          let blockchainState = {
+            owner: nft.account_id,
+            isListed: false,
+            isInEscrow: false,
+            marketplaceAccount: '0.0.6916959'
+          };
+          
+          try {
+            const stateResponse = await fetch(`http://localhost:4001/api/assets/blockchain-state/${tokenId}/${serialNumber}`);
+            if (stateResponse.ok) {
+              const stateData = await stateResponse.json();
+              if (stateData.success) {
+                blockchainState = stateData.data;
+                console.log(`✅ Verified blockchain state for ${tokenId}-${serialNumber}:`, blockchainState);
+              }
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to verify blockchain state for ${tokenId}-${serialNumber}:`, error);
+          }
+
+          const assetObj = {
+            id: `${tokenId}-${serialNumber}`,
+            tokenId,
+            serialNumber,
+            name: metadata.name || metadata.assetName || `NFT #${serialNumber}`,
+            description: metadata.description || metadata.desc || '',
+            imageURI: imageUrl,
+            image: imageUrl,
+            price: metadata.price || metadata.totalValue || '100',
+            totalValue: metadata.totalValue || metadata.price || '100',
+            owner: blockchainState.owner, // Use verified blockchain owner
+            category: metadata.category || metadata.assetType || 'Digital Art',
+            type: metadata.type || 'digital',
+            status: blockchainState.isListed ? 'listed' : 'unlisted',
+            isActive: true,
+            isTradeable: true,
+            isListed: blockchainState.isListed, // Use verified blockchain listing status
+            isInEscrow: blockchainState.isInEscrow,
+            royaltyPercentage: metadata.royaltyPercentage || '5',
+            location: 'Hedera Testnet',
+            createdAt: nft.created_timestamp || new Date().toISOString()
+          };
+          
+          console.log(`✅ Final asset object:`, {
+            id: assetObj.id,
+            name: assetObj.name,
+            imageURI: assetObj.imageURI?.substring(0, 100) + '...',
+            image: assetObj.image?.substring(0, 100) + '...'
+          });
+          
+          return assetObj;
+        } catch (error) {
+          console.warn(`⚠️ Failed to process NFT:`, error);
+          return null;
+        }
+      });
       
+      const marketplaceAssets = (await Promise.all(nftPromises)).filter(Boolean);
+      
+      console.log('📊 Marketplace assets loaded from Hedera:', marketplaceAssets.length);
       setAssets(marketplaceAssets);
+      
+      // Calculate collection stats
+      const collectionStats = getAllCollectionStats(marketplaceAssets);
+      setCollections(collectionStats);
+      console.log('📦 Collections calculated:', collectionStats.length);
     } catch (err) {
       console.error('Error fetching marketplace data:', err);
       setError('Failed to load marketplace data');
-      // Don't use fallback data - show empty state instead
       setAssets([]);
+      setCollections([]);
     } finally {
       setLoading(false);
     }
@@ -131,168 +280,49 @@ const AssetMarketplace: React.FC = () => {
     setRefreshing(false);
   };
 
-  // Mock data for OpenSea-style collections
-  const mockCollections = [
-    {
-      id: 'dx-terminal',
-      name: 'DX Terminal',
-      logo: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=40&h=40&fit=crop&crop=center',
-      floorPrice: '0.0052',
-      currency: 'ETH',
-      change: '+25.8%',
-      changeType: 'positive',
-      volume: '560.81',
-      sales: '114,136',
-      owners: '6',
-      verified: true,
-      category: 'gaming',
-      image: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=300&h=300&fit=crop&crop=center',
-      description: 'Welcome to Terminal City! This collection is where each of your AI Trader NFT\'s will appear.'
-    },
-    {
-      id: 'universe-heroes',
-      name: 'UNIOVERSE HEROES',
-      logo: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=40&h=40&fit=crop&crop=center',
-      floorPrice: '0.0076',
-      currency: 'ETH',
-      change: '+136.1%',
-      changeType: 'positive',
-      volume: '283.94',
-      sales: '48,568',
-      owners: '3',
-      verified: true,
-      category: 'gaming',
-      image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43/300x300/7C3AED?w=300&h=300&fit=crop&crop=centerUNIOVERSE',
-      description: 'Heroes from across the universe unite in this epic collection.'
-    },
-    {
-      id: 'pudgy-penguins',
-      name: 'Pudgy Penguins',
-      logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=40&h=40&fit=crop&crop=center059669?w=300&h=300&fit=crop&crop=centerPP',
-      floorPrice: '10.2899',
-      currency: 'ETH',
-      change: '-0.3%',
-      changeType: 'negative',
-      volume: '265.12',
-      sales: '26',
-      owners: '4',
-      verified: true,
-      category: 'pfps',
-      image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43/300x300/059669?w=300&h=300&fit=crop&crop=centerPudgy+Penguins',
-      description: 'A collection of 8,888 cute penguins with proof of ownership stored on Ethereum.'
-    },
-    {
-      id: 'moonbirds',
-      name: 'Moonbirds',
-      logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=40&h=40&fit=crop&crop=centerDC2626?w=300&h=300&fit=crop&crop=centerMB',
-      floorPrice: '2.7188',
-      currency: 'ETH',
-      change: '+1.6%',
-      changeType: 'positive',
-      volume: '225.94',
-      sales: '84',
-      owners: '5',
-      verified: true,
-      category: 'pfps',
-      image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43/300x300/DC2626?w=300&h=300&fit=crop&crop=centerMoonbirds',
-      description: 'A collection of 10,000 utility-enabled PFPs that feature a richly diverse and unique pool of rarity-powered traits.'
-    },
-    {
-      id: 'farworld-creatures',
-      name: 'FARWORLD // Creatures',
-      logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=40&h=40&fit=crop&crop=center7C2D12?w=300&h=300&fit=crop&crop=centerFW',
-      floorPrice: '0.004',
-      currency: 'ETH',
-      change: '+53%',
-      changeType: 'positive',
-      volume: '182.51',
-      sales: '53,454',
-      owners: '3',
-      verified: true,
-      category: 'gaming',
-      image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43/300x300/7C2D12?w=300&h=300&fit=crop&crop=centerFARWORLD',
-      description: 'Mystical creatures from the far reaches of the digital universe.'
-    },
-    {
-      id: 'cryptopunks',
-      name: 'CryptoPunks',
-      logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=40&h=40&fit=crop&crop=center1F2937?w=300&h=300&fit=crop&crop=centerCP',
-      floorPrice: '46.57',
-      currency: 'ETH',
-      change: '-4.8%',
-      changeType: 'negative',
-      volume: '137.25',
-      sales: '3',
-      owners: '3',
-      verified: true,
-      category: 'pfps',
-      image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43/300x300/1F2937?w=300&h=300&fit=crop&crop=centerCryptoPunks',
-      description: '10,000 unique collectible characters with proof of ownership stored on the Ethereum blockchain.'
-    },
-    {
-      id: 'milady-maker',
-      name: 'Milady Maker',
-      logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=40&h=40&fit=crop&crop=centerEC4899?w=300&h=300&fit=crop&crop=centerMM',
-      floorPrice: '1.68',
-      currency: 'ETH',
-      change: '-5.1%',
-      changeType: 'negative',
-      volume: '122.20',
-      sales: '61',
-      owners: '5',
-      verified: true,
-      category: 'pfps',
-      image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43/300x300/EC4899?w=300&h=300&fit=crop&crop=centerMilady',
-      description: 'A collection of 10,000 generative pfpNFTs in a neochibi aesthetic.'
-    },
-    {
-      id: 'basepaint',
-      name: 'BasePaint',
-      logo: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=40&h=40&fit=crop&crop=center3B82F6?w=300&h=300&fit=crop&crop=centerBP',
-      floorPrice: '0.004',
-      currency: 'ETH',
-      change: '+3.4%',
-      changeType: 'positive',
-      volume: '98.45',
-      sales: '12,345',
-      owners: '4',
-      verified: true,
-      category: 'art',
-      image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43/300x300/3B82F6?w=300&h=300&fit=crop&crop=centerBasePaint',
-      description: 'Collaborative art creation on Base blockchain.'
-    }
-  ];
-
-  // Featured collection for banner
-  const featuredCollection = {
-    id: 'meridian',
-    name: 'Meridian by Matt DesLauriers',
-    creator: 'Art_Blocks',
-    image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=800&h=400&fit=crop&crop=center4F46E5?w=300&h=300&fit=crop&crop=centerMeridian+by+Matt+DesLauriers',
-    floorPrice: '4.00',
-    currency: 'ETH',
-    items: '1,000',
-    totalVolume: '22.2K',
-    listed: '6%',
-    verified: true,
-    description: 'A generative art collection exploring the intersection of digital and physical landscapes.'
-  };
+  // No mock data - all data comes from blockchain
 
   useEffect(() => {
     console.log('🔄 AssetMarketplace mounted - fetching data...');
-    console.log('🚨 CACHE BUSTER:', Date.now());
     fetchMarketplaceData();
   }, []);
 
-  // Filter and sort assets when filters change
-  useEffect(() => {
-    if (assets.length === 0) return;
+  // Filter and sort assets
+  const filteredAssets = React.useMemo(() => {
+    let filtered = [...assets];
+    
+    // Filter by search query
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(asset =>
+        asset.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        asset.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
 
-    let filteredAssets = [...assets];
+    // Filter by status (listed/unlisted)
+    if (statusFilter === 'listed') {
+      filtered = filtered.filter(asset => asset.isListed);
+    } else if (statusFilter === 'unlisted') {
+      filtered = filtered.filter(asset => !asset.isListed);
+    }
+
+    // Filter by price range
+    if (priceFilter.min) {
+      const minPrice = parseFloat(priceFilter.min);
+      filtered = filtered.filter(asset => 
+        parseFloat(asset.price || '0') >= minPrice
+      );
+    }
+    if (priceFilter.max) {
+      const maxPrice = parseFloat(priceFilter.max);
+      filtered = filtered.filter(asset => 
+        parseFloat(asset.price || '0') <= maxPrice
+      );
+    }
     
     // Filter by category
     if (selectedCategory !== 'all') {
-      filteredAssets = filteredAssets.filter(asset => {
+      filtered = filtered.filter(asset => {
         switch (selectedCategory) {
           case 'digital':
             return asset.assetType === 'Digital' || asset.category === 'Digital Art' || asset.category === 6 || asset.category === 7;
@@ -310,29 +340,23 @@ const AssetMarketplace: React.FC = () => {
       });
     }
 
-    // Filter by search query
-    if (searchQuery) {
-      filteredAssets = filteredAssets.filter(asset => 
-        asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        asset.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        asset.assetType.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Sort assets
-    filteredAssets.sort((a, b) => {
+    // Sort assets by selected criteria
+    filtered.sort((a, b) => {
+      if (sortBy === 'floor' || sortBy === 'volume') {
       const aValue = parseFloat(a.price || a.floorPrice || '0');
       const bValue = parseFloat(b.price || b.floorPrice || '0');
       return sortOrder === 'desc' ? bValue - aValue : aValue - bValue;
+      }
+      // Sort by date (most recent first)
+      const aDate = new Date(a.listedAt || 0).getTime();
+      const bDate = new Date(b.listedAt || 0).getTime();
+      return sortOrder === 'desc' ? bDate - aDate : aDate - bDate;
     });
 
-    setAssets(filteredAssets);
-  }, [selectedCategory, searchQuery, sortBy, sortOrder]);
+    return filtered;
+  }, [assets, selectedCategory, searchQuery, sortBy, sortOrder, statusFilter, priceFilter]);
 
 
-  const handleCollectionClick = (collectionId: string) => {
-    navigate(`/dashboard/collection/${collectionId}`);
-  };
 
 
 
@@ -356,54 +380,16 @@ const AssetMarketplace: React.FC = () => {
     }
   };
 
-  const getChangeColor = (changeType: string) => {
-    return changeType === 'positive' ? 'text-green-400' : 'text-red-400';
-  };
-
   return (
     <div className="min-h-screen bg-black text-off-white">
-      {/* Original Discovery Header */}
-      <div className="bg-gray-900/50 border-b border-gray-700/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-neon-green to-emerald-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">TB</span>
-              </div>
-              <span className="text-lg font-semibold text-off-white">TrustBridge</span>
-            </div>
-
-            {/* Search Bar */}
-            <div className="flex-1 max-w-md mx-8 hidden md:block">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  type="text"
-                  placeholder="Search TrustBridge"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-gray-900 border-gray-700 text-off-white placeholder-gray-400 focus:border-neon-green focus:ring-neon-green/20"
-                />
-              </div>
-            </div>
-
-            {/* Auth Status */}
-            <div className="flex items-center space-x-4">
-              <AuthStatus />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         {/* Category Filters - OpenSea Style */}
-        <div className="flex items-center space-x-1 mb-8">
+        <div className="flex items-center space-x-1 mb-6 sm:mb-8 overflow-x-auto pb-2">
           {CATEGORIES.map((category) => (
             <button
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded transition-all duration-200 text-xs font-medium ${
+              className={`flex items-center space-x-1.5 px-2 sm:px-3 py-1.5 rounded transition-all duration-200 text-xs font-medium whitespace-nowrap ${
                 selectedCategory === category.id
                   ? 'bg-neon-green/20 text-neon-green border border-neon-green/40'
                   : 'text-gray-400 hover:text-off-white hover:bg-gray-800'
@@ -415,61 +401,118 @@ const AssetMarketplace: React.FC = () => {
           ))}
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {/* Featured Collection Banner */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-8"
+        {/* Enhanced Filters - OpenSea Style */}
+        <div className="flex flex-wrap items-center gap-3 mb-6 bg-midnight-800 rounded-lg p-4 border border-gray-700">
+          {/* Status Filter */}
+          <div className="flex items-center space-x-2">
+            <span className="text-xs font-medium text-gray-400">Status:</span>
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  statusFilter === 'all'
+                    ? 'bg-neon-green/20 text-neon-green border border-neon-green/40'
+                    : 'bg-gray-900 text-gray-400 hover:text-off-white'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setStatusFilter('listed')}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  statusFilter === 'listed'
+                    ? 'bg-neon-green/20 text-neon-green border border-neon-green/40'
+                    : 'bg-gray-900 text-gray-400 hover:text-off-white'
+                }`}
+              >
+                Listed
+              </button>
+              <button
+                onClick={() => setStatusFilter('unlisted')}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                  statusFilter === 'unlisted'
+                    ? 'bg-neon-green/20 text-neon-green border border-neon-green/40'
+                    : 'bg-gray-900 text-gray-400 hover:text-off-white'
+                }`}
+              >
+                Not Listed
+              </button>
+            </div>
+          </div>
+
+          {/* Price Range Filter */}
+          <div className="flex items-center space-x-2">
+            <span className="text-xs font-medium text-gray-400">Price:</span>
+            <input
+              type="number"
+              placeholder="Min"
+              value={priceFilter.min}
+              onChange={(e) => setPriceFilter(prev => ({ ...prev, min: e.target.value }))}
+              className="w-20 px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-off-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-neon-green/50"
+            />
+            <span className="text-gray-500">-</span>
+            <input
+              type="number"
+              placeholder="Max"
+              value={priceFilter.max}
+              onChange={(e) => setPriceFilter(prev => ({ ...prev, max: e.target.value }))}
+              className="w-20 px-2 py-1.5 bg-gray-900 border border-gray-700 rounded text-xs text-off-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-neon-green/50"
+            />
+            <span className="text-xs text-gray-400">TRUST</span>
+          </div>
+
+          {/* Clear Filters */}
+          {(statusFilter !== 'all' || priceFilter.min || priceFilter.max) && (
+            <button
+              onClick={() => {
+                setStatusFilter('all');
+                setPriceFilter({ min: '', max: '' });
+              }}
+              className="px-3 py-1.5 rounded text-xs font-medium text-red-400 hover:bg-red-400/10 transition-colors"
             >
-              <Card className="overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800 border-gray-700">
-                <div className="relative h-64">
-                  <img
-                    src={featuredCollection.image}
-                    alt={featuredCollection.name}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute bottom-6 left-6 text-white">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <h2 className="text-xl font-bold">{featuredCollection.name}</h2>
-                      {featuredCollection.verified && (
-                        <CheckCircle className="w-4 h-4 text-blue-400" />
-                      )}
-                    </div>
-                    <p className="text-gray-300 mb-3 text-sm">By {featuredCollection.creator}</p>
-                    <div className="flex items-center space-x-6 text-xs">
-                      <div>
-                        <span className="text-gray-400 text-xs uppercase tracking-wider">FLOOR PRICE</span>
-                        <p className="text-lg font-bold">{featuredCollection.floorPrice} {featuredCollection.currency}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 text-xs uppercase tracking-wider">ITEMS</span>
-                        <p className="text-lg font-bold">{featuredCollection.items}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 text-xs uppercase tracking-wider">TOTAL VOLUME</span>
-                        <p className="text-lg font-bold">{featuredCollection.totalVolume} {featuredCollection.currency}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 text-xs uppercase tracking-wider">LISTED</span>
-                        <p className="text-lg font-bold">{featuredCollection.listed}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
+              Clear Filters
+            </button>
+          )}
+
+          {/* Results Count */}
+          <div className="ml-auto text-xs text-gray-400">
+            {filteredAssets.length} {filteredAssets.length === 1 ? 'asset' : 'assets'}
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:gap-8">
+          {/* Main Content */}
+          <div>
+            {/* Featured Collection Banner */}
+            {/* Removed featured collection banner - using real data only */}
 
             {/* Controls - OpenSea Style */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-0.5">
-                  <button className="px-2 py-1 rounded text-xs font-medium bg-neon-green/20 text-neon-green border border-neon-green/40">NFTs</button>
-                  <button className="px-2 py-1 rounded text-xs font-medium text-gray-400 hover:text-off-white">Tokens</button>
+                  <button 
+                    onClick={() => setViewType('assets')}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                      viewType === 'assets'
+                        ? 'bg-neon-green/20 text-neon-green border border-neon-green/40'
+                        : 'text-gray-400 hover:text-off-white'
+                    }`}
+                  >
+                    <Package className="w-3 h-3 inline mr-1" />
+                    Assets
+                  </button>
+                  <button 
+                    onClick={() => setViewType('collections')}
+                    className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
+                      viewType === 'collections'
+                        ? 'bg-neon-green/20 text-neon-green border border-neon-green/40'
+                        : 'text-gray-400 hover:text-off-white'
+                    }`}
+                  >
+                    <Layers className="w-3 h-3 inline mr-1" />
+                    Collections
+                  </button>
                 </div>
                 <div className="flex items-center space-x-1">
                   {TIME_FILTERS.map((filter) => (
@@ -567,8 +610,94 @@ const AssetMarketplace: React.FC = () => {
               </div>
             </div>
 
-            {/* Collections Grid */}
-            <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
+            {/* Collections or Assets Grid */}
+            {viewType === 'collections' ? (
+              /* Collections Grid */
+              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                {collections.length === 0 ? (
+                  <div className="col-span-full text-center py-12">
+                    <Layers className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                    <p className="text-gray-400">No collections found</p>
+                  </div>
+                ) : (
+                  collections.map((collection, index) => (
+                    <motion.div
+                      key={collection.collectionId}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="group cursor-pointer"
+                      onClick={() => {
+                        // Filter assets by this collection
+                        setViewType('assets');
+                        setSearchQuery(collection.collectionName);
+                      }}
+                    >
+                      <Card className="overflow-hidden bg-gray-900 border-gray-700 hover:border-neon-green/50 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-neon-green/20">
+                        {/* Collection Banner */}
+                        <div className="relative h-32 bg-gradient-to-br from-neon-green/20 to-emerald-500/20">
+                          {collection.bannerImage && (
+                            <img
+                              src={collection.bannerImage}
+                              alt={collection.collectionName}
+                              className="w-full h-full object-cover opacity-50 group-hover:opacity-70 transition-opacity"
+                            />
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent" />
+                        </div>
+
+                        <CardContent className="p-4">
+                          {/* Collection Name */}
+                          <h3 className="text-lg font-bold text-off-white mb-3 group-hover:text-neon-green transition-colors">
+                            {collection.collectionName}
+                          </h3>
+
+                          {/* Collection Stats */}
+                          <div className="grid grid-cols-2 gap-2 mb-3">
+                            <div className="bg-midnight-800 rounded-lg p-2">
+                              <p className="text-xs text-gray-400">Floor</p>
+                              <p className="text-sm font-bold text-neon-green">
+                                {collection.floorPrice > 0 ? `${collection.floorPrice.toFixed(0)} T` : '---'}
+                              </p>
+                            </div>
+                            <div className="bg-midnight-800 rounded-lg p-2">
+                              <p className="text-xs text-gray-400">Volume</p>
+                              <p className="text-sm font-bold text-off-white">
+                                {collection.totalVolume.toFixed(0)} T
+                              </p>
+                            </div>
+                            <div className="bg-midnight-800 rounded-lg p-2">
+                              <p className="text-xs text-gray-400">Items</p>
+                              <p className="text-sm font-bold text-off-white">
+                                {collection.totalItems}
+                              </p>
+                            </div>
+                            <div className="bg-midnight-800 rounded-lg p-2">
+                              <p className="text-xs text-gray-400">Owners</p>
+                              <p className="text-sm font-bold text-off-white">
+                                {collection.uniqueOwners}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Listed Items Badge */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-400">
+                              {collection.listedItems} listed
+                            </span>
+                            {collection.verified && (
+                              <CheckCircle className="w-4 h-4 text-neon-green" />
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+            ) : (
+              /* Asset Grid */
+              <div className={`grid gap-4 sm:gap-6 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
               {loading ? (
                 Array.from({ length: 6 }).map((_, index) => (
                   <Card key={index} className="animate-pulse bg-gray-900 border-gray-700">
@@ -607,14 +736,17 @@ const AssetMarketplace: React.FC = () => {
                   </Button>
                 </div>
               ) : (
-                assets.map((asset, index) => (
+                filteredAssets.map((asset, index) => (
                   <motion.div
                     key={asset.listingId || asset.id || `asset-${index}`}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
                     className="group cursor-pointer"
-                    onClick={() => handleCollectionClick(asset.assetId || asset.id)}
+                    onClick={() => {
+                      setSelectedAsset(asset);
+                      setShowAssetDetail(true);
+                    }}
                   >
                     <Card className="overflow-hidden bg-gray-900 border-gray-700 hover:border-neon-green/50 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-neon-green/20">
                       <div className="relative">
@@ -622,6 +754,9 @@ const AssetMarketplace: React.FC = () => {
                           src={asset.imageURI || asset.image}
                           alt={asset.name}
                           className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Arial" font-size="24" fill="%2300ff88" text-anchor="middle" dy=".3em">NFT</text></svg>';
+                          }}
                         />
                         <div className="absolute top-3 right-3">
                           <button className="p-2 bg-black/50 rounded-full hover:bg-black/70 transition-colors">
@@ -664,9 +799,9 @@ const AssetMarketplace: React.FC = () => {
                             </p>
                           </div>
                           <div className="text-right">
-                            <span className="text-gray-400 text-xs">Status</span>
-                            <p className={`text-sm font-medium ${asset.isActive ? 'text-neon-green' : 'text-gray-400'}`}>
-                              {asset.isActive ? 'Active' : 'Inactive'}
+                            <span className="text-gray-400 text-xs">Listing</span>
+                            <p className={`text-sm font-medium ${asset.isListed ? 'text-neon-green' : 'text-gray-400'}`}>
+                              {asset.isListed ? 'For Sale' : 'Not Listed'}
                             </p>
                           </div>
                         </div>
@@ -706,7 +841,8 @@ const AssetMarketplace: React.FC = () => {
                             className="w-full text-xs"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/dashboard/asset/${asset.assetId || asset.id}/trade`);
+                              setSelectedAsset(asset);
+                              setShowAssetDetail(true);
                             }}
                           >
                             {asset.isActive ? 'View & Trade' : 'View Details'}
@@ -718,52 +854,31 @@ const AssetMarketplace: React.FC = () => {
                 ))
               )}
             </div>
+            )}
           </div>
 
-          {/* Right Sidebar - Trending Collections - OpenSea Style */}
+          {/* Removed sidebar - using real data only */}
+        </div>
+
+        {/* Activity Feed - Right Sidebar */}
           <div className="lg:col-span-1">
-            <Card className="bg-gray-900 border-gray-700 sticky top-24">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-medium text-off-white uppercase tracking-wider">COLLECTION</h3>
-                  <h3 className="text-xs font-medium text-off-white uppercase tracking-wider">FLOOR</h3>
-                </div>
-                <div className="space-y-2">
-                  {mockCollections.slice(0, 10).map((collection) => (
-                    <div
-                      key={collection.id}
-                      className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
-                      onClick={() => handleCollectionClick(collection.id)}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <img
-                          src={collection.logo}
-                          alt={collection.name}
-                          className="w-6 h-6 rounded-full"
-                        />
-                        <div className="flex items-center space-x-1">
-                          <p className="text-xs font-medium text-off-white">{collection.name}</p>
-                          {collection.verified && (
-                            <CheckCircle className="w-3 h-3 text-blue-400" />
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-medium text-off-white">
-                          {formatPrice(collection.floorPrice, collection.currency)}
-                        </p>
-                        <p className={`text-xs ${getChangeColor(collection.changeType)}`}>
-                          {collection.change}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <ActivityFeed limit={15} showStats={true} />
         </div>
       </div>
+
+      {/* Marketplace Asset Modal - Discovery Focused */}
+      <MarketplaceAssetModal
+        isOpen={showAssetDetail}
+        onClose={() => {
+          setShowAssetDetail(false);
+          setSelectedAsset(null);
+        }}
+        asset={selectedAsset}
+        onAssetUpdate={() => {
+          // Refresh marketplace data after buying
+          fetchMarketplaceData();
+        }}
+      />
     </div>
   );
 };

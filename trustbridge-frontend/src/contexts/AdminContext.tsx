@@ -37,15 +37,16 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      const roles = await contractService.getAdminRoles(address);
-      setAdminRoles(roles);
-      setIsAdmin(roles.isAdmin);
-      setIsVerifier(roles.isVerifier);
+      // Disable contract service calls for Hedera - admin roles will be managed differently
+      // const roles = await contractService.getAdminRoles(address);
+      setAdminRoles({ isAdmin: false, isVerifier: false });
+      setIsAdmin(false);
+      setIsVerifier(false);
 
-      console.log('Admin status checked:', {
+      console.log('Admin status checked (Hedera mode):', {
         address,
-        isAdmin: roles.isAdmin,
-        isVerifier: roles.isVerifier
+        isAdmin: false,
+        isVerifier: false
       });
     } catch (err) {
       console.error('Failed to check admin status:', err);

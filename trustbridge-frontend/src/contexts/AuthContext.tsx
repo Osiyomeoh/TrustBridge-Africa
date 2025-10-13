@@ -9,6 +9,7 @@ export interface User {
   name?: string;
   phone?: string;
   country?: string;
+  profileImage?: string;
   role: string;
   kycStatus: 'pending' | 'in_progress' | 'approved' | 'rejected' | 'not_started';
   kycInquiryId?: string;
@@ -66,12 +67,11 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { 
     isConnected, 
+    accountId,
     address, 
-    signer,
-    provider,
     signMessage, 
     connectWallet: connectWalletContext,
-    isLoading: walletLoading,
+    loading: walletLoading,
     error: walletError 
   } = useWallet();
 
@@ -85,6 +85,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastConnectedAddress, setLastConnectedAddress] = useState<string | null>(null);
 
   // Check for existing authentication on mount only if wallet is connected
   useEffect(() => {
@@ -108,12 +109,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Clear tokens when wallet is actually disconnected
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      setLastConnectedAddress(null);
+      return;
+    }
+
+    // Check if wallet address has changed (different user connected)
+    if (isConnected && address && lastConnectedAddress && address !== lastConnectedAddress) {
+      console.log('Different wallet address detected, clearing previous session...');
+      console.log('Previous address:', lastConnectedAddress);
+      console.log('New address:', address);
+      
+      // Clear previous user's session
+      setAuthState({
+        isAuthenticated: false,
+        user: null,
+        authStep: 'wallet',
+        accessToken: null,
+        refreshToken: null,
+      });
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      
+      // Update the last connected address
+      setLastConnectedAddress(address);
+      
+      // Check auth for the new wallet
+      if (!isCheckingAuth) {
+        checkExistingAuth();
+      }
       return;
     }
 
     // Wallet is connected - check authentication
     if (isConnected && address) {
       console.log('Wallet connected with address, checking authentication status...');
+      
+      // Update last connected address if this is a new connection
+      if (!lastConnectedAddress) {
+        setLastConnectedAddress(address);
+      }
+      
       if (!isCheckingAuth) {
         checkExistingAuth();
       }
@@ -131,7 +166,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       return () => clearTimeout(timer);
     }
-  }, [isConnected, address]);
+  }, [isConnected, address, lastConnectedAddress]);
+
+  // Debug auth state changes
+  useEffect(() => {
+    console.log('AuthContext - Auth state changed:', {
+      isAuthenticated: authState.isAuthenticated,
+      authStep: authState.authStep,
+      user: authState.user ? `${authState.user.email} (${authState.user.name})` : null,
+      address: address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null,
+      isConnected
+    });
+  }, [authState, address, isConnected]);
 
   // Add timeout to prevent getting stuck on wallet step
   useEffect(() => {
@@ -185,6 +231,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           if (response.success) {
             const userData = response.data;
             
+            // Check if the user from token matches the currently connected wallet
+            if (userData.walletAddress && address && userData.walletAddress.toLowerCase() !== address.toLowerCase()) {
+              console.log('Token user wallet mismatch - clearing session');
+              console.log('Token wallet:', userData.walletAddress);
+              console.log('Connected wallet:', address);
+              
+              // Clear tokens and reset auth state
+              localStorage.removeItem('accessToken');
+              localStorage.removeItem('refreshToken');
+              setAuthState({
+                isAuthenticated: false,
+                user: null,
+                authStep: 'wallet',
+                accessToken: null,
+                refreshToken: null,
+              });
+              
+              // Check if new wallet has an existing account
+              if (!isCheckingAuth) {
+                checkExistingAuth();
+              }
+              return;
+            }
+
             // Normalize user data to match frontend types
             const user: User = {
               ...userData,
@@ -196,10 +266,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                         userData.kycStatus === 'REJECTED' ? 'rejected' : 'not_started'
             };
             
-            // Determine auth step based on user status
+            // Determine auth step based on wallet connection and user status
             let authStep: 'wallet' | 'profile' | 'email' | 'kyc' | 'complete' = 'wallet';
             
-            console.log('Checking existing auth - user status:', {
+            console.log('Checking existing auth - wallet and user status:', {
+              isConnected,
+              accountId,
               email: user.email,
               name: user.name,
               emailVerificationStatus: user.emailVerificationStatus,
@@ -209,7 +281,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               isVerified: user.emailVerificationStatus === 'verified'
             });
             
-            if (user.emailVerificationStatus === 'verified') {
+            // First check if wallet is connected
+            if (!isConnected || !accountId) {
+              authStep = 'wallet';
+              console.log('🔌 Wallet not connected, staying on wallet step');
+            } else if (user.emailVerificationStatus === 'verified') {
               authStep = 'complete'; // User can access dashboard after email verification
               console.log('✅ User email verified, going to complete step');
             } else if (user.email && user.name) {
@@ -254,8 +330,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           try {
             console.log('AuthContext - Checking for existing user with wallet address:', address);
             console.log('AuthContext - About to call apiService.checkWalletUser...');
-            const response = await apiService.checkWalletUser(address);
-            console.log('AuthContext - checkWalletUser response received:', response);
+            
+            let response;
+            try {
+              response = await apiService.checkWalletUser(address);
+              console.log('AuthContext - checkWalletUser response received:', response);
+            } catch (error) {
+              console.error('AuthContext - checkWalletUser failed:', error);
+              // If the API call fails, assume no user exists and continue with new user flow
+              response = { success: false, message: 'Error checking wallet user' };
+            }
             
             if (response.success && response.data) {
               const userData = response.data;
@@ -270,6 +354,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                           userData.kycStatus === 'APPROVED' ? 'approved' :
                           userData.kycStatus === 'REJECTED' ? 'rejected' : 'not_started'
               };
+              
+              console.log('AuthContext - Normalized user data:', {
+                originalEmailStatus: userData.emailVerificationStatus,
+                normalizedEmailStatus: user.emailVerificationStatus,
+                originalKycStatus: userData.kycStatus,
+                normalizedKycStatus: user.kycStatus
+              });
               console.log('AuthContext - Found existing user:', user);
               console.log('AuthContext - User data details:', {
                 email: user.email,
@@ -280,14 +371,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 isEmailVerified: user.emailVerificationStatus === 'verified'
               });
               
-              // Determine auth step based on user status
+              // Determine auth step based on wallet connection and user status
               let authStep: 'wallet' | 'profile' | 'email' | 'kyc' | 'complete' = 'wallet';
               
-              console.log('AuthContext - User verification status:', user.emailVerificationStatus);
-              console.log('AuthContext - User email:', user.email);
-              console.log('AuthContext - User name:', user.name);
+              console.log('AuthContext - Wallet and user verification status:', {
+                isConnected,
+                accountId,
+                emailVerificationStatus: user.emailVerificationStatus,
+                email: user.email,
+                name: user.name
+              });
               
-              if (user.emailVerificationStatus === 'verified') {
+              // First check if wallet is connected
+              if (!isConnected || !accountId) {
+                authStep = 'wallet';
+                console.log('🔌 Wallet not connected, staying on wallet step');
+              } else if (user.emailVerificationStatus === 'verified') {
                 authStep = 'complete';
                 console.log('✅ Existing user email verified, going to complete step');
               } else if (!user.email || !user.name) {
@@ -383,7 +482,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               setAuthState(prev => ({ 
                 ...prev, 
                 authStep: 'profile',
-                isAuthenticated: true,
+                isAuthenticated: false,
                 user: newUser,
                 accessToken: null,
                 refreshToken: null,
@@ -415,7 +514,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setAuthState(prev => ({ 
               ...prev, 
               authStep: 'profile',
-              isAuthenticated: true, // Set as authenticated so we can proceed to profile
+              isAuthenticated: false, // Not authenticated until profile is completed
               user: newUser,
               accessToken: null,
               refreshToken: null,
@@ -431,12 +530,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const connectWallet = async (walletType: 'hashpack' | 'metamask') => {
+  const connectWallet = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      await connectWalletContext(walletType);
+      await connectWalletContext();
       // Don't automatically authenticate - let the user go through the flow
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect wallet');
@@ -461,23 +560,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       console.log('Attempting to sign message for profile completion:', {
         address,
-        hasSigner: !!signer,
+        accountId,
         message: message.substring(0, 50) + '...'
       });
       
-      // Sign the message (WalletContext will handle signer fallback)
+      // Sign the message (WalletContext will handle HashPack signature creation)
+      console.log('Calling signMessage...');
       const signature = await signMessage(message);
+      console.log('signMessage completed, signature received:', signature.substring(0, 20) + '...');
       
-      // Send to backend
+      // Send to backend - only include fields the backend expects
       const requestData = {
         walletAddress: address,
         signature,
         message,
         timestamp,
-        ...profileData,
+        email: profileData.email,
+        name: profileData.name,
+        phone: profileData.phone,
+        country: profileData.country,
       };
       
-      console.log('Sending profile completion request:', {
+      console.log('Sending HashPack profile completion request:', {
         walletAddress: requestData.walletAddress,
         email: requestData.email,
         name: requestData.name,
@@ -485,10 +589,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         country: requestData.country,
         hasSignature: !!requestData.signature,
         hasMessage: !!requestData.message,
-        timestamp: requestData.timestamp
+        timestamp: requestData.timestamp,
+        signature: requestData.signature?.substring(0, 20) + '...',
+        message: requestData.message?.substring(0, 50) + '...'
       });
       
+      console.log('Making backend request to completeProfile...');
       const response = await apiService.completeProfile(requestData);
+      console.log('Backend response received:', response);
 
       if (response.success) {
         const { user, accessToken, refreshToken } = response.data;
@@ -521,6 +629,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (err: any) {
       console.error('Profile completion failed:', err);
+      console.error('Backend response:', err.response?.data);
       
       // Handle specific error cases
       let errorMessage = 'Profile completion failed';
@@ -528,6 +637,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (err.response?.data?.message) {
         // Backend error message
         errorMessage = err.response.data.message;
+        console.error('Backend error message:', errorMessage);
       } else if (err.message) {
         // Generic error message
         errorMessage = err.message;
@@ -536,10 +646,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Check for specific error cases
       if (errorMessage.includes('Email already registered') || errorMessage.includes('Email already in use')) {
         errorMessage = 'This email address is already registered to another account. Please use a different email address.';
-      } else if (errorMessage.includes('Invalid wallet signature')) {
-        errorMessage = 'Wallet signature verification failed. Please try again.';
+      } else if (errorMessage.includes('Invalid wallet signature') || errorMessage.includes('signature verification failed')) {
+        errorMessage = 'HashPack wallet verification failed. Please ensure your wallet is properly connected and try again.';
       } else if (errorMessage.includes('Wallet not connected')) {
-        errorMessage = 'Please connect your wallet first.';
+        errorMessage = 'Please connect your HashPack wallet first.';
       }
       
       setError(errorMessage);

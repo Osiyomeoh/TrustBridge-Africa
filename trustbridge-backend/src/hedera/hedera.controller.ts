@@ -1,7 +1,12 @@
 import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsNumber } from 'class-validator';
 import { HederaService } from './hedera.service';
+import { TrustTokenService } from './trust-token.service';
+import { HscsContractService } from './hscs-contract.service';
+import { HscsHybridService } from './hscs-hybrid.service';
+import { MarketplaceService } from './marketplace.service';
+import { HcsService } from './hcs.service';
 import { TokenizationRequestDto } from './dto/tokenization-request.dto';
 
 export class SettlementRequestDto {
@@ -67,7 +72,14 @@ export class TokenAssociationRequestDto {
 @ApiTags('Hedera')
 @Controller('hedera')
 export class HederaController {
-  constructor(private readonly hederaService: HederaService) {}
+  constructor(
+    private readonly hederaService: HederaService,
+    private readonly trustTokenService: TrustTokenService,
+    private readonly hscsContractService: HscsContractService,
+    private readonly hscsHybridService: HscsHybridService,
+    private readonly marketplaceService: MarketplaceService,
+    private readonly hcsService: HcsService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get Hedera services overview' })
@@ -509,5 +521,697 @@ export class HederaController {
       data: result,
       message: 'Freeze workflow completed successfully'
     };
+  }
+
+  // TRUST Token Management Endpoints
+  @Post('trust-token/initialize')
+  @ApiOperation({ summary: 'Initialize TRUST token on Hedera' })
+  @ApiResponse({ status: 201, description: 'TRUST token initialized successfully' })
+  async initializeTrustToken() {
+    const tokenId = await this.trustTokenService.initializeTrustToken();
+    return {
+      success: true,
+      data: { tokenId },
+      message: 'TRUST token initialized successfully'
+    };
+  }
+
+  @Post('trust-token/mint')
+  @ApiOperation({ summary: 'Mint TRUST tokens to an account' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        toAccountId: { type: 'string', example: '0.0.1234567' },
+        amount: { type: 'number', example: 1000 }
+      },
+      required: ['toAccountId', 'amount']
+    }
+  })
+  @ApiResponse({ status: 201, description: 'TRUST tokens minted successfully' })
+  async mintTrustTokens(@Body() body: { toAccountId: string; amount: number }) {
+    const transactionId = await this.trustTokenService.mintTrustTokens(body.toAccountId, body.amount);
+    return {
+      success: true,
+      data: { transactionId },
+      message: `${body.amount} TRUST tokens minted to ${body.toAccountId}`
+    };
+  }
+
+  @Get('trust-token/balance/:accountId')
+  @ApiOperation({ summary: 'Get TRUST token balance for an account' })
+  @ApiResponse({ status: 200, description: 'TRUST token balance retrieved' })
+  async getTrustTokenBalance(@Param('accountId') accountId: string) {
+    const balance = await this.trustTokenService.getTrustTokenBalance(accountId);
+    return {
+      success: true,
+      data: { balance },
+      message: `TRUST token balance for ${accountId}: ${balance}`
+    };
+  }
+
+  @Get('trust-token/info')
+  @ApiOperation({ summary: 'Get TRUST token information' })
+  @ApiResponse({ status: 200, description: 'TRUST token information retrieved' })
+  async getTrustTokenInfo() {
+    const tokenId = this.trustTokenService.getTrustTokenId();
+    return {
+      success: true,
+      data: { tokenId },
+      message: tokenId ? `TRUST token ID: ${tokenId}` : 'TRUST token not initialized'
+    };
+  }
+
+  // HSCS Contract Endpoints
+
+  @Post('trust-token/exchange')
+  @ApiOperation({ summary: 'Exchange HBAR for TRUST tokens via HSCS contract' })
+  @ApiResponse({ status: 200, description: 'Exchange successful' })
+  async exchangeHbarForTrust(@Body() exchangeRequest: any) {
+    try {
+      const result = await this.hscsContractService.exchangeHbarForTrust(
+        exchangeRequest.accountId,
+        exchangeRequest.hbarAmount,
+        exchangeRequest.treasuryAccountId,
+        exchangeRequest.operationsAccountId,
+        exchangeRequest.stakingAccountId
+      );
+      return {
+        success: true,
+        data: result,
+        message: 'HBAR exchanged for TRUST tokens successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to exchange HBAR for TRUST tokens'
+      };
+    }
+  }
+
+  @Post('trust-token/burn')
+  @ApiOperation({ summary: 'Burn TRUST tokens via HSCS contract' })
+  @ApiResponse({ status: 200, description: 'Burn successful' })
+  async burnTrustTokens(@Body() burnRequest: any) {
+    try {
+      const transactionId = await this.hscsContractService.burnTrustTokens(
+        burnRequest.accountId,
+        burnRequest.amount,
+        burnRequest.reason || 'NFT_CREATION'
+      );
+      return {
+        success: true,
+        data: { transactionId },
+        message: 'TRUST tokens burned successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to burn TRUST tokens'
+      };
+    }
+  }
+
+  @Get('trust-token/exchange-info')
+  @ApiOperation({ summary: 'Get exchange information from HSCS contract' })
+  @ApiResponse({ status: 200, description: 'Exchange information' })
+  async getExchangeInfo() {
+    try {
+      const info = await this.hscsContractService.getExchangeInfo();
+      return {
+        success: true,
+        data: info,
+        message: 'Exchange information retrieved successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to get exchange information'
+      };
+    }
+  }
+
+  @Post('trust-token/calculate-fee')
+  @ApiOperation({ summary: 'Calculate NFT creation fee via HSCS contract' })
+  @ApiResponse({ status: 200, description: 'Fee calculated' })
+  async calculateNftCreationFee(@Body() feeRequest: any) {
+    try {
+      const fee = await this.hscsContractService.calculateNftCreationFee(
+        feeRequest.verificationLevel,
+        feeRequest.rarity
+      );
+      return {
+        success: true,
+        data: { fee },
+        message: 'NFT creation fee calculated successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to calculate NFT creation fee'
+      };
+    }
+  }
+
+  @Post('trust-token/stake')
+  @ApiOperation({ summary: 'Stake TRUST tokens via HSCS contract' })
+  @ApiResponse({ status: 200, description: 'Staking successful' })
+  async stakeTrustTokens(@Body() stakeRequest: any) {
+    try {
+      const transactionId = await this.hscsContractService.stakeTrustTokens(
+        stakeRequest.accountId,
+        stakeRequest.amount,
+        stakeRequest.duration
+      );
+      return {
+        success: true,
+        data: { transactionId },
+        message: 'TRUST tokens staked successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to stake TRUST tokens'
+      };
+    }
+  }
+
+  // HSCS Hybrid Endpoints (HSCS + HTS)
+
+  @Post('trust-token/hybrid/exchange')
+  @ApiOperation({ summary: 'Exchange HBAR for TRUST tokens using hybrid HSCS + HTS approach' })
+  @ApiResponse({ status: 200, description: 'Exchange successful' })
+  async hybridExchangeHbarForTrust(@Body() exchangeRequest: any) {
+    try {
+      const result = await this.hscsHybridService.exchangeHbarForTrust(
+        exchangeRequest.accountId,
+        exchangeRequest.hbarAmount,
+        exchangeRequest.treasuryAccountId,
+        exchangeRequest.operationsAccountId,
+        exchangeRequest.stakingAccountId,
+        exchangeRequest.fromAccountPrivateKey // Optional private key for signing
+      );
+      return {
+        success: true,
+        data: result,
+        message: 'HBAR exchanged for TRUST tokens successfully via hybrid approach'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to exchange HBAR for TRUST tokens via hybrid approach'
+      };
+    }
+  }
+
+  @Post('trust-token/hybrid/burn')
+  @ApiOperation({ summary: 'Burn TRUST tokens using hybrid HSCS + HTS approach' })
+  @ApiResponse({ status: 200, description: 'Burn successful' })
+  async hybridBurnTrustTokens(@Body() burnRequest: any) {
+    try {
+      const transactionId = await this.hscsHybridService.burnTrustTokens(
+        burnRequest.accountId,
+        burnRequest.amount,
+        burnRequest.reason || 'NFT_CREATION',
+        burnRequest.fromAccountPrivateKey // Optional private key for signing
+      );
+      return {
+        success: true,
+        data: { transactionId },
+        message: 'TRUST tokens burned successfully via hybrid approach'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to burn TRUST tokens via hybrid approach'
+      };
+    }
+  }
+
+  @Post('trust-token/hybrid/calculate-fee')
+  @ApiOperation({ summary: 'Calculate NFT creation fee using hybrid HSCS + HTS approach' })
+  @ApiResponse({ status: 200, description: 'Fee calculated' })
+  async hybridCalculateNftCreationFee(@Body() feeRequest: any) {
+    try {
+      const fee = await this.hscsHybridService.calculateNftCreationFee(
+        feeRequest.verificationLevel,
+        feeRequest.rarity
+      );
+      return {
+        success: true,
+        data: { fee },
+        message: 'NFT creation fee calculated successfully via hybrid approach'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to calculate NFT creation fee via hybrid approach'
+      };
+    }
+  }
+
+  @Get('trust-token/hybrid/balance/:accountId')
+  @ApiOperation({ summary: 'Get TRUST token balance using hybrid HSCS + HTS approach' })
+  @ApiResponse({ status: 200, description: 'Balance retrieved' })
+  async hybridGetTrustTokenBalance(@Param('accountId') accountId: string) {
+    try {
+      const balance = await this.hscsHybridService.getTrustTokenBalance(accountId);
+      return {
+        success: true,
+        data: { balance },
+        message: 'TRUST token balance retrieved successfully via hybrid approach'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to get TRUST token balance via hybrid approach'
+      };
+    }
+  }
+
+  @Post('trust-token/hybrid/stake')
+  @ApiOperation({ summary: 'Stake TRUST tokens using hybrid HSCS + HTS approach' })
+  @ApiResponse({ status: 200, description: 'Staking successful' })
+  async hybridStakeTrustTokens(@Body() stakeRequest: any) {
+    try {
+      const transactionId = await this.hscsHybridService.stakeTrustTokens(
+        stakeRequest.accountId,
+        stakeRequest.amount,
+        stakeRequest.duration
+      );
+      return {
+        success: true,
+        data: { transactionId },
+        message: 'TRUST tokens staked successfully via hybrid approach'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to stake TRUST tokens via hybrid approach'
+      };
+    }
+  }
+
+  // ============ Marketplace Endpoints ============
+
+  @Post('marketplace/list')
+  @ApiOperation({ summary: 'List NFT on marketplace' })
+  @ApiResponse({ status: 200, description: 'NFT listed successfully' })
+  async marketplaceListNFT(@Body() listingData: {
+    nftTokenId: string;
+    serialNumber: number;
+    price: number;
+    sellerAccountId: string;
+  }) {
+    try {
+      const result = await this.marketplaceService.listNFT(
+        listingData.nftTokenId,
+        listingData.serialNumber,
+        listingData.price,
+        listingData.sellerAccountId
+      );
+      
+      return {
+        success: true,
+        data: result,
+        message: 'NFT listed on marketplace successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to list NFT on marketplace'
+      };
+    }
+  }
+
+  @Post('marketplace/buy/:listingId')
+  @ApiOperation({ summary: 'Buy NFT from marketplace' })
+  @ApiResponse({ status: 200, description: 'NFT purchased successfully' })
+  async marketplaceBuyNFT(
+    @Param('listingId') listingId: number,
+    @Body() buyData: {
+      buyerAccountId: string;
+      buyerPrivateKey?: string;
+    }
+  ) {
+    try {
+      const result = await this.marketplaceService.buyNFT(
+        listingId,
+        buyData.buyerAccountId,
+        buyData.buyerPrivateKey
+      );
+      
+      return {
+        success: true,
+        data: result,
+        message: 'NFT purchased successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to buy NFT'
+      };
+    }
+  }
+
+  @Post('marketplace/cancel/:listingId')
+  @ApiOperation({ summary: 'Cancel marketplace listing' })
+  @ApiResponse({ status: 200, description: 'Listing cancelled successfully' })
+  async marketplaceCancelListing(@Param('listingId') listingId: number) {
+    try {
+      const result = await this.marketplaceService.cancelListing(listingId);
+      
+      return {
+        success: true,
+        data: result,
+        message: 'Listing cancelled successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to cancel listing'
+      };
+    }
+  }
+
+  @Post('marketplace/update-price')
+  @ApiOperation({ summary: 'Update marketplace listing price' })
+  @ApiResponse({ status: 200, description: 'Price updated successfully' })
+  async marketplaceUpdatePrice(@Body() priceData: {
+    listingId: number;
+    newPrice: number;
+  }) {
+    try {
+      const result = await this.marketplaceService.updatePrice(
+        priceData.listingId,
+        priceData.newPrice
+      );
+      
+      return {
+        success: true,
+        data: result,
+        message: 'Listing price updated successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to update listing price'
+      };
+    }
+  }
+
+  @Get('marketplace/listing/:listingId')
+  @ApiOperation({ summary: 'Get marketplace listing details' })
+  @ApiResponse({ status: 200, description: 'Listing details retrieved' })
+  async marketplaceGetListing(@Param('listingId') listingId: number) {
+    try {
+      const result = await this.marketplaceService.getListing(listingId);
+      
+      return {
+        success: true,
+        data: result,
+        message: 'Listing details retrieved successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to get listing details'
+      };
+    }
+  }
+
+  @Get('marketplace/check-listing/:nftTokenId/:serialNumber')
+  @ApiOperation({ summary: 'Check if NFT is listed' })
+  @ApiResponse({ status: 200, description: 'NFT listing status checked' })
+  async marketplaceCheckListing(
+    @Param('nftTokenId') nftTokenId: string,
+    @Param('serialNumber') serialNumber: number
+  ) {
+    try {
+      const result = await this.marketplaceService.isNFTListed(nftTokenId, serialNumber);
+      
+      return {
+        success: true,
+        data: result,
+        message: 'NFT listing status retrieved successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to check NFT listing status'
+      };
+    }
+  }
+
+  @Get('marketplace/config')
+  @ApiOperation({ summary: 'Get marketplace configuration' })
+  @ApiResponse({ status: 200, description: 'Marketplace config retrieved' })
+  async marketplaceGetConfig() {
+    try {
+      const result = await this.marketplaceService.getMarketplaceConfig();
+      
+      return {
+        success: true,
+        data: result,
+        message: 'Marketplace configuration retrieved successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to get marketplace configuration'
+      };
+    }
+  }
+
+  @Post('marketplace/transfer-nft')
+  @ApiOperation({ summary: 'Transfer NFT from marketplace escrow to buyer' })
+  @ApiResponse({ status: 200, description: 'NFT transferred successfully' })
+  async marketplaceTransferNFT(@Body() transferData: {
+    nftTokenId: string;
+    serialNumber: number;
+    buyerAccountId: string;
+    listingId: number;
+  }) {
+    try {
+      const result = await this.marketplaceService.transferNFTFromEscrow(
+        transferData.nftTokenId,
+        transferData.serialNumber,
+        transferData.buyerAccountId
+      );
+      
+      return {
+        success: true,
+        data: result,
+        message: 'NFT transferred from marketplace escrow to buyer'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to transfer NFT from escrow'
+      };
+    }
+  }
+
+  @Post('marketplace/return-nft')
+  @ApiOperation({ summary: 'Return NFT from marketplace escrow to seller (unlist)' })
+  @ApiResponse({ status: 200, description: 'NFT returned successfully' })
+  async marketplaceReturnNFT(@Body() returnData: {
+    nftTokenId: string;
+    serialNumber: number;
+    sellerAccountId: string;
+  }) {
+    try {
+      const result = await this.marketplaceService.transferNFTFromEscrow(
+        returnData.nftTokenId,
+        returnData.serialNumber,
+        returnData.sellerAccountId
+      );
+      
+      return {
+        success: true,
+        data: result,
+        message: 'NFT returned from marketplace escrow to seller'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to return NFT from escrow'
+      };
+    }
+  }
+
+  // ============ HCS Endpoints ============
+
+  @Post('hcs/marketplace/event')
+  @ApiOperation({ summary: 'Submit marketplace event to HCS (immutable audit trail)' })
+  @ApiResponse({ status: 200, description: 'Event submitted successfully' })
+  async submitMarketplaceEvent(@Body() event: any) {
+    try {
+      const transactionId = await this.hcsService.submitMarketplaceEvent(event);
+      return {
+        success: true,
+        data: {
+          transactionId,
+          topicId: this.hcsService.getMarketplaceTopicId(),
+        },
+        message: 'Marketplace event submitted to HCS'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to submit marketplace event'
+      };
+    }
+  }
+
+  @Get('hcs/marketplace/events')
+  @ApiOperation({ summary: 'Query marketplace events from HCS' })
+  @ApiResponse({ status: 200, description: 'Events retrieved successfully' })
+  async getMarketplaceEvents(
+    @Param('limit') limit?: number,
+    @Param('assetTokenId') assetTokenId?: string
+  ) {
+    try {
+      const events = await this.hcsService.queryMarketplaceEvents(limit || 100, assetTokenId);
+      return {
+        success: true,
+        data: {
+          events,
+          topicId: this.hcsService.getMarketplaceTopicId(),
+          count: events.length,
+        },
+        message: 'Marketplace events retrieved from HCS'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to query marketplace events'
+      };
+    }
+  }
+
+  @Get('hcs/marketplace/events/:assetTokenId')
+  @ApiOperation({ summary: 'Query marketplace events for specific asset from HCS' })
+  @ApiResponse({ status: 200, description: 'Asset events retrieved successfully' })
+  async getAssetEvents(@Param('assetTokenId') assetTokenId: string) {
+    try {
+      const events = await this.hcsService.queryMarketplaceEvents(1000, assetTokenId);
+      return {
+        success: true,
+        data: {
+          events,
+          assetTokenId,
+          count: events.length,
+        },
+        message: `Retrieved ${events.length} events for asset ${assetTokenId}`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to query asset events'
+      };
+    }
+  }
+
+  @Post('hcs/offers/message')
+  @ApiOperation({ summary: 'Submit offer message to HCS (decentralized communication)' })
+  @ApiResponse({ status: 200, description: 'Message submitted successfully' })
+  async submitOfferMessage(@Body() message: any) {
+    try {
+      const transactionId = await this.hcsService.submitOfferMessage(message);
+      return {
+        success: true,
+        data: {
+          transactionId,
+          topicId: this.hcsService.getOfferTopicId(),
+        },
+        message: 'Offer message submitted to HCS'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to submit offer message'
+      };
+    }
+  }
+
+  @Get('hcs/offers/messages/:assetTokenId')
+  @ApiOperation({ summary: 'Query offer messages for specific asset from HCS' })
+  @ApiResponse({ status: 200, description: 'Offer messages retrieved successfully' })
+  async getOfferMessages(@Param('assetTokenId') assetTokenId: string) {
+    try {
+      const messages = await this.hcsService.queryOfferMessages(assetTokenId);
+      return {
+        success: true,
+        data: {
+          messages,
+          assetTokenId,
+          count: messages.length,
+        },
+        message: `Retrieved ${messages.length} offer messages for asset ${assetTokenId}`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to query offer messages'
+      };
+    }
+  }
+
+  @Get('hcs/topics/info')
+  @ApiOperation({ summary: 'Get HCS topic information' })
+  @ApiResponse({ status: 200, description: 'Topic info retrieved successfully' })
+  async getTopicsInfo() {
+    try {
+      const marketplaceTopicId = this.hcsService.getMarketplaceTopicId();
+      const offerTopicId = this.hcsService.getOfferTopicId();
+
+      const marketplaceInfo = marketplaceTopicId 
+        ? await this.hcsService.getTopicInfo(marketplaceTopicId)
+        : null;
+      
+      const offerInfo = offerTopicId
+        ? await this.hcsService.getTopicInfo(offerTopicId)
+        : null;
+
+      return {
+        success: true,
+        data: {
+          marketplaceTopic: marketplaceInfo,
+          offerTopic: offerInfo,
+        },
+        message: 'HCS topic information retrieved'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to get topic information'
+      };
+    }
   }
 }

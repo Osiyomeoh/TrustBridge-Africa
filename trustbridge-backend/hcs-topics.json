@@ -1,0 +1,14 @@
+{
+  "marketplaceEventsTopic": {
+    "topicId": "0.0.7012456",
+    "memo": "TrustBridge Marketplace Events - Immutable Audit Trail for all listings, sales, and offers",
+    "createdAt": "2025-10-09T23:34:50.698Z",
+    "transactionId": "0.0.6916959@1760052877.012040798"
+  },
+  "offerMessagesTopic": {
+    "topicId": "0.0.7012457",
+    "memo": "TrustBridge Offer Messages - Decentralized buyer/seller communication",
+    "createdAt": "2025-10-09T23:34:50.698Z",
+    "transactionId": "0.0.6916959@1760052881.762352513"
+  }
+}

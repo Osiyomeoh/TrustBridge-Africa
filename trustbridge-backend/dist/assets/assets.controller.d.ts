@@ -53,4 +53,14 @@ export declare class AssetsController {
         transactionId: string;
         message?: string;
     }>;
+    getNFTBlockchainState(tokenId: string, serialNumber: string): Promise<{
+        success: boolean;
+        data: {
+            owner: string;
+            isListed: boolean;
+            isInEscrow: boolean;
+            marketplaceAccount: string;
+            seller?: string;
+        };
+    }>;
 }

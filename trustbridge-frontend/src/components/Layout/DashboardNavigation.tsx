@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, TrendingUp, Wallet, BarChart3, Settings, Menu, X, Zap, User, LogOut, ChevronLeft, ChevronRight, ChevronDown, Shield, CheckCircle, Coins, Vote, BarChart3 as BarChart, Activity, Building2, UserCheck, Crown, UserPlus, Coins as CoinsIcon } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { TrendingUp, BarChart3, Settings, X, Zap, User, LogOut, ChevronLeft, ChevronRight, ChevronDown, Shield, CheckCircle, Coins, Vote, BarChart3 as BarChart, Activity, Building2, UserCheck, Crown, UserPlus, Coins as CoinsIcon } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ThemeToggle from '../UI/ThemeToggle';
 import { useSidebar } from '../../contexts/SidebarContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,7 +11,7 @@ import { useTrustTokenBalance } from '../../hooks/useTrustTokenBalance';
 const DashboardNavigation: React.FC = () => {
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(new Set());
-  const { isCollapsed, toggleSidebar } = useSidebar();
+  const { isCollapsed, toggleSidebar, isMobileSidebarOpen, toggleMobileSidebar } = useSidebar();
   
   const { logout } = useAuth();
   const { disconnectWallet, address, balance } = useWallet();
@@ -128,8 +128,126 @@ const DashboardNavigation: React.FC = () => {
 
   return (
     <>
+      {/* Mobile Sidebar Navigation */}
+      <nav className={`lg:hidden fixed top-0 left-0 h-screen bg-gray-900 border-r border-gray-700 shadow-2xl shadow-black/20 z-[60] transition-all duration-300 ease-in-out ${
+        isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } w-64`}>
+        <div className="h-full flex flex-col w-full overflow-y-auto p-4">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-gradient-to-br from-neon-green to-emerald-500 rounded-lg flex items-center justify-center">
+                <span className="text-black font-bold text-sm">TB</span>
+              </div>
+              <span className="text-lg font-semibold text-off-white">TrustBridge</span>
+            </div>
+            <button
+              onClick={toggleMobileSidebar}
+              className="p-2 rounded-lg bg-gray-800 text-gray-400 hover:text-off-white hover:bg-gray-700 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Mobile Navigation Items */}
+          <div className="flex-1 space-y-2">
+            {/* Main Navigation */}
+            <div className="space-y-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.href;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavigation(item.href)}
+                    className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? 'bg-neon-green/20 text-neon-green border border-neon-green/40'
+                        : 'text-gray-300 hover:text-off-white hover:bg-gray-800'
+                    }`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Dropdown Sections */}
+            <div className="space-y-1">
+              {dropdownSections.map((section) => {
+                const Icon = section.icon;
+                const isOpen = openDropdowns.has(section.id);
+                return (
+                  <div key={section.id}>
+                    <button
+                      onClick={() => toggleDropdown(section.id)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-off-white hover:bg-gray-800 transition-all duration-200"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Icon className="w-5 h-5" />
+                        <span>{section.label}</span>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isOpen && (
+                      <div className="ml-4 space-y-1 mt-1">
+                        {section.items.map((item) => {
+                          const ItemIcon = item.icon;
+                          const isActive = location.pathname === item.href;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => handleNavigation(item.href)}
+                              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                                isActive
+                                  ? 'bg-neon-green/10 text-neon-green'
+                                  : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
+                              }`}
+                            >
+                              <ItemIcon className="w-4 h-4" />
+                              <span>{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Mobile User Section */}
+          <div className="mt-6 pt-4 border-t border-gray-700">
+            <div className="space-y-2">
+              <div className="px-3 py-2 bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-400">Wallet</p>
+                <p className="text-sm font-mono text-off-white">{formatAddress(address)}</p>
+                <p className="text-xs text-gray-400">{formatBalance(balance)}</p>
+              </div>
+              <button
+                onClick={handleDisconnect}
+                className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm text-red-400 hover:bg-red-400/10 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Disconnect</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Mobile Overlay */}
+      {isMobileSidebarOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-[50]"
+          onClick={toggleMobileSidebar}
+        />
+      )}
+
       {/* Desktop Sidebar Navigation - Overlay Style */}
-      <nav className={`flex fixed top-0 left-0 h-screen bg-gray-900 border-r border-gray-700 shadow-2xl shadow-black/20 z-[60] transition-all duration-300 ease-in-out group ${
+      <nav className={`hidden lg:flex fixed top-0 left-0 h-screen bg-gray-900 border-r border-gray-700 shadow-2xl shadow-black/20 z-[60] transition-all duration-300 ease-in-out group ${
         isCollapsed ? 'w-16 hover:w-64' : 'w-64'
       }`}>
         <div className={`h-full flex flex-col w-full transition-all duration-300 ease-in-out overflow-y-auto ${

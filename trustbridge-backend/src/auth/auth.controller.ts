@@ -71,6 +71,12 @@ export class VerifyEmailDto {
   token: string;
 }
 
+export class ResendVerificationDto {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+}
+
 export class ChangePasswordDto {
   @IsString()
   @IsNotEmpty()
@@ -165,6 +171,14 @@ export class AuthController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async checkWalletUser(@Param('address') address: string) {
     return this.authService.checkWalletUser(address);
+  }
+
+  @Get('check-email/:email')
+  @ApiOperation({ summary: 'Check if email is already registered' })
+  @ApiResponse({ status: 200, description: 'Email check completed' })
+  @ApiResponse({ status: 404, description: 'Email not found' })
+  async checkEmailUser(@Param('email') email: string) {
+    return this.authService.checkEmailUser(email);
   }
 
   @Get()
@@ -270,11 +284,11 @@ export class AuthController {
 
   @Post('resend-verification')
   @ApiOperation({ summary: 'Resend verification email with new 6-digit code' })
-  @ApiBody({ schema: { type: 'object', properties: { email: { type: 'string', format: 'email' } }, required: ['email'] } })
+  @ApiBody({ type: ResendVerificationDto })
   @ApiResponse({ status: 200, description: 'Verification email sent successfully' })
   @ApiResponse({ status: 400, description: 'Resend verification failed' })
-  async resendVerification(@Body() body: { email: string }) {
-    const result = await this.authService.resendVerificationEmail(body.email);
+  async resendVerification(@Body() resendVerificationDto: ResendVerificationDto) {
+    const result = await this.authService.resendVerificationEmail(resendVerificationDto.email);
     
     return {
       success: true,

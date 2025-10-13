@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { apiService } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
-import { hederaAssetService } from '../../services/hederaAssetService';
+import hederaAssetService from '../../services/hederaAssetService';
 import axios from 'axios';
 
 interface VerificationRequest {

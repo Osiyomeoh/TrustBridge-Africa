@@ -84,10 +84,40 @@
         </div>
         
         <div>
+            <h2>🔗 Wallet Connection</h2>
             <button id="connectBtn" class="button">Connect HashPack Wallet</button>
             <button id="disconnectBtn" class="button" disabled>Disconnect</button>
             <button id="getAccountBtn" class="button" disabled>Get Account Info</button>
             <button id="getBalanceBtn" class="button" disabled>Get Balance</button>
+        </div>
+
+        <div>
+            <h2>🪙 Hedera Token Service (HTS) Tests</h2>
+            <button id="createTokenBtn" class="button" disabled>Create Test Token</button>
+            <button id="mintTokenBtn" class="button" disabled>Mint Tokens</button>
+            <button id="transferTokenBtn" class="button" disabled>Transfer Tokens</button>
+            <button id="getTokenInfoBtn" class="button" disabled>Get Token Info</button>
+            <button id="getTokenBalanceBtn" class="button" disabled>Get Token Balance</button>
+        </div>
+
+        <div>
+            <h2>📁 Hedera File Service (HFS) Tests</h2>
+            <button id="uploadFileBtn" class="button" disabled>Upload Test File</button>
+            <button id="downloadFileBtn" class="button" disabled>Download File</button>
+            <button id="getFileInfoBtn" class="button" disabled>Get File Info</button>
+            <button id="deleteFileBtn" class="button" disabled>Delete File</button>
+        </div>
+
+        <div>
+            <h2>📝 Hedera Consensus Service (HCS) Tests</h2>
+            <button id="createTopicBtn" class="button" disabled>Create Topic</button>
+            <button id="submitMessageBtn" class="button" disabled>Submit Message</button>
+            <button id="getTopicInfoBtn" class="button" disabled>Get Topic Info</button>
+            <button id="getMessagesBtn" class="button" disabled>Get Messages</button>
+        </div>
+
+        <div>
+            <h2>🔧 Debug & Utilities</h2>
             <button id="detectBtn" class="button" onclick="manualDetect()">Manual Detection</button>
             <button id="retryBtn" class="button" onclick="retryInitialization()">Retry Initialization</button>
             <button id="refreshBtn" class="button" onclick="location.reload()">Refresh Page</button>
@@ -101,6 +131,21 @@
         <div id="balanceInfo" class="account-info" style="display: none;">
             <h3>Balance Information</h3>
             <div id="balanceDetails"></div>
+        </div>
+
+        <div id="htsInfo" class="account-info" style="display: none;">
+            <h3>HTS Token Information</h3>
+            <div id="htsDetails"></div>
+        </div>
+
+        <div id="hfsInfo" class="account-info" style="display: none;">
+            <h3>HFS File Information</h3>
+            <div id="hfsDetails"></div>
+        </div>
+
+        <div id="hcsInfo" class="account-info" style="display: none;">
+            <h3>HCS Topic Information</h3>
+            <div id="hcsDetails"></div>
         </div>
         
         <div id="logs" class="code-block" style="display: none;">

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/UI/Card';
@@ -13,13 +13,25 @@ import { contractService } from '../services/contractService';
 import { useToast } from '../hooks/useToast';
 
 const Dashboard: React.FC = () => {
-  const { user, startKYC } = useAuth();
+  const { user, startKYC, authStep, isAuthenticated } = useAuth();
   const { balance: trustBalance, loading: trustLoading } = useTrustTokenBalance();
   const [showKYCBanner, setShowKYCBanner] = useState(true);
   const [showIntegrationTest, setShowIntegrationTest] = useState(false);
   const [mintingTokens, setMintingTokens] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  // Check authentication status and redirect if needed
+  useEffect(() => {
+    console.log('Dashboard - Auth check:', { isAuthenticated, authStep, user: !!user });
+    
+    // If user is not authenticated or needs to complete profile
+    if (!isAuthenticated || authStep === 'wallet' || authStep === 'profile' || authStep === 'email') {
+      console.log('Dashboard - User needs authentication, redirecting to profile completion');
+      // Profile completion is handled by the centralized popup
+      return;
+    }
+  }, [isAuthenticated, authStep, user, navigate]);
   
   // Fetch real data from backend
   const { data: analyticsData, loading: analyticsLoading, error: analyticsError } = useMarketAnalytics();

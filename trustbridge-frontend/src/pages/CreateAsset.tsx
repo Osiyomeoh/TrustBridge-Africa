@@ -5,24 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/UI/Card'
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
 import FileUpload from '../components/UI/FileUpload';
-import FilePreview from '../components/UI/FilePreview';
+import { UploadedFile } from '../components/UI/FileUpload';
 import Breadcrumb from '../components/UI/Breadcrumb';
 import StepNavigation from '../components/UI/StepNavigation';
 import { 
-  Upload, 
-  MapPin, 
   FileText, 
   CheckCircle, 
-  AlertCircle,
   Building2,
   TreePine,
-  Factory,
-  Home,
   Loader2,
   Shield,
   TrendingUp,
-  Trash2,
-  Eye,
   Package,
   Palette,
   Car
@@ -30,13 +23,22 @@ import {
 import { useToast } from '../hooks/useToast';
 import { useWallet } from '../contexts/WalletContext';
 import { useAuth } from '../contexts/AuthContext';
-import { contractService } from '../services/contractService';
+import { 
+  TokenCreateTransaction, 
+  FileCreateTransaction, 
+  TopicCreateTransaction, 
+  TopicMessageSubmitTransaction,
+  AccountId,
+  TokenType,
+  TokenSupplyType
+} from '@hashgraph/sdk';
+import { TrustTokenService } from '../services/trust-token.service';
 import KYCRequired from '../components/Auth/KYCRequired';
 
 const CreateAsset: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { address, isConnected } = useWallet();
+  const { accountId, isConnected, signer, hederaClient } = useWallet();
   const { user } = useAuth();
   
   const [currentStep, setCurrentStep] = useState(1);
@@ -95,17 +97,17 @@ const CreateAsset: React.FC = () => {
   ];
 
   const steps = selectedAssetType === 'digital' ? [
-    { id: 1, title: 'Asset Details', description: 'Basic information about your digital asset' },
-    { id: 2, title: 'Location & Value', description: 'Where is it located and what is it worth?' },
-    { id: 3, title: 'Image & Description', description: 'Add image and describe your digital asset' },
-    { id: 4, title: 'Ready to Create', description: 'Your digital asset is ready for instant creation' },
-    { id: 5, title: 'Review & Submit', description: 'Review and create your digital asset' }
+    { id: '1', title: 'Asset Details', description: 'Basic information about your digital asset' },
+    { id: '2', title: 'Location & Value', description: 'Where is it located and what is it worth?' },
+    { id: '3', title: 'Image & Description', description: 'Add image and describe your digital asset' },
+    { id: '4', title: 'Ready to Create', description: 'Your digital asset is ready for instant creation' },
+    { id: '5', title: 'Review & Submit', description: 'Review and create your digital asset' }
   ] : [
-    { id: 1, title: 'Asset Details', description: 'Basic information about your real-world asset' },
-    { id: 2, title: 'Location & Value', description: 'Where is it located and what is it worth?' },
-    { id: 3, title: 'Evidence Upload', description: 'Upload supporting documents and images' },
-    { id: 4, title: 'Maturity & Verification', description: 'Set maturity date and verification level' },
-    { id: 5, title: 'Review & Submit', description: 'Review and submit for verification' }
+    { id: '1', title: 'Asset Details', description: 'Basic information about your real-world asset' },
+    { id: '2', title: 'Location & Value', description: 'Where is it located and what is it worth?' },
+    { id: '3', title: 'Evidence Upload', description: 'Upload supporting documents and images' },
+    { id: '4', title: 'Maturity & Verification', description: 'Set maturity date and verification level' },
+    { id: '5', title: 'Review & Submit', description: 'Review and submit for verification' }
   ];
 
   const handleInputChange = (field: string, value: any) => {
@@ -116,7 +118,8 @@ const CreateAsset: React.FC = () => {
   };
 
 
-  const handleFileUpload = (files: File[]) => {
+  const handleFileUpload = (uploadedFiles: UploadedFile[]) => {
+    const files = uploadedFiles.map(uf => uf.file);
     setFormData(prev => ({
       ...prev,
       evidenceFiles: [...prev.evidenceFiles, ...files]
@@ -131,10 +134,10 @@ const CreateAsset: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!isConnected || !address) {
+    if (!isConnected || !accountId || !signer || !hederaClient) {
       toast({
         title: 'Wallet Not Connected',
-        description: 'Please connect your wallet to create an asset.',
+        description: 'Please connect your HashPack wallet to create an asset.',
         variant: 'destructive'
       });
       return;
@@ -142,63 +145,156 @@ const CreateAsset: React.FC = () => {
 
     setIsLoading(true);
     try {
-      // Convert files to hashes (simplified - in real app, upload to IPFS first)
-      const evidenceHashes = formData.evidenceFiles.map((_, index) => `evidence_hash_${index}_${Date.now()}`);
-      const documentTypes = formData.evidenceFiles.map(file => file.type.split('/')[0]);
+      let assetTokenId: string | undefined;
+      let assetFileId: string | undefined;
+      let assetTopicId: string | undefined;
 
-      let result;
-      
-      if (selectedAssetType === 'digital') {
-        // Create digital asset (instant creation and verification)
-        const digitalAssetData = {
-          category: formData.category,
-          assetType: formData.assetType,
-          name: formData.name,
-          location: formData.location,
-          totalValue: formData.totalValue,
-          imageURI: formData.imageURI || 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=300&fit=crop&crop=center',
-          description: formData.description
-        };
+      // Step 1: Upload asset metadata to HFS (small JSON file)
+      // Note: Images are stored on IPFS, only metadata goes to HFS
+      const assetMetadata = {
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        assetType: formData.assetType,
+        location: formData.location,
+        totalValue: formData.totalValue,
+        maturityDate: selectedAssetType === 'rwa' ? formData.maturityDate : undefined,
+        imageURI: formData.imageURI, // This is an IPFS URL from file upload
+        documentURI: formData.documentURI,
+        evidenceFiles: formData.evidenceFiles.map(file => ({
+          name: file.name,
+          type: file.type,
+          size: file.size
+        })),
+        createdBy: accountId,
+        createdAt: new Date().toISOString(),
+      };
 
-        result = await contractService.createDigitalAsset(digitalAssetData);
-        
-        toast({
-          title: 'Digital Asset Created Successfully!',
-          description: `Your digital asset has been created with ID: ${result.assetId.slice(0, 10)}...`,
-          variant: 'default'
-        });
-      } else {
-        // Create RWA asset (requires verification)
-        const rwaAssetData = {
-          category: formData.category,
-          assetType: formData.assetType,
-          name: formData.name,
-          location: formData.location,
-          totalValue: formData.totalValue,
-          maturityDate: Math.floor(new Date(formData.maturityDate).getTime() / 1000),
-          evidenceHashes,
-          documentTypes,
-          imageURI: formData.imageURI || 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=300&fit=crop&crop=center',
-          documentURI: formData.documentURI || 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=300&fit=crop&crop=center',
-          description: formData.description
-        };
+      // Upload metadata to HFS
+      const metadataContent = new TextEncoder().encode(JSON.stringify(assetMetadata));
+      const fileCreateTx = new FileCreateTransaction()
+        .setContents(metadataContent)
+        .setMaxTransactionFee(1000);
 
-        result = await contractService.createRWAAsset(rwaAssetData);
-        
-        toast({
-          title: 'RWA Asset Created Successfully!',
-          description: `Your RWA asset has been created with ID: ${result.assetId.slice(0, 10)}... It will be verified by our attestors.`,
-          variant: 'default'
-        });
+      fileCreateTx.freezeWithSigner(signer);
+      const signedFileTx = await signer.signTransaction(fileCreateTx);
+      const fileResponse = await signedFileTx.execute(hederaClient);
+      const fileReceipt = await fileResponse.getReceipt(hederaClient);
+      assetFileId = fileReceipt.fileId?.toString();
+
+      // Step 2: Create HTS NFT for the asset
+      const tokenCreateTx = new TokenCreateTransaction()
+        .setTokenName(formData.name)
+        .setTokenSymbol(formData.assetType.toUpperCase().slice(0, 5))
+        .setTokenType(TokenType.NonFungibleUnique) // NON_FUNGIBLE_UNIQUE
+        .setInitialSupply(0) // NFT tokens start with 0 supply
+        .setTreasuryAccountId(AccountId.fromString(accountId))
+        .setSupplyType(TokenSupplyType.Infinite) // Allow unlimited minting
+        .setMaxTransactionFee(1000);
+
+      tokenCreateTx.freezeWithSigner(signer);
+      const signedTokenTx = await signer.signTransaction(tokenCreateTx);
+      const tokenResponse = await signedTokenTx.execute(hederaClient);
+      const tokenReceipt = await tokenResponse.getReceipt(hederaClient);
+      assetTokenId = tokenReceipt.tokenId?.toString();
+
+      // Step 3: Create HCS topic for asset events
+      const topicCreateTx = new TopicCreateTransaction()
+        .setTopicMemo(`Asset events for ${formData.name}`)
+        .setMaxTransactionFee(1000);
+
+      topicCreateTx.freezeWithSigner(signer);
+      const signedTopicTx = await signer.signTransaction(topicCreateTx);
+      const topicResponse = await signedTopicTx.execute(hederaClient);
+      const topicReceipt = await topicResponse.getReceipt(hederaClient);
+      assetTopicId = topicReceipt.topicId?.toString();
+
+      // Step 4: Submit asset creation event to HCS
+      const assetEvent = {
+        event: 'AssetCreated',
+        assetId: assetTokenId,
+        assetType: selectedAssetType,
+        owner: accountId,
+        metadataFileId: assetFileId,
+        topicId: assetTopicId,
+        timestamp: new Date().toISOString()
+      };
+
+      const messageContent = new TextEncoder().encode(JSON.stringify(assetEvent));
+      const messageSubmitTx = new TopicMessageSubmitTransaction()
+        .setTopicId(topicReceipt.topicId!)
+        .setMessage(messageContent)
+        .setMaxTransactionFee(1000);
+
+      messageSubmitTx.freezeWithSigner(signer);
+      const signedMessageTx = await signer.signTransaction(messageSubmitTx);
+      await signedMessageTx.execute(hederaClient);
+
+      // Step 5: Get TRUST token ID for trading
+      const trustTokenInfo = await TrustTokenService.getTrustTokenInfo();
+      if (!trustTokenInfo.tokenId) {
+        throw new Error('TRUST token not initialized. Please contact support.');
       }
+
+      // Step 6: Store asset data in backend
+      const assetData = {
+        tokenId: assetTokenId,
+        fileId: assetFileId,
+        topicId: assetTopicId,
+        trustTokenId: trustTokenInfo.tokenId,
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        assetType: selectedAssetType,
+        location: formData.location,
+        totalValue: formData.totalValue,
+        maturityDate: selectedAssetType === 'rwa' ? formData.maturityDate : undefined,
+        imageURI: formData.imageURI,
+        documentURI: formData.documentURI,
+        owner: accountId,
+        status: selectedAssetType === 'digital' ? 'VERIFIED' : 'PENDING'
+      };
+
+      // Store in backend database
+      const response = await fetch('http://localhost:4001/api/assets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(assetData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to store asset data');
+      }
+
+      toast({
+        title: 'Asset Created Successfully!',
+        description: `Your ${selectedAssetType} asset has been created with Hedera token ID: ${assetTokenId}`,
+        variant: 'default'
+      });
 
       // Navigate to assets page
       navigate('/dashboard/assets');
     } catch (error) {
       console.error('Error creating asset:', error);
+      
+      let errorMessage = 'Failed to create asset';
+      if (error instanceof Error) {
+        if (error.message.includes('TOKEN_HAS_NO_SUPPLY_KEY')) {
+          errorMessage = 'Token creation failed: Missing supply key. Please try again.';
+        } else if (error.message.includes('INSUFFICIENT_TX_FEE')) {
+          errorMessage = 'Insufficient HBAR for transaction fees. Please add more HBAR to your account.';
+        } else if (error.message.includes('TRANSACTION_EXPIRED')) {
+          errorMessage = 'Transaction expired. Please try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: 'Error Creating Asset',
-        description: error instanceof Error ? error.message : 'Failed to create asset',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {
@@ -236,7 +332,7 @@ const CreateAsset: React.FC = () => {
   };
 
   // Check if KYC is required for RWA creation
-  const requiresKYC = selectedAssetType === 'rwa' && user && user.kycStatus !== 'verified';
+  const requiresKYC = selectedAssetType === 'rwa' && user && user.kycStatus !== 'approved';
   
   // Show KYC required modal if needed
   if (requiresKYC) {
@@ -362,8 +458,7 @@ const CreateAsset: React.FC = () => {
         {/* Step Navigation */}
         <StepNavigation
           steps={steps}
-          currentStep={currentStep}
-          onStepClick={setCurrentStep}
+          onStepClick={(stepId) => setCurrentStep(parseInt(stepId))}
         />
 
         {/* Form Content */}
@@ -524,9 +619,9 @@ const CreateAsset: React.FC = () => {
                           Upload Evidence Documents *
                         </label>
                         <FileUpload
-                          onFileSelect={handleFileUpload}
-                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                          multiple
+                          onFilesChange={handleFileUpload}
+                          acceptedTypes={['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png']}
+                          allowMultiple={true}
                         />
                       </div>
 
@@ -535,11 +630,16 @@ const CreateAsset: React.FC = () => {
                           <h4 className="text-sm font-medium text-off-white mb-2">Uploaded Files:</h4>
                           <div className="space-y-2">
                             {formData.evidenceFiles.map((file, index) => (
-                              <FilePreview
-                                key={index}
-                                file={file}
-                                onRemove={() => removeFile(index)}
-                              />
+                              <div key={index} className="flex items-center justify-between p-2 bg-gray-800 rounded">
+                                <span className="text-sm text-off-white">{file.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeFile(index)}
+                                  className="text-red-400 hover:text-red-300"
+                                >
+                                  Remove
+                                </button>
+                              </div>
                             ))}
                           </div>
                         </div>

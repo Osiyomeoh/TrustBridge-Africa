@@ -24,4 +24,19 @@ export declare class TradingController {
         offers: import("./trading.service").DigitalAssetOffer[];
         trades: any[];
     }>;
+    getAllListings(): Promise<{
+        success: boolean;
+        data: {
+            listings: any[];
+            total: number;
+        };
+    }>;
+    createListing(listingData: any): Promise<{
+        success: boolean;
+        data: any;
+    }>;
+    purchaseListing(id: string, purchaseData: any): Promise<{
+        success: boolean;
+        data: any;
+    }>;
 }

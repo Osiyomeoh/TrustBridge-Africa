@@ -2,7 +2,6 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/UI/Card';
 import { Badge } from '../../components/UI/Badge';
 import { CheckCircle, XCircle, AlertCircle, FileText, User, Briefcase, GraduationCap } from 'lucide-react';
-import AuthStatus from '../../components/Auth/AuthStatus';
 
 const ResumeRequirements = () => {
   const requiredSections = [
@@ -61,25 +60,6 @@ const ResumeRequirements = () => {
 
   return (
     <div className="min-h-screen bg-dark-gray">
-      {/* Header */}
-      <div className="bg-gray-900/50 border-b border-gray-700/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-neon-green to-emerald-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">TB</span>
-              </div>
-              <span className="text-lg font-semibold text-off-white">TrustBridge</span>
-            </div>
-
-            {/* Auth Status */}
-            <div className="flex items-center space-x-4">
-              <AuthStatus />
-            </div>
-          </div>
-        </div>
-      </div>
       
       <div className="py-8">
         <div className="container mx-auto px-4 max-w-4xl">

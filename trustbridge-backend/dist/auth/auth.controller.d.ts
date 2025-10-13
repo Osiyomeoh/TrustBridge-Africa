@@ -22,6 +22,9 @@ export declare class CompleteProfileDto {
 export declare class VerifyEmailDto {
     token: string;
 }
+export declare class ResendVerificationDto {
+    email: string;
+}
 export declare class ChangePasswordDto {
     oldPassword: string;
     newPassword: string;
@@ -67,6 +70,11 @@ export declare class AuthController {
         data?: import("../schemas/user.schema").User;
         message: string;
     }>;
+    checkEmailUser(email: string): Promise<{
+        success: boolean;
+        data?: import("../schemas/user.schema").User;
+        message: string;
+    }>;
     getAuthStatus(): Promise<{
         success: boolean;
         data: {
@@ -98,9 +106,7 @@ export declare class AuthController {
         };
         message: string;
     }>;
-    resendVerification(body: {
-        email: string;
-    }): Promise<{
+    resendVerification(resendVerificationDto: ResendVerificationDto): Promise<{
         success: boolean;
         data: {
             success: boolean;

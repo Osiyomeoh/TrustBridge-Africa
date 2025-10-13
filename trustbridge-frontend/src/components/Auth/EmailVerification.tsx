@@ -128,19 +128,28 @@ const EmailVerification: React.FC = () => {
   };
 
   const handleResend = async () => {
-    if (!user?.email) return;
+    console.log('Resend button clicked!', { user, email: user?.email });
     
+    if (!user?.email) {
+      console.error('No user email available for resend');
+      setResendError('No email address found. Please try again.');
+      return;
+    }
+    
+    console.log('Starting resend verification for:', user.email);
     setResendLoading(true);
     setResendError('');
     setResendSuccess(false);
 
     try {
-      await apiService.resendVerification(user.email);
+      console.log('Calling apiService.resendVerification...');
+      const result = await apiService.resendVerification(user.email);
+      console.log('Resend verification result:', result);
       setResendSuccess(true);
       setCountdown(60); // 60 second cooldown
     } catch (error) {
-      setResendError('Failed to resend verification email. Please try again.');
       console.error('Resend verification failed:', error);
+      setResendError('Failed to resend verification email. Please try again.');
     } finally {
       setResendLoading(false);
     }
@@ -338,7 +347,10 @@ const EmailVerification: React.FC = () => {
               variant="ghost"
               size="sm"
               className="text-medium-gray hover:text-off-white"
-              onClick={handleResend}
+              onClick={() => {
+                console.log('Button clicked!', { resendLoading, countdown, user: user?.email });
+                handleResend();
+              }}
               disabled={resendLoading || countdown > 0}
             >
               {resendLoading ? (

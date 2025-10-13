@@ -77,4 +77,11 @@ export declare class AssetsService {
         byStatus: any[];
         timestamp: Date;
     }>;
+    getNFTBlockchainState(tokenId: string, serialNumber: string): Promise<{
+        owner: string;
+        isListed: boolean;
+        isInEscrow: boolean;
+        marketplaceAccount: string;
+        seller?: string;
+    }>;
 }

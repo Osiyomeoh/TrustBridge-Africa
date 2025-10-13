@@ -206,4 +206,39 @@ export class AssetsController {
       };
     }
   }
+
+  @Get('blockchain-state/:tokenId/:serialNumber')
+  @ApiOperation({ summary: 'Get NFT blockchain state (ownership, listing status, seller)' })
+  @ApiResponse({ status: 200, description: 'NFT blockchain state retrieved' })
+  async getNFTBlockchainState(
+    @Param('tokenId') tokenId: string,
+    @Param('serialNumber') serialNumber: string
+  ): Promise<{ 
+    success: boolean; 
+    data: {
+      owner: string;
+      isListed: boolean;
+      isInEscrow: boolean;
+      marketplaceAccount: string;
+      seller?: string;
+    };
+  }> {
+    try {
+      const state = await this.assetsService.getNFTBlockchainState(tokenId, serialNumber);
+      return {
+        success: true,
+        data: state
+      };
+    } catch (error) {
+      return {
+        success: false,
+        data: {
+          owner: '',
+          isListed: false,
+          isInEscrow: false,
+          marketplaceAccount: ''
+        }
+      };
+    }
+  }
 }

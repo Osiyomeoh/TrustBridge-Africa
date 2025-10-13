@@ -16,7 +16,7 @@ import {
 import { ipfsService, IPFSUploadResult, IPFSFileMetadata } from '../../services/ipfs';
 import { useToast } from '../../hooks/useToast';
 
-interface UploadedFile {
+export interface UploadedFile {
   id: string;
   file: File;
   cid?: string;

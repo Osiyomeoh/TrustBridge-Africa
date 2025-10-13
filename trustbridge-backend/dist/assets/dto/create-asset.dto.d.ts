@@ -18,4 +18,12 @@ export declare class CreateAssetDto {
     maturityDate: string;
     expectedAPY: number;
     metadata?: any;
+    tokenId?: string;
+    fileId?: string;
+    topicId?: string;
+    assetType?: string;
+    status?: string;
+    imageURI?: string;
+    documentURI?: string;
+    trustTokenId?: string;
 }

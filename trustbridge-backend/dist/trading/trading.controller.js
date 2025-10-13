@@ -37,6 +37,15 @@ let TradingController = class TradingController {
     async getAssetTradingHistory(assetId) {
         return this.tradingService.getAssetTradingHistory(assetId);
     }
+    async getAllListings() {
+        return this.tradingService.getAllListings();
+    }
+    async createListing(listingData) {
+        return this.tradingService.createListing(listingData);
+    }
+    async purchaseListing(id, purchaseData) {
+        return this.tradingService.purchaseListing(id, purchaseData);
+    }
 };
 exports.TradingController = TradingController;
 __decorate([
@@ -80,6 +89,27 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], TradingController.prototype, "getAssetTradingHistory", null);
+__decorate([
+    (0, common_1.Get)('listings'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], TradingController.prototype, "getAllListings", null);
+__decorate([
+    (0, common_1.Post)('listings'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], TradingController.prototype, "createListing", null);
+__decorate([
+    (0, common_1.Post)('listings/:id/purchase'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], TradingController.prototype, "purchaseListing", null);
 exports.TradingController = TradingController = __decorate([
     (0, common_1.Controller)('trading'),
     __metadata("design:paramtypes", [trading_service_1.TradingService])

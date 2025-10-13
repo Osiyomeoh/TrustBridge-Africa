@@ -29,7 +29,8 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
-      window.location.href = '/auth'
+      // Don't redirect automatically - let AuthContext handle the flow
+      console.log('API 401 error: User not authenticated, clearing tokens but not redirecting')
     }
     return Promise.reject(error)
   }
@@ -116,6 +117,7 @@ export const apiService = {
   resendVerification: (email: string) => apiClient.post('/auth/resend-verification', { email }).then(res => res.data),
   getProfile: () => apiClient.get('/auth/me').then(res => res.data),
   checkWalletUser: (address: string) => apiClient.get(`/auth/check-wallet/${address}`).then(res => res.data),
+  checkEmailUser: (email: string) => apiClient.get(`/auth/check-email/${encodeURIComponent(email)}`).then(res => res.data),
   refreshToken: (refreshToken: string) => apiClient.post('/auth/refresh', { refreshToken }).then(res => res.data),
   logout: () => apiClient.post('/auth/logout').then(res => res.data),
   

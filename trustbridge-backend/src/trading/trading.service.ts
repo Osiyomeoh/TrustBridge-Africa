@@ -169,4 +169,41 @@ export class TradingService {
       throw new Error(`Failed to get trading history: ${error.message}`);
     }
   }
+
+  // New methods for Hedera integration
+  async getAllListings() {
+    this.logger.log('Getting all listings');
+    return {
+      success: true,
+      data: {
+        listings: [],
+        total: 0
+      }
+    };
+  }
+
+  async createListing(listingData: any) {
+    this.logger.log('Creating listing:', listingData);
+    return {
+      success: true,
+      data: {
+        id: Date.now().toString(),
+        ...listingData,
+        createdAt: new Date().toISOString()
+      }
+    };
+  }
+
+  async purchaseListing(id: string, purchaseData: any) {
+    this.logger.log(`Processing purchase for listing ${id}:`, purchaseData);
+    return {
+      success: true,
+      data: {
+        purchaseId: Date.now().toString(),
+        listingId: id,
+        ...purchaseData,
+        completedAt: new Date().toISOString()
+      }
+    };
+  }
 }

@@ -17,6 +17,11 @@ const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
 const hedera_service_1 = require("./hedera.service");
+const trust_token_service_1 = require("./trust-token.service");
+const hscs_contract_service_1 = require("./hscs-contract.service");
+const hscs_hybrid_service_1 = require("./hscs-hybrid.service");
+const marketplace_service_1 = require("./marketplace.service");
+const hcs_service_1 = require("./hcs.service");
 const tokenization_request_dto_1 = require("./dto/tokenization-request.dto");
 class SettlementRequestDto {
 }
@@ -88,8 +93,13 @@ __decorate([
     __metadata("design:type", String)
 ], TokenAssociationRequestDto.prototype, "action", void 0);
 let HederaController = class HederaController {
-    constructor(hederaService) {
+    constructor(hederaService, trustTokenService, hscsContractService, hscsHybridService, marketplaceService, hcsService) {
         this.hederaService = hederaService;
+        this.trustTokenService = trustTokenService;
+        this.hscsContractService = hscsContractService;
+        this.hscsHybridService = hscsHybridService;
+        this.marketplaceService = marketplaceService;
+        this.hcsService = hcsService;
     }
     async getHederaOverview() {
         return {
@@ -346,6 +356,491 @@ let HederaController = class HederaController {
             data: result,
             message: 'Freeze workflow completed successfully'
         };
+    }
+    async initializeTrustToken() {
+        const tokenId = await this.trustTokenService.initializeTrustToken();
+        return {
+            success: true,
+            data: { tokenId },
+            message: 'TRUST token initialized successfully'
+        };
+    }
+    async mintTrustTokens(body) {
+        const transactionId = await this.trustTokenService.mintTrustTokens(body.toAccountId, body.amount);
+        return {
+            success: true,
+            data: { transactionId },
+            message: `${body.amount} TRUST tokens minted to ${body.toAccountId}`
+        };
+    }
+    async getTrustTokenBalance(accountId) {
+        const balance = await this.trustTokenService.getTrustTokenBalance(accountId);
+        return {
+            success: true,
+            data: { balance },
+            message: `TRUST token balance for ${accountId}: ${balance}`
+        };
+    }
+    async getTrustTokenInfo() {
+        const tokenId = this.trustTokenService.getTrustTokenId();
+        return {
+            success: true,
+            data: { tokenId },
+            message: tokenId ? `TRUST token ID: ${tokenId}` : 'TRUST token not initialized'
+        };
+    }
+    async exchangeHbarForTrust(exchangeRequest) {
+        try {
+            const result = await this.hscsContractService.exchangeHbarForTrust(exchangeRequest.accountId, exchangeRequest.hbarAmount, exchangeRequest.treasuryAccountId, exchangeRequest.operationsAccountId, exchangeRequest.stakingAccountId);
+            return {
+                success: true,
+                data: result,
+                message: 'HBAR exchanged for TRUST tokens successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to exchange HBAR for TRUST tokens'
+            };
+        }
+    }
+    async burnTrustTokens(burnRequest) {
+        try {
+            const transactionId = await this.hscsContractService.burnTrustTokens(burnRequest.accountId, burnRequest.amount, burnRequest.reason || 'NFT_CREATION');
+            return {
+                success: true,
+                data: { transactionId },
+                message: 'TRUST tokens burned successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to burn TRUST tokens'
+            };
+        }
+    }
+    async getExchangeInfo() {
+        try {
+            const info = await this.hscsContractService.getExchangeInfo();
+            return {
+                success: true,
+                data: info,
+                message: 'Exchange information retrieved successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to get exchange information'
+            };
+        }
+    }
+    async calculateNftCreationFee(feeRequest) {
+        try {
+            const fee = await this.hscsContractService.calculateNftCreationFee(feeRequest.verificationLevel, feeRequest.rarity);
+            return {
+                success: true,
+                data: { fee },
+                message: 'NFT creation fee calculated successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to calculate NFT creation fee'
+            };
+        }
+    }
+    async stakeTrustTokens(stakeRequest) {
+        try {
+            const transactionId = await this.hscsContractService.stakeTrustTokens(stakeRequest.accountId, stakeRequest.amount, stakeRequest.duration);
+            return {
+                success: true,
+                data: { transactionId },
+                message: 'TRUST tokens staked successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to stake TRUST tokens'
+            };
+        }
+    }
+    async hybridExchangeHbarForTrust(exchangeRequest) {
+        try {
+            const result = await this.hscsHybridService.exchangeHbarForTrust(exchangeRequest.accountId, exchangeRequest.hbarAmount, exchangeRequest.treasuryAccountId, exchangeRequest.operationsAccountId, exchangeRequest.stakingAccountId, exchangeRequest.fromAccountPrivateKey);
+            return {
+                success: true,
+                data: result,
+                message: 'HBAR exchanged for TRUST tokens successfully via hybrid approach'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to exchange HBAR for TRUST tokens via hybrid approach'
+            };
+        }
+    }
+    async hybridBurnTrustTokens(burnRequest) {
+        try {
+            const transactionId = await this.hscsHybridService.burnTrustTokens(burnRequest.accountId, burnRequest.amount, burnRequest.reason || 'NFT_CREATION', burnRequest.fromAccountPrivateKey);
+            return {
+                success: true,
+                data: { transactionId },
+                message: 'TRUST tokens burned successfully via hybrid approach'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to burn TRUST tokens via hybrid approach'
+            };
+        }
+    }
+    async hybridCalculateNftCreationFee(feeRequest) {
+        try {
+            const fee = await this.hscsHybridService.calculateNftCreationFee(feeRequest.verificationLevel, feeRequest.rarity);
+            return {
+                success: true,
+                data: { fee },
+                message: 'NFT creation fee calculated successfully via hybrid approach'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to calculate NFT creation fee via hybrid approach'
+            };
+        }
+    }
+    async hybridGetTrustTokenBalance(accountId) {
+        try {
+            const balance = await this.hscsHybridService.getTrustTokenBalance(accountId);
+            return {
+                success: true,
+                data: { balance },
+                message: 'TRUST token balance retrieved successfully via hybrid approach'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to get TRUST token balance via hybrid approach'
+            };
+        }
+    }
+    async hybridStakeTrustTokens(stakeRequest) {
+        try {
+            const transactionId = await this.hscsHybridService.stakeTrustTokens(stakeRequest.accountId, stakeRequest.amount, stakeRequest.duration);
+            return {
+                success: true,
+                data: { transactionId },
+                message: 'TRUST tokens staked successfully via hybrid approach'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to stake TRUST tokens via hybrid approach'
+            };
+        }
+    }
+    async marketplaceListNFT(listingData) {
+        try {
+            const result = await this.marketplaceService.listNFT(listingData.nftTokenId, listingData.serialNumber, listingData.price, listingData.sellerAccountId);
+            return {
+                success: true,
+                data: result,
+                message: 'NFT listed on marketplace successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to list NFT on marketplace'
+            };
+        }
+    }
+    async marketplaceBuyNFT(listingId, buyData) {
+        try {
+            const result = await this.marketplaceService.buyNFT(listingId, buyData.buyerAccountId, buyData.buyerPrivateKey);
+            return {
+                success: true,
+                data: result,
+                message: 'NFT purchased successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to buy NFT'
+            };
+        }
+    }
+    async marketplaceCancelListing(listingId) {
+        try {
+            const result = await this.marketplaceService.cancelListing(listingId);
+            return {
+                success: true,
+                data: result,
+                message: 'Listing cancelled successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to cancel listing'
+            };
+        }
+    }
+    async marketplaceUpdatePrice(priceData) {
+        try {
+            const result = await this.marketplaceService.updatePrice(priceData.listingId, priceData.newPrice);
+            return {
+                success: true,
+                data: result,
+                message: 'Listing price updated successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to update listing price'
+            };
+        }
+    }
+    async marketplaceGetListing(listingId) {
+        try {
+            const result = await this.marketplaceService.getListing(listingId);
+            return {
+                success: true,
+                data: result,
+                message: 'Listing details retrieved successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to get listing details'
+            };
+        }
+    }
+    async marketplaceCheckListing(nftTokenId, serialNumber) {
+        try {
+            const result = await this.marketplaceService.isNFTListed(nftTokenId, serialNumber);
+            return {
+                success: true,
+                data: result,
+                message: 'NFT listing status retrieved successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to check NFT listing status'
+            };
+        }
+    }
+    async marketplaceGetConfig() {
+        try {
+            const result = await this.marketplaceService.getMarketplaceConfig();
+            return {
+                success: true,
+                data: result,
+                message: 'Marketplace configuration retrieved successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to get marketplace configuration'
+            };
+        }
+    }
+    async marketplaceTransferNFT(transferData) {
+        try {
+            const result = await this.marketplaceService.transferNFTFromEscrow(transferData.nftTokenId, transferData.serialNumber, transferData.buyerAccountId);
+            return {
+                success: true,
+                data: result,
+                message: 'NFT transferred from marketplace escrow to buyer'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to transfer NFT from escrow'
+            };
+        }
+    }
+    async marketplaceReturnNFT(returnData) {
+        try {
+            const result = await this.marketplaceService.transferNFTFromEscrow(returnData.nftTokenId, returnData.serialNumber, returnData.sellerAccountId);
+            return {
+                success: true,
+                data: result,
+                message: 'NFT returned from marketplace escrow to seller'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to return NFT from escrow'
+            };
+        }
+    }
+    async submitMarketplaceEvent(event) {
+        try {
+            const transactionId = await this.hcsService.submitMarketplaceEvent(event);
+            return {
+                success: true,
+                data: {
+                    transactionId,
+                    topicId: this.hcsService.getMarketplaceTopicId(),
+                },
+                message: 'Marketplace event submitted to HCS'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to submit marketplace event'
+            };
+        }
+    }
+    async getMarketplaceEvents(limit, assetTokenId) {
+        try {
+            const events = await this.hcsService.queryMarketplaceEvents(limit || 100, assetTokenId);
+            return {
+                success: true,
+                data: {
+                    events,
+                    topicId: this.hcsService.getMarketplaceTopicId(),
+                    count: events.length,
+                },
+                message: 'Marketplace events retrieved from HCS'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to query marketplace events'
+            };
+        }
+    }
+    async getAssetEvents(assetTokenId) {
+        try {
+            const events = await this.hcsService.queryMarketplaceEvents(1000, assetTokenId);
+            return {
+                success: true,
+                data: {
+                    events,
+                    assetTokenId,
+                    count: events.length,
+                },
+                message: `Retrieved ${events.length} events for asset ${assetTokenId}`
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to query asset events'
+            };
+        }
+    }
+    async submitOfferMessage(message) {
+        try {
+            const transactionId = await this.hcsService.submitOfferMessage(message);
+            return {
+                success: true,
+                data: {
+                    transactionId,
+                    topicId: this.hcsService.getOfferTopicId(),
+                },
+                message: 'Offer message submitted to HCS'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to submit offer message'
+            };
+        }
+    }
+    async getOfferMessages(assetTokenId) {
+        try {
+            const messages = await this.hcsService.queryOfferMessages(assetTokenId);
+            return {
+                success: true,
+                data: {
+                    messages,
+                    assetTokenId,
+                    count: messages.length,
+                },
+                message: `Retrieved ${messages.length} offer messages for asset ${assetTokenId}`
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to query offer messages'
+            };
+        }
+    }
+    async getTopicsInfo() {
+        try {
+            const marketplaceTopicId = this.hcsService.getMarketplaceTopicId();
+            const offerTopicId = this.hcsService.getOfferTopicId();
+            const marketplaceInfo = marketplaceTopicId
+                ? await this.hcsService.getTopicInfo(marketplaceTopicId)
+                : null;
+            const offerInfo = offerTopicId
+                ? await this.hcsService.getTopicInfo(offerTopicId)
+                : null;
+            return {
+                success: true,
+                data: {
+                    marketplaceTopic: marketplaceInfo,
+                    offerTopic: offerInfo,
+                },
+                message: 'HCS topic information retrieved'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to get topic information'
+            };
+        }
     }
 };
 exports.HederaController = HederaController;
@@ -606,9 +1101,283 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], HederaController.prototype, "completeFreezeWorkflow", null);
+__decorate([
+    (0, common_1.Post)('trust-token/initialize'),
+    (0, swagger_1.ApiOperation)({ summary: 'Initialize TRUST token on Hedera' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'TRUST token initialized successfully' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "initializeTrustToken", null);
+__decorate([
+    (0, common_1.Post)('trust-token/mint'),
+    (0, swagger_1.ApiOperation)({ summary: 'Mint TRUST tokens to an account' }),
+    (0, swagger_1.ApiBody)({
+        schema: {
+            type: 'object',
+            properties: {
+                toAccountId: { type: 'string', example: '0.0.1234567' },
+                amount: { type: 'number', example: 1000 }
+            },
+            required: ['toAccountId', 'amount']
+        }
+    }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'TRUST tokens minted successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "mintTrustTokens", null);
+__decorate([
+    (0, common_1.Get)('trust-token/balance/:accountId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get TRUST token balance for an account' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'TRUST token balance retrieved' }),
+    __param(0, (0, common_1.Param)('accountId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "getTrustTokenBalance", null);
+__decorate([
+    (0, common_1.Get)('trust-token/info'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get TRUST token information' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'TRUST token information retrieved' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "getTrustTokenInfo", null);
+__decorate([
+    (0, common_1.Post)('trust-token/exchange'),
+    (0, swagger_1.ApiOperation)({ summary: 'Exchange HBAR for TRUST tokens via HSCS contract' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Exchange successful' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "exchangeHbarForTrust", null);
+__decorate([
+    (0, common_1.Post)('trust-token/burn'),
+    (0, swagger_1.ApiOperation)({ summary: 'Burn TRUST tokens via HSCS contract' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Burn successful' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "burnTrustTokens", null);
+__decorate([
+    (0, common_1.Get)('trust-token/exchange-info'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get exchange information from HSCS contract' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Exchange information' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "getExchangeInfo", null);
+__decorate([
+    (0, common_1.Post)('trust-token/calculate-fee'),
+    (0, swagger_1.ApiOperation)({ summary: 'Calculate NFT creation fee via HSCS contract' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Fee calculated' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "calculateNftCreationFee", null);
+__decorate([
+    (0, common_1.Post)('trust-token/stake'),
+    (0, swagger_1.ApiOperation)({ summary: 'Stake TRUST tokens via HSCS contract' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Staking successful' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "stakeTrustTokens", null);
+__decorate([
+    (0, common_1.Post)('trust-token/hybrid/exchange'),
+    (0, swagger_1.ApiOperation)({ summary: 'Exchange HBAR for TRUST tokens using hybrid HSCS + HTS approach' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Exchange successful' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "hybridExchangeHbarForTrust", null);
+__decorate([
+    (0, common_1.Post)('trust-token/hybrid/burn'),
+    (0, swagger_1.ApiOperation)({ summary: 'Burn TRUST tokens using hybrid HSCS + HTS approach' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Burn successful' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "hybridBurnTrustTokens", null);
+__decorate([
+    (0, common_1.Post)('trust-token/hybrid/calculate-fee'),
+    (0, swagger_1.ApiOperation)({ summary: 'Calculate NFT creation fee using hybrid HSCS + HTS approach' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Fee calculated' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "hybridCalculateNftCreationFee", null);
+__decorate([
+    (0, common_1.Get)('trust-token/hybrid/balance/:accountId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get TRUST token balance using hybrid HSCS + HTS approach' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Balance retrieved' }),
+    __param(0, (0, common_1.Param)('accountId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "hybridGetTrustTokenBalance", null);
+__decorate([
+    (0, common_1.Post)('trust-token/hybrid/stake'),
+    (0, swagger_1.ApiOperation)({ summary: 'Stake TRUST tokens using hybrid HSCS + HTS approach' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Staking successful' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "hybridStakeTrustTokens", null);
+__decorate([
+    (0, common_1.Post)('marketplace/list'),
+    (0, swagger_1.ApiOperation)({ summary: 'List NFT on marketplace' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'NFT listed successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "marketplaceListNFT", null);
+__decorate([
+    (0, common_1.Post)('marketplace/buy/:listingId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Buy NFT from marketplace' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'NFT purchased successfully' }),
+    __param(0, (0, common_1.Param)('listingId')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "marketplaceBuyNFT", null);
+__decorate([
+    (0, common_1.Post)('marketplace/cancel/:listingId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Cancel marketplace listing' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Listing cancelled successfully' }),
+    __param(0, (0, common_1.Param)('listingId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "marketplaceCancelListing", null);
+__decorate([
+    (0, common_1.Post)('marketplace/update-price'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update marketplace listing price' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Price updated successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "marketplaceUpdatePrice", null);
+__decorate([
+    (0, common_1.Get)('marketplace/listing/:listingId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get marketplace listing details' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Listing details retrieved' }),
+    __param(0, (0, common_1.Param)('listingId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "marketplaceGetListing", null);
+__decorate([
+    (0, common_1.Get)('marketplace/check-listing/:nftTokenId/:serialNumber'),
+    (0, swagger_1.ApiOperation)({ summary: 'Check if NFT is listed' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'NFT listing status checked' }),
+    __param(0, (0, common_1.Param)('nftTokenId')),
+    __param(1, (0, common_1.Param)('serialNumber')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Number]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "marketplaceCheckListing", null);
+__decorate([
+    (0, common_1.Get)('marketplace/config'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get marketplace configuration' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Marketplace config retrieved' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "marketplaceGetConfig", null);
+__decorate([
+    (0, common_1.Post)('marketplace/transfer-nft'),
+    (0, swagger_1.ApiOperation)({ summary: 'Transfer NFT from marketplace escrow to buyer' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'NFT transferred successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "marketplaceTransferNFT", null);
+__decorate([
+    (0, common_1.Post)('marketplace/return-nft'),
+    (0, swagger_1.ApiOperation)({ summary: 'Return NFT from marketplace escrow to seller (unlist)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'NFT returned successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "marketplaceReturnNFT", null);
+__decorate([
+    (0, common_1.Post)('hcs/marketplace/event'),
+    (0, swagger_1.ApiOperation)({ summary: 'Submit marketplace event to HCS (immutable audit trail)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Event submitted successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "submitMarketplaceEvent", null);
+__decorate([
+    (0, common_1.Get)('hcs/marketplace/events'),
+    (0, swagger_1.ApiOperation)({ summary: 'Query marketplace events from HCS' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Events retrieved successfully' }),
+    __param(0, (0, common_1.Param)('limit')),
+    __param(1, (0, common_1.Param)('assetTokenId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, String]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "getMarketplaceEvents", null);
+__decorate([
+    (0, common_1.Get)('hcs/marketplace/events/:assetTokenId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Query marketplace events for specific asset from HCS' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Asset events retrieved successfully' }),
+    __param(0, (0, common_1.Param)('assetTokenId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "getAssetEvents", null);
+__decorate([
+    (0, common_1.Post)('hcs/offers/message'),
+    (0, swagger_1.ApiOperation)({ summary: 'Submit offer message to HCS (decentralized communication)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Message submitted successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "submitOfferMessage", null);
+__decorate([
+    (0, common_1.Get)('hcs/offers/messages/:assetTokenId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Query offer messages for specific asset from HCS' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Offer messages retrieved successfully' }),
+    __param(0, (0, common_1.Param)('assetTokenId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "getOfferMessages", null);
+__decorate([
+    (0, common_1.Get)('hcs/topics/info'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get HCS topic information' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Topic info retrieved successfully' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "getTopicsInfo", null);
 exports.HederaController = HederaController = __decorate([
     (0, swagger_1.ApiTags)('Hedera'),
     (0, common_1.Controller)('hedera'),
-    __metadata("design:paramtypes", [hedera_service_1.HederaService])
+    __metadata("design:paramtypes", [hedera_service_1.HederaService,
+        trust_token_service_1.TrustTokenService,
+        hscs_contract_service_1.HscsContractService,
+        hscs_hybrid_service_1.HscsHybridService,
+        marketplace_service_1.MarketplaceService,
+        hcs_service_1.HcsService])
 ], HederaController);
 //# sourceMappingURL=hedera.controller.js.map

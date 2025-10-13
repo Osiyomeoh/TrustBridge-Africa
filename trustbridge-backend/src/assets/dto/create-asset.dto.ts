@@ -21,7 +21,7 @@ export class LocationDto {
 }
 
 export class CreateAssetDto {
-  @ApiProperty({ example: '0x1234567890123456789012345678901234567890' })
+  @ApiProperty({ example: '0.0.1234567' })
   @IsString()
   owner: string;
 
@@ -66,4 +66,45 @@ export class CreateAssetDto {
   @ApiProperty({ example: { crop: 'Arabica', size: '5 hectares' }, required: false })
   @IsOptional()
   metadata?: any;
+
+  // Hedera Integration Fields
+  @ApiProperty({ example: '0.0.1234567', description: 'HTS Token ID for the asset NFT', required: false })
+  @IsOptional()
+  @IsString()
+  tokenId?: string;
+
+  @ApiProperty({ example: '0.0.1234567', description: 'HFS File ID for asset metadata', required: false })
+  @IsOptional()
+  @IsString()
+  fileId?: string;
+
+  @ApiProperty({ example: '0.0.1234567', description: 'HCS Topic ID for asset events', required: false })
+  @IsOptional()
+  @IsString()
+  topicId?: string;
+
+  @ApiProperty({ example: 'digital', description: 'Asset type: digital or rwa', required: false })
+  @IsOptional()
+  @IsString()
+  assetType?: string;
+
+  @ApiProperty({ example: 'verified', description: 'Asset verification status', required: false })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiProperty({ example: 'https://example.com/image.jpg', description: 'Asset image URI', required: false })
+  @IsOptional()
+  @IsString()
+  imageURI?: string;
+
+  @ApiProperty({ example: 'https://example.com/document.pdf', description: 'Asset document URI', required: false })
+  @IsOptional()
+  @IsString()
+  documentURI?: string;
+
+  @ApiProperty({ example: '0.0.1234567', description: 'TRUST token ID for trading', required: false })
+  @IsOptional()
+  @IsString()
+  trustTokenId?: string;
 }

@@ -5,6 +5,8 @@ import Button from '../UI/Button';
 import Input from '../UI/Input';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWallet } from '../../contexts/WalletContext';
+import { useToast } from '../../hooks/useToast';
+import { apiService } from '../../services/api';
 
 interface ProfileCompletionPopupProps {
   isOpen: boolean;
@@ -17,8 +19,9 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
   onClose, 
   onComplete 
 }) => {
-  const { completeProfile, isLoading, error, user } = useAuth();
+  const { completeProfile, verifyEmail, isLoading, error, user } = useAuth();
   const { address: walletAddress, walletType } = useWallet();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     email: '',
     name: '',
@@ -26,14 +29,59 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
     country: '',
   });
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [step, setStep] = useState<'form' | 'email-sent'>('form');
+  const [step, setStep] = useState<'form' | 'email-sent' | 'verify-email'>('form');
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailChecked, setEmailChecked] = useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
-  // Check if user is already verified
+  // Check if user is already verified or needs verification
   useEffect(() => {
     if (user && (user.emailVerificationStatus === 'VERIFIED' || user.emailVerificationStatus === 'verified')) {
       onComplete();
+    } else if (user && user.email && user.emailVerificationStatus && user.emailVerificationStatus !== 'VERIFIED' && user.emailVerificationStatus !== 'verified') {
+      // User has a profile but needs email verification
+      setStep('verify-email');
     }
   }, [user, onComplete]);
+
+  // Email availability check
+  const checkEmailAvailability = async (email: string) => {
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+      return;
+    }
+
+    setIsCheckingEmail(true);
+    try {
+      const response = await apiService.checkEmailUser(email);
+      
+      if (response.success && response.data) {
+        setValidationErrors(prev => ({
+          ...prev,
+          email: 'This email is already registered to another account. Please use a different email address.'
+        }));
+        setEmailChecked(null);
+      } else {
+        setValidationErrors(prev => {
+          const newErrors = { ...prev };
+          if (newErrors.email === 'This email is already registered to another account. Please use a different email address.') {
+            delete newErrors.email;
+          }
+          return newErrors;
+        });
+        setEmailChecked(email);
+      }
+    } catch (error) {
+      console.error('Error checking email availability:', error);
+      setValidationErrors(prev => ({
+        ...prev,
+        email: 'Unable to verify email availability. Please try again.'
+      }));
+      setEmailChecked(null);
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -42,6 +90,8 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
       errors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Please enter a valid email address';
+    } else if (emailChecked !== formData.email) {
+      errors.email = 'Please wait for email verification to complete';
     }
 
     if (!formData.name) {
@@ -67,9 +117,15 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
 
     try {
       await completeProfile(formData);
-      setStep('email-sent');
+      setStep('verify-email');
     } catch (error) {
       console.error('Profile completion failed:', error);
+      
+      // Check if user exists and has email verification status
+      // If so, go to verification step instead of staying on form
+      if (user && user.email && user.emailVerificationStatus) {
+        setStep('verify-email');
+      }
     }
   };
 
@@ -80,11 +136,63 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
     if (validationErrors[field]) {
       setValidationErrors(prev => ({ ...prev, [field]: '' }));
     }
+    
+    // Check email availability with debounce
+    if (field === 'email') {
+      const timeoutId = setTimeout(() => {
+        checkEmailAvailability(value);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
   };
 
-  const handleVerifyEmail = () => {
-    // This would typically open the user's email client or redirect to email verification
-    window.open('https://mail.google.com', '_blank');
+  const handleVerifyEmail = async () => {
+    if (!verificationCode || verificationCode.length !== 6) {
+      setValidationErrors({ verification: 'Please enter a 6-digit verification code' });
+      return;
+    }
+
+    setIsVerifying(true);
+    try {
+      await verifyEmail(verificationCode);
+      onComplete();
+    } catch (error) {
+      console.error('Email verification failed:', error);
+      setValidationErrors({ verification: 'Invalid verification code. Please try again.' });
+      // Stay on verification step - don't go back to form
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    try {
+      // Use user email if available, otherwise fall back to formData email
+      const emailToUse = user?.email || formData.email;
+      console.log('Resending verification code for email:', emailToUse);
+      console.log('User email:', user?.email);
+      console.log('FormData email:', formData.email);
+      
+      if (!emailToUse) {
+        throw new Error('No email address available for resending verification code');
+      }
+      
+      const response = await apiService.resendVerification(emailToUse);
+      console.log('Resend verification response:', response);
+      toast({
+        title: 'Code Resent',
+        description: 'A new verification code has been sent to your email.',
+        variant: 'default'
+      });
+    } catch (error) {
+      console.error('Failed to resend verification code:', error);
+      console.error('Error details:', error.response?.data);
+      toast({
+        title: 'Resend Failed',
+        description: `Failed to resend verification code: ${error.response?.data?.message || error.message}`,
+        variant: 'destructive'
+      });
+    }
   };
 
   if (!isOpen) return null;
@@ -154,12 +262,25 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="Enter your email"
-                    className={`pl-10 ${validationErrors.email ? 'border-red-500' : ''}`}
-                    disabled={isLoading}
+                    className={`pl-10 ${validationErrors.email ? 'border-red-500' : emailChecked === formData.email ? 'border-green-500' : ''}`}
+                    disabled={isLoading || isCheckingEmail}
                   />
+                  {isCheckingEmail && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                    </div>
+                  )}
+                  {emailChecked === formData.email && !isCheckingEmail && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    </div>
+                  )}
                 </div>
                 {validationErrors.email && (
                   <p className="text-red-400 text-xs mt-1">{validationErrors.email}</p>
+                )}
+                {emailChecked === formData.email && !validationErrors.email && (
+                  <p className="text-green-400 text-xs mt-1">Email is available</p>
                 )}
               </div>
 
@@ -261,41 +382,84 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
                 )}
               </Button>
             </motion.form>
-          ) : (
+          ) : step === 'verify-email' ? (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center space-y-4"
+              className="space-y-4"
             >
-              <div className="w-16 h-16 bg-neon-green/20 rounded-full flex items-center justify-center mx-auto">
-                <Mail className="w-8 h-8 text-neon-green" />
-              </div>
-              <div>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-neon-green/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Mail className="w-8 h-8 text-neon-green" />
+                </div>
                 <h3 className="text-lg font-semibold text-off-white mb-2">
-                  Check Your Email
+                  Verify Your Email
                 </h3>
                 <p className="text-sm text-electric-mint">
-                  We've sent a verification link to <strong>{formData.email}</strong>
+                  We've sent a 6-digit verification code to <strong>{user?.email || formData.email}</strong>
                 </p>
               </div>
-              <div className="space-y-3">
-                <Button
-                  onClick={handleVerifyEmail}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Open Email
-                </Button>
-                <Button
-                  onClick={onClose}
-                  variant="ghost"
-                  className="w-full"
-                >
-                  I'll verify later
-                </Button>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-off-white mb-2">
+                    Verification Code
+                  </label>
+                  <Input
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setVerificationCode(value);
+                      if (validationErrors.verification) {
+                        setValidationErrors(prev => ({ ...prev, verification: '' }));
+                      }
+                    }}
+                    placeholder="Enter 6-digit code"
+                    className="text-center text-lg tracking-widest"
+                    maxLength={6}
+                  />
+                  {validationErrors.verification && (
+                    <p className="text-red-400 text-xs mt-1">{validationErrors.verification}</p>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <Button
+                    onClick={handleVerifyEmail}
+                    disabled={isVerifying || verificationCode.length !== 6}
+                    className="w-full"
+                  >
+                    {isVerifying ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      'Verify Email'
+                    )}
+                  </Button>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleResendCode}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Resend Code
+                    </Button>
+                    <Button
+                      onClick={onClose}
+                      variant="ghost"
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
               </div>
             </motion.div>
-          )}
+          ) : null}
         </motion.div>
       </motion.div>
     </AnimatePresence>

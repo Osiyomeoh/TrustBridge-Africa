@@ -19,7 +19,7 @@ import {
   Share2,
   Copy
 } from 'lucide-react';
-import { hederaAssetService } from '../services/hederaAssetService';
+import hederaAssetService from '../services/hederaAssetService';
 import { useToast } from '../hooks/useToast';
 
 interface VerificationRequest {

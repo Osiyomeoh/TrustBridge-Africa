@@ -29,7 +29,8 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
-      window.location.href = '/auth'
+      // Don't redirect automatically - let AuthContext handle the flow
+      console.log('API 401 error: User not authenticated, clearing tokens but not redirecting')
     }
     return Promise.reject(error)
   }

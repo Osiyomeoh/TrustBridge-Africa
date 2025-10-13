@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import Navigation from './Navigation';
 import Header from './Header';
+import Footer from './Footer';
 import { cn } from '../../utils/helpers';
 
 interface LayoutProps {
@@ -33,6 +34,9 @@ const Layout: React.FC<LayoutProps> = ({ children, className }) => {
         >
           {children}
         </motion.main>
+        
+        {/* Footer */}
+        <Footer />
       </div>
     </div>
   );

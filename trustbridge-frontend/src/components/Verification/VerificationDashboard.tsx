@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../UI/Card';
 import Button from '../UI/Button';
 import { useToast } from '../../hooks/useToast';
 import { verificationService, VerificationRequest, VerificationStatus } from '../../services/verificationService';
-import { hederaAssetService } from '../../services/hederaAssetService';
+import hederaAssetService from '../../services/hederaAssetService';
 import { useWallet } from '../../contexts/WalletContext';
 import { 
   CheckCircle, 

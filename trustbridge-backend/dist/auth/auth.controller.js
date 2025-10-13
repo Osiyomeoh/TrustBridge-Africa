@@ -12,7 +12,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AuthController = exports.UpdateKYCStatusDto = exports.DiditWebhookDto = exports.PersonaWebhookDto = exports.ConfirmResetDto = exports.ResetPasswordDto = exports.ChangePasswordDto = exports.VerifyEmailDto = exports.CompleteProfileDto = exports.EmailAuthDto = exports.WalletAuthDto = void 0;
+exports.AuthController = exports.UpdateKYCStatusDto = exports.DiditWebhookDto = exports.PersonaWebhookDto = exports.ConfirmResetDto = exports.ResetPasswordDto = exports.ChangePasswordDto = exports.ResendVerificationDto = exports.VerifyEmailDto = exports.CompleteProfileDto = exports.EmailAuthDto = exports.WalletAuthDto = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
@@ -104,6 +104,14 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], VerifyEmailDto.prototype, "token", void 0);
+class ResendVerificationDto {
+}
+exports.ResendVerificationDto = ResendVerificationDto;
+__decorate([
+    (0, class_validator_1.IsEmail)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], ResendVerificationDto.prototype, "email", void 0);
 class ChangePasswordDto {
 }
 exports.ChangePasswordDto = ChangePasswordDto;
@@ -205,6 +213,9 @@ let AuthController = class AuthController {
     async checkWalletUser(address) {
         return this.authService.checkWalletUser(address);
     }
+    async checkEmailUser(email) {
+        return this.authService.checkEmailUser(email);
+    }
     async getAuthStatus() {
         return {
             success: true,
@@ -265,8 +276,8 @@ let AuthController = class AuthController {
             message: 'Email verified successfully',
         };
     }
-    async resendVerification(body) {
-        const result = await this.authService.resendVerificationEmail(body.email);
+    async resendVerification(resendVerificationDto) {
+        const result = await this.authService.resendVerificationEmail(resendVerificationDto.email);
         return {
             success: true,
             data: result,
@@ -504,6 +515,16 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "checkWalletUser", null);
 __decorate([
+    (0, common_1.Get)('check-email/:email'),
+    (0, swagger_1.ApiOperation)({ summary: 'Check if email is already registered' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Email check completed' }),
+    (0, swagger_1.ApiResponse)({ status: 404, description: 'Email not found' }),
+    __param(0, (0, common_1.Param)('email')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "checkEmailUser", null);
+__decorate([
     (0, common_1.Get)(),
     (0, swagger_1.ApiOperation)({ summary: 'Get authentication status' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Authentication status retrieved successfully' }),
@@ -558,12 +579,12 @@ __decorate([
 __decorate([
     (0, common_1.Post)('resend-verification'),
     (0, swagger_1.ApiOperation)({ summary: 'Resend verification email with new 6-digit code' }),
-    (0, swagger_1.ApiBody)({ schema: { type: 'object', properties: { email: { type: 'string', format: 'email' } }, required: ['email'] } }),
+    (0, swagger_1.ApiBody)({ type: ResendVerificationDto }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Verification email sent successfully' }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Resend verification failed' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [ResendVerificationDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "resendVerification", null);
 __decorate([

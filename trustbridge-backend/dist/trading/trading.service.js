@@ -98,6 +98,39 @@ let TradingService = TradingService_1 = class TradingService {
             throw new Error(`Failed to get trading history: ${error.message}`);
         }
     }
+    async getAllListings() {
+        this.logger.log('Getting all listings');
+        return {
+            success: true,
+            data: {
+                listings: [],
+                total: 0
+            }
+        };
+    }
+    async createListing(listingData) {
+        this.logger.log('Creating listing:', listingData);
+        return {
+            success: true,
+            data: {
+                id: Date.now().toString(),
+                ...listingData,
+                createdAt: new Date().toISOString()
+            }
+        };
+    }
+    async purchaseListing(id, purchaseData) {
+        this.logger.log(`Processing purchase for listing ${id}:`, purchaseData);
+        return {
+            success: true,
+            data: {
+                purchaseId: Date.now().toString(),
+                listingId: id,
+                ...purchaseData,
+                completedAt: new Date().toISOString()
+            }
+        };
+    }
 };
 exports.TradingService = TradingService;
 exports.TradingService = TradingService = TradingService_1 = __decorate([

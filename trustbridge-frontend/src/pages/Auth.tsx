@@ -9,7 +9,6 @@ import ProfileCompletion from '../components/Auth/ProfileCompletion';
 import EmailVerification from '../components/Auth/EmailVerification';
 import KYCVerification from '../components/Auth/KYCVerification';
 import AnimatedBackground from '../components/UI/AnimatedBackground';
-import AuthStatus from '../components/Auth/AuthStatus';
 
 const Auth: React.FC = () => {
   const { authStep, isAuthenticated, user } = useAuth();
@@ -148,26 +147,6 @@ const Auth: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-gray via-black to-dark-gray relative overflow-hidden">
       <AnimatedBackground />
-      
-      {/* Header */}
-      <div className="bg-gray-900/50 border-b border-gray-700/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-neon-green to-emerald-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">TB</span>
-              </div>
-              <span className="text-lg font-semibold text-off-white">TrustBridge</span>
-            </div>
-
-            {/* Auth Status */}
-            <div className="flex items-center space-x-4">
-              <AuthStatus />
-            </div>
-          </div>
-        </div>
-      </div>
       
       {/* Page Header */}
       <div className="relative z-10 pt-8 pb-4">

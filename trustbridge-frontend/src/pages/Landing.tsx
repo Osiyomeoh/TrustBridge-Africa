@@ -12,31 +12,31 @@ const Landing: React.FC = () => {
   const features = [
     {
       icon: TrendingUp,
-      title: 'Digital & Real-World Assets',
-      description: 'Trade digital art, NFTs, and tokenized African real estate in one platform'
+      title: 'Universal Asset Tokenization',
+      description: 'Tokenize ANY asset - digital art, real estate, commodities, intellectual property, and more'
     },
     {
       icon: Shield,
-      title: 'Professional Verification',
-      description: 'Expert attestors verify asset authenticity and value for RWA assets'
+      title: 'Hedera + IPFS Technology',
+      description: '3-second finality, $0.001 fees, decentralized storage - enterprise-grade blockchain'
     },
     {
       icon: Globe,
-      title: 'Global Investment Access',
-      description: 'Connect African assets with international investors worldwide'
+      title: 'Trust Token Economy',
+      description: 'Custom TRUST tokens for payments, HBAR only for gas - predictable, low-cost trading'
     },
     {
       icon: Users,
-      title: 'Enhanced Minting',
-      description: 'Create collections, batch mint, and add rarity to your digital assets'
+      title: 'Decentralized Marketplace',
+      description: 'Peer-to-peer trading with IPFS metadata, Mirror Node verification, and immutable records'
     }
   ];
 
   const stats = [
-    { label: 'Total Value Locked', value: '$12.4M', change: '+34.2%' },
-    { label: 'Active Assets', value: '156', change: '+12%' },
-    { label: 'Verified Attestors', value: '23', change: '+8.5%' },
-    { label: 'Countries', value: '8', change: 'New' }
+    { label: 'Transaction Speed', value: '3 seconds', change: 'Hedera aBFT' },
+    { label: 'Transaction Cost', value: '$0.001', change: 'USD-pegged' },
+    { label: 'Asset Types', value: 'Unlimited', change: 'Universal' },
+    { label: 'Storage', value: 'IPFS', change: 'Decentralized' }
   ];
 
   const steps = [
@@ -66,26 +66,6 @@ const Landing: React.FC = () => {
     <div className="min-h-screen bg-black text-off-white relative overflow-hidden dark:bg-black light:bg-light-bg dark:text-off-white light:text-light-text">
       {/* Animated Background */}
       <AnimatedBackground />
-
-      {/* Header */}
-      <div className="bg-gray-900/50 border-b border-gray-700/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-neon-green to-emerald-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">TB</span>
-              </div>
-              <span className="text-lg font-semibold text-off-white">TrustBridge</span>
-            </div>
-
-            {/* Auth Status */}
-            <div className="flex items-center space-x-4">
-              <AuthStatus />
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div className="relative z-10">
         {/* Navigation */}
@@ -129,9 +109,6 @@ const Landing: React.FC = () => {
             <ThemeToggle />
             <Link to="/get-test-tokens">
               <Button variant="ghost" size="sm">Test Tokens</Button>
-            </Link>
-            <Link to="/auth">
-              <Button variant="neon" size="sm">Get Started</Button>
             </Link>
           </div>
         </nav>
@@ -180,7 +157,7 @@ const Landing: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3, duration: 0.6 }}
                 >
-                  AFRICAN
+                  TOKENIZE
                 </motion.span>
                 <motion.span 
                   className="block text-electric-mint drop-shadow-2xl dark:text-electric-mint light:text-electric-mint"
@@ -188,7 +165,7 @@ const Landing: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4, duration: 0.6 }}
                 >
-                  DIGITAL & REAL-WORLD
+                  ANY ASSET
                 </motion.span>
                 <motion.span 
                   className="block text-white outlined-text drop-shadow-2xl dark:text-white light:text-black"
@@ -196,7 +173,7 @@ const Landing: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5, duration: 0.6 }}
                 >
-                  ASSETS
+                  TRADE EVERYTHING
                 </motion.span>
               </h1>
 
@@ -206,8 +183,8 @@ const Landing: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6, duration: 0.6 }}
               >
-                Discover, create, and trade digital art, NFTs, and real-world African assets in one unified marketplace. 
-                <span className="text-neon-green font-bold dark:text-neon-green light:text-neon-green"> TrustBridge</span> connects creators, investors, and communities through blockchain technology.
+                From digital art to real estate, commodities to intellectual property - tokenize ANY asset on Hedera. 
+                <span className="text-neon-green font-bold dark:text-neon-green light:text-neon-green"> TrustBridge</span> makes asset tokenization universal, fast, and affordable with 3-second finality and $0.001 fees.
               </motion.p>
 
               <motion.div

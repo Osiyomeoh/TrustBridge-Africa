@@ -484,7 +484,7 @@ class ContractService {
       };
       
       let metadata = null;
-      if (tokenURI.startsWith('ipfs://') || tokenURI.startsWith('https://')) {
+      if (tokenURI && typeof tokenURI === 'string' && (tokenURI.startsWith('ipfs://') || tokenURI.startsWith('https://'))) {
         try {
           const url = tokenURI.startsWith('ipfs://') 
             ? tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/')
@@ -683,7 +683,7 @@ class ContractService {
 
           // Try to fetch metadata from IPFS/HTTP with timeout
           let metadata = null;
-          if (tokenURI.startsWith('ipfs://') || tokenURI.startsWith('https://')) {
+          if (tokenURI && typeof tokenURI === 'string' && (tokenURI.startsWith('ipfs://') || tokenURI.startsWith('https://'))) {
             try {
               const url = tokenURI.startsWith('ipfs://') 
                 ? tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/')

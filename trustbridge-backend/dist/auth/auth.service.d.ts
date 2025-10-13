@@ -59,7 +59,13 @@ export declare class AuthService {
         data?: User;
         message: string;
     }>;
+    checkEmailUser(email: string): Promise<{
+        success: boolean;
+        data?: User;
+        message: string;
+    }>;
     private verifyWalletSignature;
+    private verifyHashPackSignature;
     private createUserFromWallet;
     private generateTokens;
     private hashPassword;

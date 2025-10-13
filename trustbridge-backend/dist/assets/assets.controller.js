@@ -140,6 +140,26 @@ let AssetsController = class AssetsController {
             };
         }
     }
+    async getNFTBlockchainState(tokenId, serialNumber) {
+        try {
+            const state = await this.assetsService.getNFTBlockchainState(tokenId, serialNumber);
+            return {
+                success: true,
+                data: state
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                data: {
+                    owner: '',
+                    isListed: false,
+                    isInEscrow: false,
+                    marketplaceAccount: ''
+                }
+            };
+        }
+    }
 };
 exports.AssetsController = AssetsController;
 __decorate([
@@ -237,6 +257,16 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], AssetsController.prototype, "verifyAsset", null);
+__decorate([
+    (0, common_1.Get)('blockchain-state/:tokenId/:serialNumber'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get NFT blockchain state (ownership, listing status, seller)' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'NFT blockchain state retrieved' }),
+    __param(0, (0, common_1.Param)('tokenId')),
+    __param(1, (0, common_1.Param)('serialNumber')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], AssetsController.prototype, "getNFTBlockchainState", null);
 exports.AssetsController = AssetsController = __decorate([
     (0, swagger_1.ApiTags)('Assets'),
     (0, common_1.Controller)('assets'),

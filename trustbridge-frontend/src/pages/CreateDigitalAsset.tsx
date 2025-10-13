@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import Input from '../components/UI/Input';
-import FileUpload from '../components/UI/FileUpload';
+import FileUpload, { UploadedFile } from '../components/UI/FileUpload';
 import { 
-  Upload, 
   Image as ImageIcon,
   FileText, 
   CheckCircle, 
@@ -21,26 +20,20 @@ import {
   BookOpen,
   Gamepad2,
   Award,
-  Zap,
-  Eye,
   Edit3,
   Settings,
   DollarSign,
-  Tag,
-  Calendar,
-  MapPin,
-  Users,
-  Star,
-  Heart,
-  Share2,
-  Copy,
-  ExternalLink
+  Star
 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { useWallet } from '../contexts/WalletContext';
-import { useAuth } from '../contexts/AuthContext';
-import { contractService } from '../services/contractService';
-import { usePortfolio } from '../hooks/useApi';
+import { useTrustTokenBalance } from '../hooks/useTrustTokenBalance';
+import { ipfsService } from '../services/ipfs';
+import { requiresAMC } from '../utils/amcRequirements';
+import TrustTokenPurchase from '../components/TrustToken/TrustTokenPurchase';
+import AMCRequiredModal from '../components/ComingSoon/AMCRequiredModal';
+import { TrustTokenService } from '../services/trust-token.service';
+import { trustTokenWalletService } from '../services/trust-token-wallet.service';
 
 interface DigitalAssetForm {
   name: string;
@@ -51,6 +44,7 @@ interface DigitalAssetForm {
   totalValue: string;
   imageURI: string;
   metadataURI: string;
+  documentURI?: string;
   royaltyPercentage: string;
   tags: string[];
   isTradeable: boolean;
@@ -62,6 +56,8 @@ interface DigitalAssetForm {
   collectionName: string;
   collectionDescription: string;
   collectionImage: string;
+  verificationLevel: 'basic' | 'premium';
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
   attributes: Array<{
     trait_type: string;
     value: string;
@@ -72,15 +68,17 @@ interface DigitalAssetForm {
 const CreateDigitalAsset: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { address, isConnected } = useWallet();
-  const { user } = useAuth();
-  const { data: portfolioData } = usePortfolio();
+  const { isConnected, accountId, signer, hederaClient } = useWallet();
+  const { balance: trustBalance, refreshBalance } = useTrustTokenBalance();
   
   const [currentStep, setCurrentStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [previewImage, setPreviewImage] = useState<string>('');
+  const [showAMCModal, setShowAMCModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<{ id: number; name: string; description: string } | null>(null);
+  const [showTrustPurchase, setShowTrustPurchase] = useState(false);
+
   
   const [formData, setFormData] = useState<DigitalAssetForm>({
     name: '',
@@ -102,20 +100,34 @@ const CreateDigitalAsset: React.FC = () => {
     collectionName: '',
     collectionDescription: '',
     collectionImage: '',
+    verificationLevel: 'basic',
+    rarity: 'common',
     attributes: []
   });
 
+  // TRUST token cost calculation
+  const getTrustTokenCost = () => {
+    const baseCost = 50; // Base cost for basic NFT
+    const verificationMultiplier = formData.verificationLevel === 'premium' ? 2 : 1;
+    const rarityMultiplier = formData.rarity === 'legendary' ? 3 : 
+                            formData.rarity === 'epic' ? 2 : 1;
+    return baseCost * verificationMultiplier * rarityMultiplier;
+  };
+
+  const trustTokenCost = getTrustTokenCost();
+  const hasEnoughTrust = trustBalance >= trustTokenCost;
+
   const digitalCategories = [
     { id: 6, name: 'Digital Art', icon: Palette, description: 'Digital artwork and creative pieces', color: 'text-pink-400' },
-    { id: 7, name: 'NFT', icon: Package, description: 'Non-fungible tokens', color: 'text-blue-400' },
-    { id: 8, name: 'Cryptocurrency', icon: TrendingUp, description: 'Digital currencies', color: 'text-green-400' },
-    { id: 9, name: 'Digital Collectibles', icon: Star, description: 'Digital collectible items', color: 'text-yellow-400' },
-    { id: 10, name: 'Virtual Real Estate', icon: Globe, description: 'Virtual land and properties', color: 'text-purple-400' },
-    { id: 11, name: 'Digital Music', icon: Music, description: 'Digital music and audio', color: 'text-indigo-400' },
-    { id: 12, name: 'Digital Books', icon: BookOpen, description: 'Digital books and publications', color: 'text-orange-400' },
-    { id: 13, name: 'Digital Games', icon: Gamepad2, description: 'Digital games and gaming assets', color: 'text-red-400' },
-    { id: 14, name: 'Digital Tokens', icon: Award, description: 'Digital utility tokens', color: 'text-cyan-400' },
-    { id: 15, name: 'Digital Certificates', icon: Shield, description: 'Digital certificates and credentials', color: 'text-emerald-400' }
+    { id: 7, name: 'Real Estate', icon: Globe, description: 'Tokenized real estate properties', color: 'text-blue-400' },
+    { id: 8, name: 'Commodities', icon: Package, description: 'Gold, oil, agricultural products', color: 'text-yellow-400' },
+    { id: 9, name: 'Intellectual Property', icon: BookOpen, description: 'Patents, trademarks, copyrights', color: 'text-purple-400' },
+    { id: 10, name: 'Digital Collectibles', icon: Star, description: 'NFTs and digital collectibles', color: 'text-green-400' },
+    { id: 11, name: 'Music & Media', icon: Music, description: 'Songs, videos, podcasts', color: 'text-indigo-400' },
+    { id: 12, name: 'Gaming Assets', icon: Gamepad2, description: 'In-game items and virtual worlds', color: 'text-red-400' },
+    { id: 13, name: 'Financial Instruments', icon: TrendingUp, description: 'Stocks, bonds, derivatives', color: 'text-cyan-400' },
+    { id: 14, name: 'Certificates', icon: Shield, description: 'Educational and professional certs', color: 'text-emerald-400' },
+    { id: 15, name: 'Other Assets', icon: Award, description: 'Any other tokenizable asset', color: 'text-orange-400' }
   ];
 
   const rarityLevels = [
@@ -142,7 +154,19 @@ const CreateDigitalAsset: React.FC = () => {
     }));
   };
 
-  const handleFilesChange = (files: any[]) => {
+  const handleCategorySelect = (categoryId: number, categoryName: string, categoryDescription: string) => {
+    // Check if category requires AMC
+    if (requiresAMC(categoryId)) {
+      setSelectedCategory({ id: categoryId, name: categoryName, description: categoryDescription });
+      setShowAMCModal(true);
+      return;
+    }
+    
+    // Allow selection for digital assets
+    handleInputChange('category', categoryId);
+  };
+
+  const handleFilesChange = (files: UploadedFile[]) => {
     setUploadedFiles(files);
     
     // Set preview image from the first completed file
@@ -214,14 +238,75 @@ const CreateDigitalAsset: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!isConnected || !address) {
+    if (!isConnected || !accountId) {
       toast({
         title: 'Wallet Not Connected',
-        description: 'Please connect your wallet to create a digital asset.',
+        description: 'Please connect your HashPack wallet to create a digital asset.',
         variant: 'destructive'
       });
       return;
     }
+
+    // Check if wallet is still properly connected
+    if (!isConnected || !accountId) {
+      toast({
+        title: 'Wallet Connection Lost',
+        description: 'Please disconnect and reconnect your HashPack wallet, then try again.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Check TRUST token balance
+    if (!hasEnoughTrust) {
+      toast({
+        title: 'Insufficient TRUST Tokens',
+        description: `You need ${trustTokenCost} TRUST tokens to create this asset. You have ${trustBalance} TRUST tokens.`,
+        variant: 'destructive'
+      });
+      setShowTrustPurchase(true);
+      return;
+    }
+
+    // Deduct TRUST tokens as platform fee (burn them via HSCS contract)
+    try {
+      console.log(`Burning ${trustTokenCost} TRUST tokens as platform fee...`);
+      
+      // Require wallet connection for real transactions
+      if (!trustTokenWalletService.isWalletConnected(accountId)) {
+        throw new Error('Wallet not connected. Please connect your wallet to burn TRUST tokens.');
+      }
+
+      if (!signer) {
+        throw new Error('Wallet signer not available. Please reconnect your wallet.');
+      }
+
+      // Use direct contract interaction with user signing
+      const result = await trustTokenWalletService.burnTrustTokens(accountId, trustTokenCost, 'NFT_CREATION', signer);
+      const transactionId = result.transactionId;
+      
+      console.log(`✅ Successfully burned ${trustTokenCost} TRUST tokens. Transaction ID: ${transactionId}`);
+      
+      // Update the user's balance
+      await refreshBalance();
+      
+      toast({
+        title: 'Platform Fee Paid',
+        description: `${trustTokenCost} TRUST tokens have been burned as platform fee. Transaction ID: ${transactionId}`,
+        variant: 'default'
+      });
+    } catch (error) {
+      console.error('Failed to burn TRUST tokens:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to process TRUST token payment. Please try again.';
+      toast({
+        title: 'Payment Failed',
+        description: errorMessage,
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    console.log('Wallet connection verified:', accountId);
 
     // Ensure image is uploaded before submission
     if (!formData.imageURI || formData.imageURI.includes('placeholder')) {
@@ -235,104 +320,409 @@ const CreateDigitalAsset: React.FC = () => {
 
     setIsCreating(true);
     try {
-      // Upload metadata to IPFS (simulated)
-      const metadata = {
-        name: formData.name,
-        description: formData.description,
-        image: formData.imageURI,
-        external_url: `https://trustbridge.africa/asset/${Date.now()}`,
-        attributes: formData.attributes,
-        properties: {
-          category: digitalCategories.find(c => c.id === formData.category)?.name,
-          assetType: formData.assetType,
-          location: formData.location,
-          totalValue: formData.totalValue,
-          royaltyPercentage: formData.royaltyPercentage,
-          tags: formData.tags,
-          isTradeable: formData.isTradeable,
-          isAuctionable: formData.isAuctionable,
-          collection: {
-            name: formData.collectionName,
-            description: formData.collectionDescription,
-            image: formData.collectionImage
-          }
-        }
-      };
+      let assetTokenId: string | undefined;
+      let assetTopicId: string | undefined;
+      let serialNumber: any;
 
-      // Simulate IPFS upload
-      const metadataURI = `https://ipfs.trustbridge.africa/metadata/${Date.now()}.json`;
+      // Use existing WalletContext with simpler approach
+      console.log('Creating digital asset using existing WalletContext...');
       
-      // Create digital asset
-      const result = await contractService.createDigitalAsset({
-        category: formData.category,
-        assetType: formData.assetType,
-        name: formData.name,
-        location: formData.location,
-        totalValue: formData.totalValue,
-        imageURI: formData.imageURI,
-        description: formData.description
-      });
-
-      // If trading is enabled, create listing
-      if (formData.isTradeable) {
-        try {
-          if (formData.isAuctionable) {
-            // Create auction
-            await contractService.createAuction(
-              result.assetId,
-              formData.auctionStartingPrice || formData.startingPrice,
-              formData.auctionDuration || 7,
-              result.tokenId // Pass the token ID
-            );
-          } else {
-            // Create fixed price listing
-            await contractService.createListing(
-              result.assetId,
-              formData.fixedPrice || formData.buyNowPrice || formData.startingPrice,
-              result.tokenId // Pass the token ID
-            );
-          }
-        } catch (error) {
-          console.warn('Failed to create trading listing, continuing without trading:', error);
+      // Import required Hedera SDK components (no HFS needed)
+      // const { FileCreateTransaction } = await import('@hashgraph/sdk'); // Not needed
+      
+      // Debug wallet state
+      console.log('Wallet state check:');
+      console.log('- isConnected:', isConnected);
+      console.log('- accountId:', accountId);
+      console.log('- signer:', signer);
+      console.log('- hederaClient:', hederaClient);
+      
+      // Check if we have the required components from WalletContext
+      if (!isConnected || !accountId) {
+        throw new Error('Wallet not properly connected. Please reconnect your HashPack wallet.');
+      }
+      
+      // Check for signer and hederaClient - these are required for Hedera transactions
+      if (!signer || !hederaClient) {
+        console.warn('Signer or HederaClient not available, wallet needs to be reconnected...');
+        toast({
+          title: 'Wallet Reconnection Required',
+          description: 'Your wallet session has expired. Please disconnect and reconnect your HashPack wallet to continue.',
+          variant: 'destructive'
+        });
+        throw new Error('Wallet signer not available. Please disconnect and reconnect your HashPack wallet.');
+      }
+      
+      // Debug signer state
+      console.log('Signer details:');
+      console.log(`- Type: ${typeof signer}`);
+      console.log(`- Constructor: ${signer?.constructor?.name}`);
+      console.log(`- Has signTransaction: ${typeof signer?.signTransaction}`);
+      console.log(`- Account ID: ${accountId}`);
+      
+      // Check HBAR balance using Mirror Node API (safer than signer method)
+      console.log('Checking HBAR balance for transaction fees...');
+      try {
+        const response = await fetch(`https://testnet.mirrornode.hedera.com/api/v1/accounts/${accountId}`);
+        const accountData = await response.json();
+        const balance = accountData.balance?.balance || 0;
+        console.log(`Account HBAR balance: ${balance / 100000000} HBAR`);
+        
+        if (balance < 100000000) { // Less than 1 HBAR
+          console.warn('⚠️ Low HBAR balance - transaction might fail due to insufficient fees');
+          console.log('Get test HBAR from: https://portal.hedera.com/faucet');
         }
+      } catch (error) {
+        console.warn('Could not check balance:', error);
       }
 
-      // Store asset data for later retrieval
-      const assetData = {
-        id: result.assetId,
+      // Step 1: Skip HFS - use direct IPFS approach like working test
+      console.log('Using direct IPFS approach (no HFS needed)...');
+      
+      // Prepare simple asset metadata for localStorage storage
+      const assetMetadata = {
         name: formData.name,
         description: formData.description,
-        imageURI: formData.imageURI,
-        category: formData.category,
         assetType: formData.assetType,
+        category: formData.category,
         location: formData.location,
         totalValue: formData.totalValue,
-        owner: address,
-        createdAt: new Date().toISOString(),
+        royaltyPercentage: formData.royaltyPercentage,
         isTradeable: formData.isTradeable,
-        status: formData.isTradeable ? 'listed' : 'created',
-        listingId: formData.isTradeable ? '2' : undefined,
-        price: formData.isTradeable ? (formData.fixedPrice || formData.buyNowPrice || formData.startingPrice) : undefined,
-        tokenId: result.tokenId
+        isAuctionable: formData.isAuctionable,
+        collection: {
+          name: formData.collectionName,
+          description: formData.collectionDescription,
+          image: formData.collectionImage
+        },
+        files: [
+          // Include uploaded files
+          ...uploadedFiles.map(file => ({
+            id: file.id,
+            name: file.file.name,
+            type: file.file.type,
+            size: file.file.size,
+            ipfsUrl: file.ipfsUrl,
+            cid: file.cid
+          })),
+          // Include the main image if it's not already in uploadedFiles
+          ...(formData.imageURI && !uploadedFiles.some(f => f.ipfsUrl === formData.imageURI) ? [{
+            id: 'main-image',
+            name: 'main-image',
+            type: 'image/jpeg', // Default type
+            size: 0,
+            ipfsUrl: formData.imageURI,
+            cid: formData.imageURI.split('/').pop() || formData.imageURI
+          }] : [])
+        ],
+        owner: accountId,
+        currency: 'TRUST', // Use TRUST token for payments
+        status: 'VERIFIED',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
-      // Store in sessionStorage for immediate retrieval
-      sessionStorage.setItem(`asset_${result.assetId}`, JSON.stringify(assetData));
-      console.log('✅ Asset created with image URI:', formData.imageURI);
+      console.log('📋 Asset metadata prepared (no HFS):', {
+        name: assetMetadata.name,
+        description: assetMetadata.description,
+        filesCount: assetMetadata.files.length,
+        firstImageUrl: assetMetadata.files[0]?.ipfsUrl,
+        formDataImageURI: formData.imageURI
+      });
 
+      // No HFS file creation needed - metadata will be stored in localStorage
+      console.log('✅ Using direct IPFS approach - no HFS file needed');
+
+      // Step 2: Create HTS NFT for the asset using proven working pattern
+      console.log('Creating HTS NFT for digital asset...');
+      
+      // Import required components for NFT creation
+      const { 
+        TokenCreateTransaction, 
+        TokenType, 
+        TokenSupplyType, 
+        TokenMintTransaction,
+        PrivateKey,
+        TokenId
+      } = await import('@hashgraph/sdk');
+      
+      // Extract IPFS hash from image URL
+      const imageUrl = formData.imageURI;
+      let ipfsHash = '';
+      
+      if (imageUrl.includes('ipfs/')) {
+        ipfsHash = imageUrl.split('ipfs/')[1];
+      } else if (imageUrl.includes('bafy')) {
+        ipfsHash = imageUrl.split('/').pop() || '';
+      } else {
+        // If it's not an IPFS URL, use a placeholder
+        ipfsHash = 'bafybeiancudkc7zsdszrzv3hcnqmsd5pmogtxmpou'; // Default test image
+      }
+      
+      console.log('🖼️ Using image URL:', imageUrl);
+      console.log('🔗 Extracted IPFS hash:', ipfsHash);
+
+      // Step 2a: Generate supply key for NFT minting
+      console.log('🔑 Generating supply key for NFT collection...');
+      const supplyKey = PrivateKey.generate();
+      console.log(`✅ Generated supply key: ${supplyKey.publicKey.toString()}`);
+
+      // Step 2b: Create HTS NFT Collection
+      console.log('🏗️ Creating HTS NFT Collection...');
+      
+      const nftTokenCreateTx = new TokenCreateTransaction()
+        .setTokenName(`${formData.name} Collection`)
+        .setTokenSymbol(formData.assetType.toUpperCase().slice(0, 5))
+        .setTokenType(TokenType.NonFungibleUnique)
+        .setDecimals(0)
+        .setInitialSupply(0)
+        .setTreasuryAccountId(accountId)
+        .setSupplyType(TokenSupplyType.Finite)
+        .setMaxSupply(1000)
+        .setSupplyKey(supplyKey.publicKey) // Use PUBLIC key
+        .setTokenMemo(`IPFS:${ipfsHash}`)
+        .setMaxTransactionFee(5000)
+        .setTransactionValidDuration(120);
+
+      console.log('Requesting HashPack approval for NFT collection creation...');
+      nftTokenCreateTx.freezeWithSigner(signer);
+      const signedNftTokenTx = await signer.signTransaction(nftTokenCreateTx);
+      const nftTokenResponse = await signedNftTokenTx.execute(hederaClient);
+      
+      if (nftTokenResponse.transactionId) {
+        console.log('Getting NFT collection creation receipt...');
+        const nftTokenReceipt = await nftTokenResponse.getReceipt(hederaClient);
+        const nftTokenId = nftTokenReceipt.tokenId?.toString();
+        
+        if (nftTokenId) {
+          console.log(`✅ NFT Collection created: ${nftTokenId}`);
+          
+          // Step 2c: Mint NFT with proper dual signatures
+          console.log('🎨 Minting NFT with proper dual signatures...');
+          console.log('💡 Note: NFT minting requires BOTH treasury account AND supply key signatures');
+          console.log('💡 TrustBridge Flow: Users create NFT assets that can be traded on the platform');
+          console.log('💡 Each NFT represents a unique digital asset with IPFS image stored in token memo');
+          
+          // Create comprehensive NFT metadata as JSON
+          const assetPrice = (formData.totalValue && formData.totalValue !== '0' && formData.totalValue !== '') ? formData.totalValue : '100';
+          const nftMetadata = {
+            name: formData.name,
+            description: formData.description,
+            image: imageUrl,
+            price: assetPrice,
+            currency: 'TRUST',
+            properties: {
+              assetType: formData.assetType,
+              category: formData.category,
+              location: formData.location,
+              royaltyPercentage: formData.royaltyPercentage || '5'
+            }
+          };
+          
+          console.log('📋 NFT Metadata to store:', nftMetadata);
+          
+          // Convert to JSON string
+          const metadataJson = JSON.stringify(nftMetadata);
+          console.log(`📏 Metadata JSON size: ${metadataJson.length} bytes`);
+          
+          // ALWAYS upload metadata to IPFS and store the IPFS hash in NFT
+          let metadataBuffer;
+          
+          if (metadataJson.length > 100) {
+            console.log('📤 Metadata too large - uploading to IPFS...');
+            
+            // Upload metadata JSON to IPFS
+            const metadataBlob = new Blob([metadataJson], { type: 'application/json' });
+            const metadataFile = new File([metadataBlob], 'metadata.json', { type: 'application/json' });
+            
+            const metadataUploadResult = await ipfsService.uploadFile(metadataFile, {
+              name: `${formData.name} - Metadata`,
+              description: 'NFT Metadata JSON'
+            });
+            
+            // ipfsService.uploadFile returns the data object directly
+            if (!metadataUploadResult?.ipfsUrl) {
+              throw new Error('Failed to upload metadata to IPFS');
+            }
+            
+            const metadataIpfsUrl = metadataUploadResult.ipfsUrl;
+            const metadataCid = metadataUploadResult.cid;
+            
+            console.log('✅ Metadata uploaded to IPFS:', metadataIpfsUrl);
+            console.log('📦 Metadata CID:', metadataCid);
+            
+            // Store only the CID (not full URL) to stay under 100 bytes limit
+            metadataBuffer = Buffer.from(metadataCid);
+            console.log(`📏 Using IPFS CID as metadata: ${metadataCid} (${metadataBuffer.length} bytes)`);
+          } else {
+            // Metadata is small enough to store directly
+            metadataBuffer = Buffer.from(metadataJson);
+            console.log(`📏 Using full metadata directly (${metadataBuffer.length} bytes)`);
+          }
+          
+          console.log(`📏 Final metadata buffer size: ${metadataBuffer.length} bytes`);
+          
+          // CORRECTED METHOD: Treasury signs first, then supply key
+          try {
+            console.log('🔧 Creating mint transaction...');
+            
+            const nftMintTx = new TokenMintTransaction()
+              .setTokenId(TokenId.fromString(nftTokenId))
+              .setMetadata([metadataBuffer])
+              .setMaxTransactionFee(5000)
+              .setTransactionValidDuration(120);
+            
+            console.log('🔧 Treasury account signs first (via HashPack)...');
+            
+            // First: Treasury account signs via HashPack
+            nftMintTx.freezeWithSigner(signer);
+            const treasurySignedTx = await signer.signTransaction(nftMintTx);
+            
+            console.log('✅ Treasury signature obtained from HashPack');
+            console.log('🔧 Supply key signs second (local signing)...');
+            
+            // Second: Supply key signs locally
+            const dualSignedTx = await treasurySignedTx.sign(supplyKey);
+            
+            console.log('✅ Supply key signature added');
+            console.log('🔧 Executing dual-signed transaction...');
+            
+            // Execute the dual-signed transaction
+            const nftMintResponse = await dualSignedTx.execute(hederaClient);
+            
+            if (nftMintResponse.transactionId) {
+              console.log('🔧 Getting transaction receipt...');
+              const nftMintReceipt = await nftMintResponse.getReceipt(hederaClient);
+              serialNumber = nftMintReceipt.serials?.[0];
+              
+              if (serialNumber) {
+                console.log(`✅ NFT minted successfully with serial number: ${serialNumber}`);
+                console.log(`🎉 Transaction ID: ${nftMintResponse.transactionId.toString()}`);
+                
+                // Set the asset token ID to the NFT collection ID
+                assetTokenId = nftTokenId;
+                
+                // Step 4: Create NFT asset reference with actual serial number
+                console.log('Creating NFT asset reference with serial number...');
+                console.log('💡 TrustBridge: This NFT asset can now be traded on the platform');
+                console.log('💡 Users can buy/sell this NFT using TRUST tokens as payment');
+                
+                // Ensure price is never empty or 0
+                const assetPrice = (formData.totalValue && formData.totalValue !== '0' && formData.totalValue !== '') ? formData.totalValue : '100';
+                console.log('💰 Asset pricing:', {
+                  formDataTotalValue: formData.totalValue,
+                  formDataTotalValueType: typeof formData.totalValue,
+                  isEmpty: formData.totalValue === '',
+                  isZero: formData.totalValue === '0',
+                  finalPrice: assetPrice
+                });
+
+                const nftAssetReference = {
+                  tokenId: assetTokenId,
+                  serialNumber: serialNumber.toString(), // Actual NFT serial number
+                  fileId: undefined, // No HFS file - using direct IPFS approach
+                  topicId: assetTopicId,
+                  name: formData.name,
+                  description: formData.description,
+                  imageURI: imageUrl, // Use the working IPFS image URL
+                  owner: accountId,
+                  price: assetPrice,
+                  currency: 'TRUST', // Use TRUST token for payments
+                  status: 'active',
+                  assetType: 'NFT', // Mark as NFT
+                  category: 'Digital Art',
+                  location: 'Hedera Testnet',
+                  tags: formData.tags || ['nft', 'art', 'ipfs', 'hts'],
+                  isTradeable: true,
+                  isAuctionable: formData.isAuctionable || false,
+                  royaltyPercentage: formData.royaltyPercentage || '5',
+                  totalValue: assetPrice,
+                  evidence: {
+                    documents: assetMetadata.files?.filter((f: any) => f.type && typeof f.type === 'string' && f.type.startsWith('application/'))?.map((f: any) => f.ipfsUrl) || [],
+                    images: [imageUrl] // Primary NFT image
+                  },
+                  evidenceHashes: [ipfsHash], // IPFS hash for verification
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                };
+                
+                // Store NFT asset reference in localStorage for quick access
+                console.log('🎯 COMPLETE NFT ASSET METADATA CAPTURED:');
+                console.log('📋 NFT Asset Reference:', JSON.stringify(nftAssetReference, null, 2));
+                console.log('🪙 NFT Collection ID:', assetTokenId);
+                console.log('🎨 NFT Serial Number:', serialNumber);
+                console.log('👤 Owner account:', accountId);
+                console.log('💰 Price:', formData.totalValue, 'TRUST');
+                console.log('🖼️ Image URL:', imageUrl);
+                console.log('🔗 IPFS Hash:', ipfsHash);
+                console.log('💡 Using direct IPFS approach - no HFS file needed');
+                
+                // Store reference in localStorage (metadata stored locally, image via IPFS)
+                const existingReferences = JSON.parse(localStorage.getItem('assetReferences') || '[]');
+                existingReferences.push(nftAssetReference);
+                localStorage.setItem('assetReferences', JSON.stringify(existingReferences));
+                
+                console.log('✅ NFT asset reference stored with Collection ID:', assetTokenId, 'Serial:', serialNumber);
+                
+                console.log('🎉 REAL HTS NFT creation completed successfully!');
+                console.log('💡 This NFT can now be viewed, traded, or transferred');
+                
+              } else {
+                throw new Error('No serial number in NFT minting receipt');
+              }
+            } else {
+              throw new Error('No transaction ID in NFT minting response');
+            }
+            
+          } catch (mintError: any) {
+            console.error(`❌ NFT minting failed: ${mintError.message}`);
+            throw mintError;
+          }
+          
+        } else {
+          throw new Error('No token ID in NFT collection receipt');
+        }
+      } else {
+        throw new Error('No transaction ID in NFT collection response');
+      }
+
+      // Step 3: Skip HCS for now - focus on core NFT creation
+      assetTopicId = 'events-logged-in-backend'; // Placeholder
+
+      // Success message will be shown after NFT creation is complete
       toast({
-        title: 'Digital Asset Created Successfully!',
-        description: `Your digital asset "${formData.name}" has been created and ${formData.isTradeable ? 'listed for trading' : 'added to your portfolio'}. Asset ID: ${result.assetId}${result.transactionId.startsWith('sim_') ? ' (Simulation Mode)' : ''}`,
+        title: 'NFT Digital Asset Created Successfully!',
+        description: `Your NFT "${formData.name}" has been created with Collection ID: ${assetTokenId}. Using direct IPFS approach - no HFS needed!`,
         variant: 'default'
       });
 
-      // Navigate to asset page or portfolio
-      navigate(`/dashboard/asset/${result.assetId}`);
+      // Navigate to Profile page and trigger refresh
+      navigate('/dashboard/profile', { state: { refreshAssets: true, timestamp: Date.now() } });
     } catch (error) {
       console.error('Error creating digital asset:', error);
+      
+      let errorMessage = 'Failed to create digital asset';
+      if (error instanceof Error) {
+        if (error.message.includes('TOKEN_HAS_NO_SUPPLY_KEY')) {
+          errorMessage = 'Token creation failed: Missing supply key. Please try again.';
+        } else if (error.message.includes('INSUFFICIENT_TX_FEE')) {
+          errorMessage = 'Insufficient HBAR for transaction fees. Please add more HBAR to your account.';
+        } else if (error.message.includes('TRANSACTION_EXPIRED')) {
+          errorMessage = 'Transaction expired. Please try again.';
+        } else if (error.message.includes('No matching key')) {
+          errorMessage = 'HashPack wallet error: Please ensure your wallet is properly connected and try again.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'Transaction timed out. Please try again with a better network connection.';
+        } else if (error.message.includes('HashPack signing timeout')) {
+          errorMessage = 'HashPack signing timed out. Please ensure HashPack is open and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: 'Error Creating Asset',
-        description: error instanceof Error ? error.message : 'Failed to create digital asset',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {
@@ -361,20 +751,7 @@ const CreateDigitalAsset: React.FC = () => {
     // Check if there are files currently uploading (only 'uploading' status, not 'pending')
     const isUploading = uploadedFiles.some(f => f.status === 'uploading');
     
-    console.log('Validation check:', {
-      currentStep,
-      formData: {
-        name: formData.name,
-        description: formData.description,
-        assetType: formData.assetType,
-        imageURI: formData.imageURI,
-        location: formData.location,
-        totalValue: formData.totalValue
-      },
-      uploadedFiles: uploadedFiles.length,
-      hasImage,
-      isUploading
-    });
+    // Validation check - removed console.log to prevent spam during re-renders
     
     switch (currentStep) {
       case 1:
@@ -383,10 +760,11 @@ const CreateDigitalAsset: React.FC = () => {
         // Ensure image is uploaded to IPFS before proceeding
         const hasValidImage = formData.imageURI && 
           !formData.imageURI.includes('placeholder') && 
-          (formData.imageURI.startsWith('https://') || formData.imageURI.startsWith('ipfs://'));
+          (typeof formData.imageURI === 'string' && (formData.imageURI.startsWith('https://') || formData.imageURI.startsWith('ipfs://')));
         return !!(hasValidImage && formData.location);
       case 3:
-        return !!(formData.totalValue);
+        // Require a valid non-zero price
+        return !!(formData.totalValue && formData.totalValue !== '0' && parseFloat(formData.totalValue) > 0);
       case 4:
         return true; // Trading options are optional
       case 5:
@@ -437,7 +815,7 @@ const CreateDigitalAsset: React.FC = () => {
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="space-y-2">
-                  {steps.map((step, index) => {
+                  {steps.map((step, _) => {
                     const Icon = step.icon;
                     const isActive = currentStep === step.id;
                     const isCompleted = currentStep > step.id;
@@ -546,19 +924,32 @@ const CreateDigitalAsset: React.FC = () => {
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                             {digitalCategories.map((category) => {
                               const Icon = category.icon;
+                              const needsAMC = requiresAMC(category.id);
                               return (
                                 <button
                                   key={category.id}
-                                  onClick={() => handleInputChange('category', category.id)}
-                                  className={`p-3 rounded border-2 transition-all text-left ${
+                                  onClick={() => handleCategorySelect(category.id, category.name, category.description)}
+                                  className={`p-3 rounded border-2 transition-all text-left relative ${
                                     formData.category === category.id
                                       ? 'border-neon-green bg-neon-green/10 text-neon-green'
+                                      : needsAMC
+                                      ? 'border-yellow-600/50 hover:border-yellow-500/70 text-gray-300 bg-yellow-900/5'
                                       : 'border-gray-600 hover:border-gray-500 text-gray-300'
                                   }`}
                                 >
+                                  {needsAMC && (
+                                    <div className="absolute top-2 right-2 bg-yellow-500 text-black text-[10px] px-2 py-0.5 rounded-full font-semibold">
+                                      AMC
+                                    </div>
+                                  )}
                                   <Icon className={`w-5 h-5 mb-2 ${category.color}`} />
                                   <div className="text-xs font-medium">{category.name}</div>
                                   <div className="text-xs text-gray-400">{category.description}</div>
+                                  {needsAMC && (
+                                    <div className="text-[10px] text-yellow-500 mt-1">
+                                      Coming Q2 2025
+                                    </div>
+                                  )}
                                 </button>
                               );
                             })}
@@ -724,15 +1115,19 @@ const CreateDigitalAsset: React.FC = () => {
                       <div className="space-y-6">
                         <div>
                           <label className="block text-sm font-medium text-off-white mb-2">
-                            Total Value (USD) *
+                            Listing Price (TRUST Tokens) *
                           </label>
                           <Input
                             type="number"
                             value={formData.totalValue}
                             onChange={(e) => handleInputChange('totalValue', e.target.value)}
-                            placeholder="Enter the estimated value in USD"
+                            placeholder="Enter price in TRUST tokens (e.g., 100, 500, 1000)"
                             className="w-full"
+                            min="1"
                           />
+                          <p className="text-xs text-gray-400 mt-1">
+                            This is the price buyers will pay in TRUST tokens to purchase your asset
+                          </p>
                         </div>
 
                         <div>
@@ -992,8 +1387,8 @@ const CreateDigitalAsset: React.FC = () => {
                               </p>
                             </div>
                             <div>
-                              <span className="text-electric-mint">Value:</span>
-                              <p className="text-off-white">${formData.totalValue} USD</p>
+                              <span className="text-electric-mint">Price:</span>
+                              <p className="text-off-white">{formData.totalValue || '100'} TRUST</p>
                             </div>
                             <div>
                               <span className="text-electric-mint">Location:</span>
@@ -1010,6 +1405,34 @@ const CreateDigitalAsset: React.FC = () => {
                             <div>
                               <span className="text-electric-mint">Auction:</span>
                               <p className="text-off-white">{formData.isAuctionable ? 'Enabled' : 'Disabled'}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* TRUST Token Cost */}
+                        <div className="bg-gray-800 p-6 rounded-lg">
+                          <h4 className="text-sm font-medium text-off-white mb-4">Creation Cost</h4>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-300">Platform Fee (TRUST tokens)</span>
+                              <span className="text-sm font-mono text-off-white">{trustTokenCost} TRUST</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-300">Gas Fees (HBAR)</span>
+                              <span className="text-sm font-mono text-off-white">~2 HBAR</span>
+                            </div>
+                            <div className="border-t border-gray-700 pt-3">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-300">Your TRUST Balance</span>
+                                <span className={`text-sm font-mono ${hasEnoughTrust ? 'text-neon-green' : 'text-red-400'}`}>
+                                  {trustBalance} TRUST
+                                </span>
+                              </div>
+                              {!hasEnoughTrust && (
+                                <div className="mt-2 p-2 bg-red-900/20 border border-red-500/30 rounded text-xs text-red-300">
+                                  Insufficient TRUST tokens. You need {trustTokenCost - trustBalance} more TRUST tokens.
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1116,7 +1539,7 @@ const CreateDigitalAsset: React.FC = () => {
                                   ? 'Please wait for image upload to complete' 
                                   : 'Please upload an image (or enter URL) and enter location'
                               )}
-                              {currentStep === 3 && 'Please enter a total value'}
+                              {currentStep === 3 && 'Please enter a valid price greater than 0'}
                             </p>
                           )}
                         </div>
@@ -1129,6 +1552,35 @@ const CreateDigitalAsset: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* AMC Required Modal */}
+      {selectedCategory && (
+        <AMCRequiredModal
+          isOpen={showAMCModal}
+          onClose={() => {
+            setShowAMCModal(false);
+            setSelectedCategory(null);
+          }}
+          categoryName={selectedCategory.name}
+          categoryDescription={selectedCategory.description}
+        />
+      )}
+
+      {/* TRUST Token Purchase Modal */}
+      <TrustTokenPurchase
+        isOpen={showTrustPurchase}
+        onClose={() => setShowTrustPurchase(false)}
+        requiredAmount={trustTokenCost}
+        onSuccess={(amount) => {
+          refreshBalance();
+          setShowTrustPurchase(false);
+          toast({
+            title: 'TRUST Tokens Purchased!',
+            description: `Successfully purchased ${amount} TRUST tokens. You can now create your asset.`,
+            variant: 'default'
+          });
+        }}
+      />
     </div>
   );
 };

@@ -425,4 +425,88 @@ export class AssetsService {
       timestamp: new Date()
     };
   }
+
+  // ========================================
+  // BLOCKCHAIN STATE VERIFICATION
+  // ========================================
+
+  async getNFTBlockchainState(tokenId: string, serialNumber: string): Promise<{
+    owner: string;
+    isListed: boolean;
+    isInEscrow: boolean;
+    marketplaceAccount: string;
+    seller?: string;
+  }> {
+    try {
+      const marketplaceAccount = '0.0.6916959'; // Your marketplace account
+      
+      // Query Hedera Mirror Node for NFT ownership
+      const mirrorNodeUrl = 'https://testnet.mirrornode.hedera.com';
+      const response = await fetch(`${mirrorNodeUrl}/api/v1/tokens/${tokenId}/nfts/${serialNumber}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch NFT state: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const currentOwner = data.account_id;
+      
+      // NFT is listed if it's currently owned by the marketplace (in escrow)
+      const isInEscrow = currentOwner === marketplaceAccount;
+      const isListed = isInEscrow;
+      
+      // If in escrow, find who listed it (who transferred to marketplace)
+      let seller: string | undefined;
+      if (isInEscrow) {
+        try {
+          // Query NFT transaction history to find the transfer to marketplace
+          const historyResponse = await fetch(`${mirrorNodeUrl}/api/v1/tokens/${tokenId}/nfts/${serialNumber}/transactions?limit=20&order=desc`);
+          if (historyResponse.ok) {
+            const historyData = await historyResponse.json();
+            
+            // Find the most recent transfer TO the marketplace (listing transaction)
+            const listingTx = historyData.transactions?.find((tx: any) => 
+              tx.receiver_account_id === marketplaceAccount && 
+              tx.sender_account_id !== marketplaceAccount
+            );
+            
+            if (listingTx) {
+              // Get detailed transaction to access nft_transfers
+              const txDetailResponse = await fetch(`${mirrorNodeUrl}/api/v1/transactions/${listingTx.transaction_id}`);
+              if (txDetailResponse.ok) {
+                const txDetail = await txDetailResponse.json();
+                
+                // Find the NFT transfer in the detailed transaction
+                const nftTransfer = txDetail.transactions?.[0]?.nft_transfers?.find((transfer: any) =>
+                  transfer.token_id === tokenId &&
+                  transfer.serial_number === parseInt(serialNumber) &&
+                  transfer.receiver_account_id === marketplaceAccount
+                );
+                
+                if (nftTransfer) {
+                  seller = nftTransfer.sender_account_id;
+                  this.logger.log(`✅ Found seller: ${seller} from transaction ${listingTx.transaction_id}`);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          this.logger.warn(`Failed to fetch seller from transaction history:`, error);
+        }
+      }
+      
+      this.logger.log(`NFT ${tokenId}-${serialNumber} state: owner=${currentOwner}, isListed=${isListed}, isInEscrow=${isInEscrow}, seller=${seller}`);
+      
+      return {
+        owner: currentOwner,
+        isListed,
+        isInEscrow,
+        marketplaceAccount,
+        seller
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get NFT blockchain state:`, error);
+      throw error;
+    }
+  }
 }

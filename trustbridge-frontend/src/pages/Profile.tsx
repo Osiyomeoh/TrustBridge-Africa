@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   User, 
   Copy, 
-  Edit3, 
   MoreHorizontal, 
   Plus, 
-  Search, 
-  Filter, 
-  Grid3X3, 
-  List, 
   Settings,
   Building2,
   Globe,
@@ -19,45 +14,32 @@ import {
   TrendingUp,
   DollarSign,
   Eye,
-  Calendar,
-  Anchor,
-  Chain,
-  HelpCircle,
   CheckCircle,
   AlertCircle,
-  Star,
-  Heart,
-  Share2,
-  Download,
-  Upload,
-  Trash2,
-  Edit,
-  MoreVertical,
-  ChevronDown,
-  ExternalLink,
-  Wallet,
-  Award,
-  Users,
-  BarChart3,
-  Coins,
   Zap,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Wallet,
+  Grid3X3,
+  Heart,
+  List
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/UI/Card';
 import Button from '../components/UI/Button';
-import Input from '../components/UI/Input';
+import AssetDetailModal from '../components/Assets/AssetDetailModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useWallet } from '../contexts/WalletContext';
 import { useToast } from '../hooks/useToast';
 import { usePortfolio, useInvestments, useAssetByOwner } from '../hooks/useApi';
 import { contractService } from '../services/contractService';
+import hederaAssetService, { HederaAsset } from '../services/hederaAssetService';
 
 const Profile: React.FC = () => {
-  const { user } = useAuth();
-  const { address, isConnected } = useWallet();
+  const { user, authStep, isAuthenticated } = useAuth();
+  const { address, isConnected, hederaClient } = useWallet();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [activeTab, setActiveTab] = useState('portfolio');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -68,13 +50,61 @@ const Profile: React.FC = () => {
   
   // Fetch real data from API
   const { data: portfolioData, loading: portfolioLoading, error: portfolioError } = usePortfolio();
-  const { data: investmentsData, loading: investmentsLoading, error: investmentsError } = useInvestments();
+  const { loading: investmentsLoading } = useInvestments();
   const { data: userAssetsData, loading: assetsLoading, error: assetsError } = useAssetByOwner(address || '');
   
   // State for user's NFTs from smart contracts
   const [userNFTs, setUserNFTs] = useState<any[]>([]);
   const [nftsLoading, setNftsLoading] = useState(false);
   const [forceRefresh, setForceRefresh] = useState(false);
+  
+  // State for Hedera digital assets
+  const [hederaAssets, setHederaAssets] = useState<HederaAsset[]>([]);
+  const [hederaAssetsLoading, setHederaAssetsLoading] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [showAssetDetail, setShowAssetDetail] = useState(false);
+  
+  // Check authentication status and redirect if needed
+  useEffect(() => {
+    console.log('Profile - Auth check effect triggered:', { 
+      isConnected, 
+      address: address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null,
+      isAuthenticated, 
+      authStep, 
+      user: !!user,
+      userEmail: user?.email,
+      userName: user?.name
+    });
+    
+    if (isConnected && address) {
+      // Add a small delay to ensure AuthContext has completed its auth check
+      const timer = setTimeout(() => {
+        console.log('Profile - Delayed auth check after 500ms:', { 
+          isAuthenticated, 
+          authStep, 
+          user: !!user 
+        });
+        
+        // If user is not authenticated or needs to complete profile
+        if (!isAuthenticated || authStep === 'wallet' || authStep === 'profile' || authStep === 'email') {
+          console.log('Profile - User needs authentication, redirecting to profile completion');
+          console.log('Redirecting because:', {
+            notAuthenticated: !isAuthenticated,
+            walletStep: authStep === 'wallet',
+            profileStep: authStep === 'profile',
+            emailStep: authStep === 'email',
+            hasUser: !!user,
+            userEmail: user?.email,
+            userIncomplete: !user?.email || !user?.name
+          });
+          // Profile completion is handled by the centralized popup
+          return;
+        }
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isConnected, address, isAuthenticated, authStep, user, navigate]);
   
   // Clear cache when wallet address changes
   useEffect(() => {
@@ -84,7 +114,7 @@ const Profile: React.FC = () => {
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith('user_nfts_') || key.startsWith('asset_'))) {
+        if (key && typeof key === 'string' && (key.startsWith('user_nfts_') || key.startsWith('asset_'))) {
           keysToRemove.push(key);
         }
       }
@@ -94,7 +124,7 @@ const Profile: React.FC = () => {
       const sessionKeysToRemove = [];
       for (let i = 0; i < sessionStorage.length; i++) {
         const key = sessionStorage.key(i);
-        if (key && key.startsWith('asset_')) {
+        if (key && typeof key === 'string' && key.startsWith('asset_')) {
           sessionKeysToRemove.push(key);
         }
       }
@@ -103,6 +133,25 @@ const Profile: React.FC = () => {
       console.log('🧹 Cleared cache keys:', keysToRemove.length, 'localStorage,', sessionKeysToRemove.length, 'sessionStorage');
     }
   }, [address]);
+
+  // Listen for navigation state to trigger refresh after asset creation
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.refreshAssets) {
+      console.log('🔄 Received refresh trigger from navigation, forcing asset refresh...');
+      setForceRefresh(prev => !prev);
+      // Clear the navigation state to prevent repeated refreshes
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    
+    // Also check sessionStorage for refresh flag (set after buying from marketplace)
+    const needsRefresh = sessionStorage.getItem('profileNeedsRefresh');
+    if (needsRefresh === 'true') {
+      console.log('🔄 Profile refresh flag detected (after purchase), forcing asset refresh...');
+      sessionStorage.removeItem('profileNeedsRefresh');
+      setForceRefresh(prev => !prev);
+    }
+  }, [location.state, location.pathname, navigate]);
 
   // Enhanced: Progressive loading - show assets as they load
   useEffect(() => {
@@ -118,26 +167,157 @@ const Profile: React.FC = () => {
       console.log('🔄 Starting progressive asset loading...');
 
       try {
-        // Try Hedera services first for consistent data
-        const hederaAssets = await contractService.getUserAssetsFromHedera(address);
-        
-        if (hederaAssets.totalAssets > 0) {
-          console.log('✅ Using Hedera assets:', hederaAssets);
-          
-          // Combine ERC-721 and HTS assets
-          const allAssets = [...hederaAssets.erc721Assets, ...hederaAssets.htsAssets];
-          setUserNFTs(allAssets);
-          
-          // Cache the result
+        // Clear cache on force refresh
+        if (forceRefresh) {
           const cacheKey = `user_nfts_${address.toLowerCase()}`;
-          localStorage.setItem(cacheKey, JSON.stringify(allAssets));
-          localStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
-          
-          setNftsLoading(false);
-          return;
+          localStorage.removeItem(cacheKey);
+          localStorage.removeItem(`${cacheKey}_timestamp`);
+          console.log('🗑️ Cleared NFT cache for fresh load');
         }
-      } catch (hederaError) {
-        console.warn('⚠️ Hedera service failed, falling back to contract calls:', hederaError.message);
+        
+        // Query Hedera Mirror Node directly for user's NFTs (owned + listed)
+        console.log('🔍 Querying Hedera Mirror Node for NFTs...');
+        const mirrorNodeUrl = 'https://testnet.mirrornode.hedera.com';
+        const marketplaceAccount = '0.0.6916959';
+        
+        // Query both user's NFTs and marketplace NFTs (to find listed assets)
+        const [userResponse, marketplaceResponse] = await Promise.all([
+          fetch(`${mirrorNodeUrl}/api/v1/accounts/${address}/nfts?limit=100`),
+          fetch(`${mirrorNodeUrl}/api/v1/accounts/${marketplaceAccount}/nfts?limit=100`)
+        ]);
+        
+        const response = userResponse;
+        
+        if (response.ok) {
+          const data = await response.json();
+          const userNFTs = data.nfts || [];
+          console.log(`✅ Found ${userNFTs.length} NFTs owned by ${address}`);
+          
+          // Check marketplace for listed assets from this user
+          let listedNFTs: any[] = [];
+          if (marketplaceResponse.ok) {
+            const marketplaceData = await marketplaceResponse.json();
+            console.log(`🔍 Checking ${marketplaceData.nfts?.length || 0} marketplace NFTs for user's listings...`);
+            
+            // For each marketplace NFT, check if it was listed by this user
+            if (marketplaceData.nfts) {
+              for (const nft of marketplaceData.nfts) {
+                try {
+                  // Query transaction history to find who listed it
+                  const txResponse = await fetch(`${mirrorNodeUrl}/api/v1/tokens/${nft.token_id}/nfts/${nft.serial_number}/transactions?limit=5&order=desc`);
+                  if (txResponse.ok) {
+                    const txData = await txResponse.json();
+                    const listingTx = txData.transactions?.find((tx: any) => 
+                      tx.receiver_account_id === marketplaceAccount && 
+                      tx.sender_account_id === address
+                    );
+                    
+                    if (listingTx) {
+                      console.log(`✅ Found listed asset: ${nft.token_id}-${nft.serial_number}`);
+                      listedNFTs.push({ ...nft, isListed: true, listedBy: address });
+                    }
+                  }
+                } catch (error) {
+                  console.warn(`Failed to check listing for ${nft.token_id}-${nft.serial_number}:`, error);
+                }
+              }
+            }
+          }
+          
+          console.log(`📊 Total: ${userNFTs.length} owned + ${listedNFTs.length} listed = ${userNFTs.length + listedNFTs.length} assets`);
+          
+          // Combine owned and listed NFTs
+          const allNFTs = [...userNFTs, ...listedNFTs];
+          
+          if (allNFTs.length > 0) {
+            // Process NFTs into asset format - with IPFS metadata fetching
+            const processedAssetsPromises = allNFTs.map(async (nft: any) => {
+              let metadata: any = {};
+              let name = `NFT #${nft.serial_number}`;
+              let totalValue = 100; // Default fallback
+              let imageURI = '';
+              
+              // Try to parse metadata
+              if (nft.metadata) {
+                try {
+                  const metadataString = atob(nft.metadata);
+                  
+                  // Check if it's an IPFS CID or URL
+                  if (metadataString.startsWith('baf') || metadataString.startsWith('Qm')) {
+                    // It's an IPFS CID, fetch the metadata
+                    const ipfsUrl = `https://indigo-recent-clam-436.mypinata.cloud/ipfs/${metadataString}`;
+                    try {
+                      const ipfsResponse = await fetch(ipfsUrl);
+                      if (ipfsResponse.ok) {
+                        metadata = await ipfsResponse.json();
+                        name = metadata.name || metadata.assetName || name;
+                        // Try multiple fields for price/value
+                        const priceStr = metadata.price || metadata.totalValue || metadata.value || '100';
+                        totalValue = parseFloat(priceStr);
+                        imageURI = metadata.image || metadata.imageURI || metadata.imageUrl || '';
+                        console.log(`✅ Fetched metadata from IPFS for ${nft.token_id}-${nft.serial_number}:`, { name, price: priceStr, totalValue });
+                      }
+                    } catch (ipfsError) {
+                      console.warn(`Failed to fetch IPFS metadata for ${nft.token_id}-${nft.serial_number}:`, ipfsError);
+                    }
+                  } else {
+                    // Try to parse as JSON directly
+                    metadata = JSON.parse(metadataString);
+                    name = metadata.name || metadata.assetName || name;
+                    const priceStr = metadata.price || metadata.totalValue || metadata.value || '100';
+                    totalValue = parseFloat(priceStr);
+                    imageURI = metadata.image || metadata.imageURI || metadata.imageUrl || '';
+                  }
+                } catch (error) {
+                  console.warn(`Failed to parse metadata for ${nft.token_id}-${nft.serial_number}:`, error);
+                }
+              }
+              
+              return {
+                id: `${nft.token_id}-${nft.serial_number}`,
+                tokenId: nft.token_id,
+                serialNumber: nft.serial_number,
+                name,
+                metadata,
+                owner: address,
+                createdAt: nft.created_timestamp,
+                modified_timestamp: nft.modified_timestamp,
+                totalValue,
+                price: totalValue,
+                imageURI,
+                category: metadata.category || metadata.assetType || 'Digital Art',
+                type: 'digital'
+              };
+            });
+            
+            const processedAssets = await Promise.all(processedAssetsPromises);
+            
+            // Log each asset's value for debugging
+            console.log('✅ Processed assets with real values:');
+            processedAssets.forEach((asset, i) => {
+              console.log(`  ${i + 1}. ${asset.name}: ${asset.totalValue} TRUST`);
+            });
+            
+            const totalPortfolioValue = processedAssets.reduce((sum, asset) => sum + (asset.totalValue || 0), 0);
+            console.log(`💰 Total Portfolio Value: ${totalPortfolioValue} TRUST`);
+            
+            setHederaAssets(processedAssets);
+            
+            // Cache the result
+            const cacheKey = `user_nfts_${address.toLowerCase()}`;
+            localStorage.setItem(cacheKey, JSON.stringify(processedAssets));
+            localStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+            
+            setNftsLoading(false);
+            return; // Successfully loaded from Mirror Node
+          } else {
+            console.log('⚠️ No NFTs found from Mirror Node, checking cache and fallback...');
+          }
+        } else {
+          console.warn('⚠️ Mirror Node response not OK:', response.status);
+        }
+      } catch (hederaError: any) {
+        console.warn('⚠️ Hedera Mirror Node query failed:', hederaError?.message || hederaError);
       }
 
       // Fallback: Check cache first (unless force refresh)
@@ -153,7 +333,7 @@ const Profile: React.FC = () => {
             console.log('✅ Using cached NFT data');
             try {
               const nfts = JSON.parse(cachedData);
-              setUserNFTs(nfts);
+              setHederaAssets(nfts);
               setNftsLoading(false);
               return;
             } catch (error) {
@@ -235,6 +415,185 @@ const Profile: React.FC = () => {
 
     fetchUserAssetsProgressive();
   }, [address, forceRefresh]);
+
+  // OLD FUNCTION - NO LONGER USED (replaced by fetchUserAssetsProgressive above)
+  // Fetch Hedera digital assets - DIRECTLY from Mirror Node (no localStorage)
+  const fetchHederaAssets_OLD = async () => {
+    if (!address) {
+      console.log('⚠️ Cannot fetch assets - no address provided');
+      return;
+    }
+    
+    setHederaAssetsLoading(true);
+    try {
+      console.log('🔍 Fetching NFTs from Hedera Mirror Node for user:', address);
+      console.log('🔗 Mirror Node URL:', `https://testnet.mirrornode.hedera.com/api/v1/accounts/${address}/nfts?limit=100`);
+      
+      // Query Mirror Node for user's NFTs
+      const response = await fetch(`https://testnet.mirrornode.hedera.com/api/v1/accounts/${address}/nfts?limit=100`);
+      
+      if (!response.ok) {
+        throw new Error(`Mirror Node returned ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      console.log(`📦 Found ${data.nfts?.length || 0} NFTs for user ${address}`);
+      console.log('📋 Raw NFT data:', data.nfts);
+      
+      // Parse NFT metadata
+      const nftPromises = (data.nfts || []).map(async (nft: any) => {
+        try {
+          const tokenId = nft.token_id;
+          const serialNumber = nft.serial_number;
+          
+          let metadata: any = {};
+          let metadataString = '';
+          let imageUrl = '';
+          
+          if (nft.metadata) {
+            metadataString = atob(nft.metadata);
+            
+            try {
+              metadata = JSON.parse(metadataString);
+              imageUrl = metadata.image || metadata.imageURI || metadata.imageUrl || '';
+            } catch {
+              // Check if it's an IPFS CID
+              if (metadataString.startsWith('baf') && !metadataString.includes('/')) {
+                const ipfsUrl = `https://indigo-recent-clam-436.mypinata.cloud/ipfs/${metadataString}`;
+                try {
+                  const metadataResponse = await fetch(ipfsUrl);
+                  if (metadataResponse.ok) {
+                    metadata = await metadataResponse.json();
+                    imageUrl = metadata.image || metadata.imageURI || metadata.imageUrl || '';
+                  }
+                } catch (e) {
+                  console.warn(`Failed to fetch metadata from IPFS:`, e);
+                }
+              } else if (metadataString.startsWith('http')) {
+                imageUrl = metadataString;
+              }
+            }
+          }
+          
+          if (!imageUrl) {
+            imageUrl = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Arial" font-size="24" fill="%2300ff88" text-anchor="middle" dy=".3em">${encodeURIComponent(metadata.name || 'NFT')}</text></svg>`;
+          }
+          
+          return {
+            id: `${tokenId}-${serialNumber}`,
+            tokenId,
+            serialNumber,
+            name: metadata.name || metadata.assetName || `NFT #${serialNumber}`,
+            description: metadata.description || '',
+            imageURI: imageUrl,
+            totalValue: metadata.price || metadata.totalValue || '100',
+            value: parseFloat(metadata.price || metadata.totalValue || '100'),
+            price: metadata.price || metadata.totalValue || '100',
+            owner: address,
+            createdAt: nft.created_timestamp || new Date().toISOString(),
+            isTradeable: true,
+            status: 'owned',
+            category: metadata.category || 'Digital Art',
+            type: 'digital'
+          };
+        } catch (error) {
+          console.warn(`Failed to process NFT:`, error);
+          return null;
+        }
+      });
+      
+      const assets = (await Promise.all(nftPromises)).filter(Boolean);
+      setHederaAssets(assets);
+      console.log('✅ Fetched and parsed', assets.length, 'NFTs from Hedera');
+    } catch (error) {
+      console.error('❌ Error fetching Hedera assets:', error);
+    } finally {
+      setHederaAssetsLoading(false);
+    }
+  };
+
+  // Force refresh assets directly from HFS (bypass Mirror Node)
+  const forceRefreshHederaAssets = async () => {
+    if (!address) return;
+    
+    setHederaAssetsLoading(true);
+    try {
+      console.log('🔄 Force refreshing Hedera assets directly from HFS...');
+      
+      // Debug: Check Hedera client status
+      console.log('🔍 Hedera client status for force refresh:', {
+        hasClient: !!hederaClient,
+        hasOperator: !!hederaClient?.operatorAccountId,
+        operatorAccountId: hederaClient?.operatorAccountId?.toString()
+      });
+      
+      if (!hederaClient || !hederaClient.operatorAccountId) {
+        console.error('❌ No valid Hedera client with operator available for HFS queries');
+        toast({
+          title: 'Wallet Not Connected',
+          description: 'Please ensure your HashPack wallet is properly connected.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      
+      // Get asset references from localStorage
+      const assetReferences = JSON.parse(localStorage.getItem('assetReferences') || '[]');
+      const userReferences = assetReferences.filter((ref: any) => ref.owner === address);
+      
+      console.log(`📊 Found ${userReferences.length} asset references for force refresh`);
+      
+      const refreshedAssets: HederaAsset[] = [];
+      
+      for (const ref of userReferences) {
+        try {
+          console.log(`🔄 Force fetching metadata for asset ${ref.tokenId} from file ${ref.fileId}...`);
+          const assetData = await hederaAssetService.getAssetDataDirectly(ref.tokenId, ref.fileId, hederaClient);
+          
+          if (assetData) {
+            refreshedAssets.push(assetData);
+            console.log(`✅ Force refreshed asset: ${assetData.name} with image: ${assetData.imageURI}`);
+          } else {
+            console.warn(`⚠️ Could not force fetch asset data for ${ref.tokenId}`);
+          }
+        } catch (error) {
+          console.error(`❌ Error force fetching asset ${ref.tokenId}:`, error);
+        }
+      }
+      
+      setHederaAssets(refreshedAssets);
+      console.log(`✅ Force refreshed ${refreshedAssets.length} assets from HFS`);
+      
+      toast({
+        title: 'Assets Refreshed',
+        description: `Successfully refreshed ${refreshedAssets.length} assets directly from HFS`,
+        variant: 'default'
+      });
+    } catch (error) {
+      console.error('❌ Error force refreshing Hedera assets:', error);
+      toast({
+        title: 'Refresh Failed',
+        description: 'Failed to refresh assets from HFS',
+        variant: 'destructive'
+      });
+    } finally {
+      setHederaAssetsLoading(false);
+    }
+  };
+
+  // NOTE: Assets are now loaded by fetchUserAssetsProgressive above
+  // which handles both owned and listed assets from Hedera Mirror Node
+
+  // Refresh assets when component mounts (e.g., returning from CreateDigitalAsset)
+  useEffect(() => {
+    if (address) {
+      console.log('🔄 Profile mounted, refreshing assets...');
+      setForceRefresh(true);
+      // Reset force refresh after a short delay
+      setTimeout(() => setForceRefresh(false), 1000);
+    }
+  }, []);
   
   // Calculate user stats from real data
   const userStats = useMemo(() => {
@@ -246,7 +605,7 @@ const Profile: React.FC = () => {
     // Show progressive loading - update stats as NFTs load
     
     // Try to get real data from sessionStorage first
-    const sessionKeys = Object.keys(sessionStorage).filter(key => key.startsWith('asset_'));
+    const sessionKeys = Object.keys(sessionStorage).filter(key => typeof key === 'string' && key.startsWith('asset_'));
     console.log('🔍 Asset keys found:', sessionKeys);
     
     const realAssets = sessionKeys.map(key => {
@@ -267,30 +626,60 @@ const Profile: React.FC = () => {
     console.log('🔍 Real assets found:', realAssets);
     console.log('🎨 User NFTs from contracts:', userNFTs);
 
-    // Combine sessionStorage assets with contract NFTs
-    const allAssets = [...realAssets];
+    // Also get assets from localStorage assetReferences
+    const assetReferences = JSON.parse(localStorage.getItem('assetReferences') || '[]');
+    console.log('🔍 localStorage assetReferences:', assetReferences);
+    const localStorageAssets = assetReferences
+      .filter((asset: any) => asset.owner === address) // Only show user's assets
+      .map((asset: any) => {
+        console.log('🔍 Processing asset from localStorage:', {
+          name: asset.name,
+          price: asset.price,
+          totalValue: asset.totalValue,
+          owner: asset.owner
+        });
+        return {
+          id: asset.tokenId,
+          name: asset.name,
+          description: asset.description,
+          imageURI: asset.imageURI,
+          totalValue: asset.totalValue || asset.price || '100',
+          value: parseFloat(asset.totalValue || asset.price || '100'),
+          price: asset.price || asset.totalValue || '100',
+          owner: asset.owner,
+          tokenId: asset.tokenId,
+          source: 'localStorage'
+        };
+      });
+    console.log('🔍 localStorage assets after filtering:', localStorageAssets);
+
+    // Combine sessionStorage assets with localStorage assets and Hedera NFTs
+    const allAssets = [...realAssets, ...localStorageAssets];
     
-    // Add NFTs from smart contracts
-    userNFTs.forEach(nft => {
-      // Check if this NFT is already in sessionStorage to avoid duplicates
-      const existingAsset = realAssets.find(asset => asset.tokenId === nft.tokenId);
+    // Add NFTs from Hedera Mirror Node (the primary source)
+    hederaAssets.forEach(nft => {
+      // Check if this NFT is already in sessionStorage or localStorage to avoid duplicates
+      const existingAsset = allAssets.find(asset => 
+        asset.tokenId === nft.tokenId || asset.id === nft.id
+      );
       if (!existingAsset) {
         allAssets.push({
-          id: nft.tokenId,
-          name: nft.metadata?.name || `Asset #${nft.tokenId}`,
+          id: nft.id || nft.tokenId,
+          name: nft.name || `Asset #${nft.serialNumber}`,
           description: nft.metadata?.description || 'Digital asset',
-          imageURI: nft.metadata?.image || 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=400&fit=crop&crop=center',
-          totalValue: '1000', // For portfolio calculation
-          value: 1000, // For UI display
-          price: '1000', // For trading display
-          owner: address,
-          createdAt: new Date().toISOString(),
+          imageURI: nft.imageURI || 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=400&fit=crop&crop=center',
+          totalValue: nft.totalValue || nft.price || '100',
+          value: parseFloat(nft.totalValue || nft.price || '100'),
+          price: nft.price || nft.totalValue || '100',
+          owner: nft.owner || address,
+          createdAt: nft.createdAt || new Date().toISOString(),
           isTradeable: true,
-          status: 'owned',
+          status: nft.isListed ? 'listed' : 'owned',
           tokenId: nft.tokenId,
-          source: 'contract',
-          type: 'Digital', // For UI display
-          category: 'Digital Asset' // For UI display
+          serialNumber: nft.serialNumber,
+          source: 'hedera',
+          type: nft.type || 'digital',
+          category: nft.category || 'Digital Asset'
         });
       }
     });
@@ -357,9 +746,9 @@ const Profile: React.FC = () => {
       return {
         portfolioValue: 'Loading...',
         usdValue: 'Loading...',
-        assetsCount: 0,
-        createdCount: 0,
-        collectionsCount: 0
+    assetsCount: 0,
+    createdCount: 0,
+    collectionsCount: 0
       };
     }
     
@@ -375,29 +764,21 @@ const Profile: React.FC = () => {
       };
     }
     
+    // No assets found - return zeros instead of mock data
     return {
-      portfolioValue: '100K TRUST',
-      usdValue: '$100K',
-      assetsCount: 1,
-      createdCount: 1,
+      portfolioValue: '0 TRUST',
+      usdValue: '$0',
+      assetsCount: 0,
+      createdCount: 0,
       collectionsCount: 0
     };
-  }, [portfolioData, portfolioLoading, userAssetsData, userNFTs, nftsLoading, address]);
+  }, [portfolioData, portfolioLoading, userAssetsData, userNFTs, nftsLoading, address, hederaAssets]);
 
   // Get user assets from real data - show immediately as they load
   const userAssets = useMemo(() => {
-    // Try to get real data from sessionStorage first
-    const sessionKeys = Object.keys(sessionStorage).filter(key => key.startsWith('asset_'));
-    const realAssets = sessionKeys.map(key => {
-      try {
-        return JSON.parse(sessionStorage.getItem(key) || '{}');
-      } catch {
-        return null;
-      }
-    }).filter(Boolean);
-
-    // Combine sessionStorage assets with contract NFTs (show immediately)
-    const allAssets = [...realAssets];
+    // NO MORE localStorage or sessionStorage - query Hedera directly for user's NFTs
+    // This will be populated by the fetchUserAssets function below
+    const allAssets: any[] = [];
     
     // Add NFTs from smart contracts as they load
     userNFTs.forEach(nft => {
@@ -420,54 +801,80 @@ const Profile: React.FC = () => {
       });
     });
 
-    return allAssets; // Always return what we have, even if loading
-  }, [userAssetsData, assetsLoading, userNFTs, address]);
+    return allAssets;
+  }, [userNFTs, address]);
 
-  // Get real recent activity from created assets
+  // Helper function to calculate time ago - MUST be defined before recentActivity
+  const getTimeAgo = (date: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
+
+  // Get real recent activity from user's assets and transactions
   const recentActivity = useMemo(() => {
-    const sessionKeys = Object.keys(sessionStorage).filter(key => key.startsWith('asset_'));
-    const realAssets = sessionKeys.map(key => {
-      try {
-        const asset = JSON.parse(sessionStorage.getItem(key) || '{}');
-        return {
-          action: 'Asset Created',
-          asset: asset.name || 'Digital Asset',
-          time: asset.createdAt ? new Date(asset.createdAt).toLocaleString() : 'Recently',
-          type: 'success'
-        };
-      } catch {
-        return null;
-      }
-    }).filter(Boolean).slice(0, 3); // Show last 3 activities
-
-    // Add some mock activities if we have real assets
-    if (realAssets.length > 0) {
-      return [
-        ...realAssets,
-    { action: 'RWA Listed', asset: 'Lagos Property', time: '1 hour ago', type: 'info' },
-        { action: 'Verification Complete', asset: 'Farm Token', time: '3 hours ago', type: 'success' },
-      ].slice(0, 3);
+    const activities: any[] = [];
+    
+    console.log('🔍 Recent Activity - userNFTs:', userNFTs);
+    console.log('🔍 Recent Activity - userNFTs length:', userNFTs?.length);
+    
+    // Add activities from user's NFTs
+    if (userNFTs && userNFTs.length > 0) {
+      userNFTs.forEach((nft: any) => {
+        // Try multiple sources for timestamp
+        const timestamp = nft.createdAt || 
+                         nft.metadata?.createdAt || 
+                         nft.created_timestamp ||
+                         nft.modified_timestamp;
+        
+        if (timestamp) {
+          const createdDate = new Date(timestamp);
+          const timeAgo = getTimeAgo(createdDate);
+          
+          activities.push({
+            action: 'Asset Created',
+            asset: nft.name || nft.metadata?.name || `NFT #${nft.serialNumber || nft.id}`,
+            time: timeAgo,
+            type: 'success',
+            timestamp: createdDate.getTime()
+          });
+        } else {
+          // If no timestamp, still show the asset with "Recently"
+          activities.push({
+            action: 'Asset Owned',
+            asset: nft.name || nft.metadata?.name || `NFT #${nft.serialNumber || nft.id}`,
+            time: 'Recently',
+            type: 'success',
+            timestamp: Date.now()
+          });
+        }
+      });
     }
-
-    // Fallback: Show your real asset activity
-    return [
-      { action: 'Asset Created', asset: 'eerr', time: 'Recently', type: 'success' },
-      { action: 'RWA Listed', asset: 'Lagos Property', time: '1 hour ago', type: 'info' },
-      { action: 'Verification Complete', asset: 'Farm Token', time: '3 hours ago', type: 'success' },
-    ];
-  }, []);
+    
+    // Sort by timestamp (most recent first) and limit to 5
+    return activities
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+      .slice(0, 5);
+  }, [userNFTs]);
 
   const tabs = [
-    { id: 'portfolio', label: 'Portfolio', icon: Wallet },
-    { id: 'digital-assets', label: 'Digital Assets', icon: Grid3X3 },
-    { id: 'rwa-assets', label: 'RWA Assets', icon: Building2 },
-    { id: 'created', label: 'Created', icon: Plus },
-    { id: 'collections', label: 'Collections', icon: Building2 },
-    { id: 'listings', label: 'Listings', icon: TrendingUp },
-    { id: 'offers', label: 'Offers', icon: DollarSign },
+    { id: 'portfolio', label: 'All Assets', icon: Wallet },
+    { id: 'digital-assets', label: 'Digital Art', icon: Grid3X3 },
+    { id: 'rwa-assets', label: 'Real Estate', icon: Building2 },
+    { id: 'commodities', label: 'Commodities', icon: Globe },
+    { id: 'intellectual', label: 'IP & Patents', icon: Shield },
+    { id: 'created', label: 'My Creations', icon: Plus },
+    { id: 'trading', label: 'Trading', icon: TrendingUp },
     { id: 'activity', label: 'Activity', icon: Activity },
-    { id: 'favorites', label: 'Favorites', icon: Heart },
-    { id: 'watchlist', label: 'Watchlist', icon: Eye }
+    { id: 'favorites', label: 'Favorites', icon: Heart }
   ];
 
   const statusFilters = [
@@ -881,7 +1288,16 @@ const Profile: React.FC = () => {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setForceRefresh(true)}
+                      onClick={() => {
+                        // Clear ALL caches and force refresh
+                        if (address) {
+                          const cacheKey = `user_nfts_${address.toLowerCase()}`;
+                          localStorage.removeItem(cacheKey);
+                          localStorage.removeItem(`${cacheKey}_timestamp`);
+                          console.log('🗑️ Cache cleared, forcing refresh...');
+                        }
+                        setForceRefresh(prev => !prev);
+                      }}
                       disabled={nftsLoading}
                       className="text-xs text-gray-400 hover:text-neon-green"
                     >
@@ -973,31 +1389,45 @@ const Profile: React.FC = () => {
 
           {activeTab === 'digital-assets' && (
             <div className="space-y-6">
-              {userAssets.length === 0 && nftsLoading ? (
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-off-white">Hedera Digital Assets</h2>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                    className="text-neon-green border-neon-green hover:bg-neon-green/10"
+                  >
+                    {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+
+              {hederaAssetsLoading ? (
                 <Card variant="floating" className="text-center py-16">
                   <CardContent>
                     <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-neon-green/20 to-emerald-500/20 rounded-full flex items-center justify-center">
                       <Loader2 className="w-16 h-16 text-neon-green animate-spin" />
                     </div>
-                    <h3 className="text-2xl font-bold text-off-white mb-4">Loading digital assets...</h3>
+                    <h3 className="text-2xl font-bold text-off-white mb-4">Loading Hedera assets...</h3>
                     <p className="text-gray-400">
-                      Please wait while we fetch your digital assets
+                      Please wait while we fetch your digital assets from Hedera
                     </p>
                   </CardContent>
                 </Card>
-              ) : userAssets.length === 0 ? (
+              ) : hederaAssets.length === 0 ? (
                 <Card variant="floating" className="text-center py-16">
                   <CardContent>
                     <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-neon-green/20 to-emerald-500/20 rounded-full flex items-center justify-center">
                       <Grid3X3 className="w-16 h-16 text-neon-green" />
                     </div>
-                    <h3 className="text-2xl font-bold text-off-white mb-4">No digital assets found</h3>
+                    <h3 className="text-2xl font-bold text-off-white mb-4">No Hedera digital assets found</h3>
                     <p className="text-gray-400 mb-6">
-                      Start by creating your first digital asset
+                      Start by creating your first digital asset on Hedera
                     </p>
                     <Button
                       variant="neon"
-                      onClick={() => handleCreateAsset('digital')}
+                      onClick={() => navigate('/create-asset')}
                       className="px-6 py-3"
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -1007,26 +1437,14 @@ const Profile: React.FC = () => {
                 </Card>
               ) : (
                 <div className="space-y-4">
-                  {nftsLoading && userAssets.length > 0 && (
-                    <div className="flex items-center justify-center py-4">
-                      <div className="flex items-center space-x-2 text-neon-green">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-sm">Loading more assets...</span>
-                      </div>
-                    </div>
-                  )}
                   <div className={`grid gap-6 ${
                     viewMode === 'grid' 
                       ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
                       : 'grid-cols-1'
                   }`}>
-                    {userAssets.filter(asset => 
-                      asset.type === 'digital' || 
-                      asset.type === 'Digital' || 
-                      !asset.type
-                    ).map((asset: any, index: number) => (
+                    {hederaAssets.map((asset: HederaAsset, index: number) => (
                     <motion.div
-                      key={asset._id || index}
+                      key={asset.id || asset.tokenId || index}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
@@ -1034,7 +1452,10 @@ const Profile: React.FC = () => {
                       <Card 
                         variant="floating" 
                         className="overflow-hidden hover:scale-105 transition-transform cursor-pointer"
-                        onClick={() => navigate(`/dashboard/asset/${asset.id || asset.tokenId}`)}
+                        onClick={() => {
+                          setSelectedAsset(asset);
+                          setShowAssetDetail(true);
+                        }}
                       >
                         <CardContent className="p-3">
                           <div className="aspect-square bg-gradient-to-br from-neon-green/20 to-emerald-500/20 rounded mb-3 flex items-center justify-center">
@@ -1049,17 +1470,31 @@ const Profile: React.FC = () => {
                             )}
                           </div>
                           <h3 className="text-sm font-medium text-off-white mb-1 truncate">
-                            {asset.name || `Digital Asset #${asset.tokenId || index + 1}`}
+                            {asset.name || `Asset #${asset.tokenId || index + 1}`}
                           </h3>
                           <p className="text-xs text-gray-400 mb-2 line-clamp-2">
                             {asset.description || 'No description available'}
                           </p>
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-neon-green font-medium">
-                              {asset.value ? `$${asset.value.toLocaleString()}` : 'N/A'}
+                              {asset.price || asset.totalValue ? `${asset.price || asset.totalValue} TRUST` : 'Not Listed'}
                             </span>
-                            <span className="text-xs text-gray-500">Digital</span>
+                            <span className="text-xs text-gray-500">
+                              {asset.status === 'active' ? 'Available' : 'Hedera'}
+                            </span>
                           </div>
+                          {/* Only show verification badge for RWA assets */}
+                          {(asset as any).type === 'rwa' && (asset as any).verification && (
+                            <div className="mt-2">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                (asset as any).verification === 'VERIFIED' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {(asset as any).verification}
+                              </span>
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     </motion.div>
@@ -1275,29 +1710,48 @@ const Profile: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {recentActivity.map((activity, index) => {
-                    const Icon = getStatusIcon(activity.type);
-                    return (
-                      <motion.div
-                        key={index}
-                        className="flex items-center justify-between p-4 bg-gray-900/50 rounded-lg hover:bg-gray-900/70 transition-colors"
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Icon className={`w-5 h-5 ${getStatusColor(activity.type)}`} />
-                          <div>
-                            <p className="text-off-white font-medium">{activity.action}</p>
-                            <p className="text-sm text-gray-400">{activity.asset}</p>
+                {recentActivity.length > 0 ? (
+                  <div className="space-y-4">
+                    {recentActivity.map((activity, index) => {
+                      const Icon = getStatusIcon(activity.type);
+                      return (
+                        <motion.div
+                          key={index}
+                          className="flex items-center justify-between p-4 bg-gray-900/50 rounded-lg hover:bg-gray-900/70 transition-colors"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Icon className={`w-5 h-5 ${getStatusColor(activity.type)}`} />
+                            <div>
+                              <p className="text-off-white font-medium">{activity.action}</p>
+                              <p className="text-sm text-gray-400">{activity.asset}</p>
+                            </div>
                           </div>
-                        </div>
-                        <span className="text-sm text-gray-500">{activity.time}</span>
-                      </motion.div>
-                    );
-                  })}
-                </div>
+                          <span className="text-sm text-gray-500">{activity.time}</span>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-16">
+                    <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-neon-green/20 to-emerald-500/20 rounded-full flex items-center justify-center">
+                      <Activity className="w-16 h-16 text-neon-green" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2 text-off-white">No Activity Yet</h3>
+                    <p className="text-gray-400 mb-6">
+                      Your transaction history will appear here once you create or trade assets
+                    </p>
+                    <Button
+                      variant="neon"
+                      onClick={() => navigate('/create-asset')}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Your First Asset
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -1320,6 +1774,20 @@ const Profile: React.FC = () => {
           )}
         </motion.div>
       </div>
+
+      {/* Asset Detail Modal */}
+      <AssetDetailModal
+        isOpen={showAssetDetail}
+        onClose={() => {
+          setShowAssetDetail(false);
+          setSelectedAsset(null);
+        }}
+        asset={selectedAsset}
+        onAssetUpdate={() => {
+          // Trigger asset refresh by toggling forceRefresh
+          setForceRefresh(prev => !prev);
+        }}
+      />
     </div>
   );
 };

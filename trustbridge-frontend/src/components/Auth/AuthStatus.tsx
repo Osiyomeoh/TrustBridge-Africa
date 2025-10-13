@@ -7,16 +7,14 @@ import UnifiedAuthFlow from './UnifiedAuthFlow';
 import Button from '../UI/Button';
 
 interface AuthStatusProps {
-  showAsButton?: boolean;
   className?: string;
 }
 
 const AuthStatus: React.FC<AuthStatusProps> = ({ 
-  showAsButton = true, 
   className = '' 
 }) => {
   const navigate = useNavigate();
-  const { isConnected, address, loading: walletLoading, disconnectWallet } = useWallet();
+  const { isConnected, accountId, address, loading: walletLoading, disconnectWallet } = useWallet();
   const { user, isLoading: authLoading, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -60,26 +58,23 @@ const AuthStatus: React.FC<AuthStatusProps> = ({
     );
   }
 
-  // Not connected or no address - show Connect Wallet
-  if (!isConnected || !address) {
-    return (
-      <UnifiedAuthFlow
-        showAsModal={true}
-        trigger={
-          <Button
-            variant="neon"
-            size="sm"
-            className={className}
-          >
-            Connect Wallet
-          </Button>
-        }
-      />
-    );
+  // Not connected - don't show anything
+  if (!isConnected || !accountId) {
+    console.log('AuthStatus - Not connected, not showing connect button:', {
+      isConnected,
+      accountId,
+      hasUser: !!user
+    });
+    return null;
   }
 
   // Connected but no user profile - show Complete Profile
-  if (isConnected && !user) {
+  if (isConnected && accountId && !user) {
+    console.log('AuthStatus - Showing Complete Profile button:', {
+      isConnected,
+      accountId,
+      hasUser: !!user
+    });
     return (
       <UnifiedAuthFlow
         showAsModal={true}
@@ -147,7 +142,7 @@ const AuthStatus: React.FC<AuthStatusProps> = ({
       >
         {/* Avatar */}
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-green to-electric-mint flex items-center justify-center">
-          {user.name ? (
+          {user?.name ? (
             <span className="text-black font-bold text-sm">
               {user.name.charAt(0).toUpperCase()}
             </span>
@@ -162,7 +157,7 @@ const AuthStatus: React.FC<AuthStatusProps> = ({
             {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connected'}
           </span>
           <span className="text-xs text-gray-400">
-            {user.name || 'User'}
+            {user?.name || 'User'}
           </span>
         </div>
         
@@ -182,7 +177,7 @@ const AuthStatus: React.FC<AuthStatusProps> = ({
             {/* Wallet Info */}
             <div className="px-4 py-3 border-b border-gray-700">
               <p className="text-sm text-gray-400">Signed in as</p>
-              <p className="text-sm font-medium text-off-white">{user.name || 'User'}</p>
+              <p className="text-sm font-medium text-off-white">{user?.name || 'User'}</p>
               <p className="text-xs text-gray-500">
                 {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Connected'}
               </p>

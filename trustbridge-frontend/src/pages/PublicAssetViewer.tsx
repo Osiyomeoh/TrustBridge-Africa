@@ -22,9 +22,8 @@ import {
   Globe,
   Link as LinkIcon
 } from 'lucide-react';
-import { hederaAssetService } from '../services/hederaAssetService';
+import hederaAssetService from '../services/hederaAssetService';
 import { useToast } from '../hooks/useToast';
-import AuthStatus from '../components/Auth/AuthStatus';
 
 interface PublicAssetData {
   asset: any;
@@ -55,9 +54,99 @@ const PublicAssetViewer: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      console.log('🔍 Fetching public asset data for:', id);
+      console.log('🔍 Fetching public asset data for token ID:', id);
       
-      // First, try to get specific asset data directly from contract
+      // First, check localStorage for this asset
+      const assetReferences = JSON.parse(localStorage.getItem('assetReferences') || '[]');
+      const localAsset = assetReferences.find((ref: any) => 
+        ref.tokenId === id || ref.tokenId.includes(id)
+      );
+
+      if (localAsset) {
+        console.log('✅ Found asset in localStorage:', localAsset);
+        console.log('   Image URI:', localAsset.imageURI || localAsset.image);
+        console.log('   Name:', localAsset.name);
+        console.log('   Description:', localAsset.description);
+        
+        const assetData: PublicAssetData = {
+          asset: {
+            id: localAsset.tokenId,
+            tokenId: localAsset.tokenId,
+            assetId: localAsset.tokenId,
+            nftContract: localAsset.tokenId,
+            name: localAsset.name,
+            description: localAsset.description,
+            imageURI: localAsset.imageURI || localAsset.image,
+            category: localAsset.category || 'Digital Asset',
+            assetType: localAsset.assetType || 'Digital',
+            location: {
+              address: localAsset.location?.address || 'Hedera Blockchain',
+              city: localAsset.location?.city || 'N/A',
+              state: localAsset.location?.state || 'N/A',
+              country: localAsset.location?.country || 'Global'
+            },
+            totalValue: localAsset.price || localAsset.totalValue || '100',
+            valueInHbar: parseFloat(localAsset.price || localAsset.totalValue || '100'),
+            owner: localAsset.owner,
+            createdAt: localAsset.createdAt || new Date().toISOString(),
+            createdAtDate: new Date(localAsset.createdAt || Date.now()),
+            isTradeable: true,
+            status: 'owned',
+            verificationScore: 85,
+            verificationLevel: 1
+          },
+          verification: localAsset.verification || null,
+          evidence: [],
+          documentTypes: [],
+          photos: [localAsset.imageURI || localAsset.image].filter(Boolean),
+          documents: []
+        };
+        
+        setAssetData(assetData);
+        setLoading(false);
+        return;
+      }
+
+      // If not in localStorage, try Hedera network
+      console.log('📡 Fetching from Hedera network...');
+      try {
+        const hederaAsset = await hederaAssetService.getAssetDataDirectly(id);
+        
+        if (hederaAsset) {
+          console.log('✅ Found asset on Hedera:', hederaAsset);
+          
+          const assetData: PublicAssetData = {
+            asset: {
+              ...hederaAsset,
+              assetId: hederaAsset.tokenId,
+              nftContract: hederaAsset.tokenId,
+              location: {
+                address: 'Hedera Blockchain',
+                city: 'N/A',
+                state: 'N/A',
+                country: 'Global'
+              },
+              createdAtDate: new Date(hederaAsset.createdAt || Date.now()),
+              verificationScore: 85,
+              verificationLevel: 1
+            },
+            verification: null,
+            evidence: [],
+            documentTypes: [],
+            photos: [hederaAsset.imageURI].filter(Boolean),
+            documents: []
+          };
+          
+          setAssetData(assetData);
+          setLoading(false);
+          return;
+        }
+      } catch (hederaError) {
+        console.log('⚠️ Could not fetch from Hedera:', hederaError);
+      }
+
+      // Fallback: Try old contract method
+      console.log('📡 Trying legacy contract method...');
       try {
         const { ethers } = await import('ethers');
       const provider = window.ethereum 
@@ -101,7 +190,7 @@ const PublicAssetViewer: React.FC = () => {
           }
 
           // Try to fetch metadata from IPFS/HTTP
-          if (tokenURI.startsWith('ipfs://') || tokenURI.startsWith('https://')) {
+          if (tokenURI && typeof tokenURI === 'string' && (tokenURI.startsWith('ipfs://') || tokenURI.startsWith('https://'))) {
             try {
               const url = tokenURI.startsWith('ipfs://') 
                 ? tokenURI.replace('ipfs://', 'https://ipfs.io/ipfs/')
@@ -374,26 +463,6 @@ const PublicAssetViewer: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-dark-gray">
-      {/* Header */}
-      <div className="bg-gray-900/50 border-b border-gray-700/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-neon-green to-emerald-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">TB</span>
-              </div>
-              <span className="text-lg font-semibold text-off-white">TrustBridge</span>
-            </div>
-
-            {/* Auth Status */}
-            <div className="flex items-center space-x-4">
-              <AuthStatus />
-            </div>
-          </div>
-        </div>
-      </div>
-      
       {/* Page Header */}
       <div className="bg-gray-900/50 border-b border-gray-700/50">
         <div className="max-w-7xl mx-auto px-6 py-6">
@@ -442,7 +511,7 @@ const PublicAssetViewer: React.FC = () => {
                     <p className="text-lg text-off-white/70 capitalize mb-4 break-words">{asset.assetType}</p>
                     <div className="flex flex-wrap items-center gap-4 mb-4">
                       <span className="text-3xl font-bold text-neon-green">
-                        {asset.valueInHbar} HBAR
+                        {asset.totalValue || asset.price || asset.valueInHbar || '100'} TRUST
                       </span>
                       {statusInfo && (
                         <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 border ${statusInfo.color} flex-shrink-0`}>
@@ -459,7 +528,7 @@ const PublicAssetViewer: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-2 text-off-white/70">
                       <Calendar className="w-4 h-4" />
-                      <span>Created {asset.createdAtDate.toLocaleDateString()}</span>
+                      <span>Created {asset.createdAtDate?.toLocaleDateString() || 'Unknown'}</span>
                     </div>
                     <div className="flex items-center gap-2 text-off-white/70">
                       <Globe className="w-4 h-4" />
@@ -522,15 +591,23 @@ const PublicAssetViewer: React.FC = () => {
                         </div>
                         <div className="relative">
                           <img
-                            src={`https://ipfs.io/ipfs/${photos[0]}`}
+                            src={photos[0].startsWith('http') ? photos[0] : `https://ipfs.io/ipfs/${photos[0]}`}
                             alt={asset.name}
                             className="w-full h-64 object-cover rounded-lg"
                             onError={(e) => {
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.nextElementSibling.style.display = 'flex';
+                              console.log('❌ Image failed to load:', photos[0]);
+                              console.log('   Trying asset.imageURI:', asset.imageURI);
+                              // Try asset.imageURI as fallback
+                              if (asset.imageURI && e.currentTarget.src !== asset.imageURI) {
+                                e.currentTarget.src = asset.imageURI;
+                              } else {
+                                e.currentTarget.style.display = 'none';
+                                const fallbackDiv = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (fallbackDiv) fallbackDiv.style.display = 'flex';
+                              }
                             }}
                           />
-                          <div className="hidden w-full h-64 bg-gray-700 rounded-lg flex items-center justify-center">
+                          <div className="hidden w-full h-64 bg-gray-700 rounded-lg items-center justify-center">
                             <div className="text-center">
                               <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                               <p className="text-gray-400">Image not available</p>

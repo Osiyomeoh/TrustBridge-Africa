@@ -1,0 +1,17 @@
+{
+  "network": "hedera_testnet",
+  "chainId": 296,
+  "timestamp": "2025-10-01T21:44:30.143Z",
+  "deployer": "0.0.6916959",
+  "contracts": {
+    "trustTokenExchange": "0.0.6935003",
+    "trustTokenBurner": "0.0.6935005",
+    "trustTokenStaking": "0.0.6935008"
+  },
+  "configuration": {
+    "treasuryWallet": "0.0.6916959",
+    "operationsWallet": "0.0.6916959",
+    "stakingPool": "0.0.6916959",
+    "trustTokenContract": "0.0.6934709"
+  }
+}

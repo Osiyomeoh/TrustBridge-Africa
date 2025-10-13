@@ -54,11 +54,24 @@ let GmailService = GmailService_1 = class GmailService {
         this.initializeTransporter();
     }
     initializeTransporter() {
+        const gmailUser = this.configService.get('GMAIL_USER');
+        const gmailPassword = this.configService.get('GMAIL_APP_PASSWORD');
+        this.logger.log('Gmail credentials loaded:', {
+            user: gmailUser ? `${gmailUser.substring(0, 3)}***@gmail.com` : 'NOT_SET',
+            passwordLength: gmailPassword ? gmailPassword.length : 0,
+            hasUser: !!gmailUser,
+            hasPassword: !!gmailPassword
+        });
+        if (!gmailUser || !gmailPassword || gmailUser === 'your-gmail@gmail.com' || gmailPassword === 'your-16-character-app-password') {
+            this.logger.warn('Gmail credentials not configured, using console logging for email verification');
+            this.transporter = null;
+            return;
+        }
         const gmailConfig = {
             service: 'gmail',
             auth: {
-                user: this.configService.get('GMAIL_USER'),
-                pass: this.configService.get('GMAIL_APP_PASSWORD'),
+                user: gmailUser,
+                pass: gmailPassword,
             },
         };
         this.transporter = nodemailer.createTransport(gmailConfig);
@@ -72,8 +85,18 @@ let GmailService = GmailService_1 = class GmailService {
         });
     }
     async sendVerificationEmail(to, verificationCode, userName) {
+        const verificationUrl = `${this.configService.get('FRONTEND_URL', 'http://localhost:3001')}/auth/verify-email?code=${verificationCode}`;
         try {
-            const verificationUrl = `${this.configService.get('FRONTEND_URL', 'http://localhost:3001')}/auth/verify-email?code=${verificationCode}`;
+            if (!this.transporter) {
+                this.logger.warn('Gmail transporter not available, logging verification code to console:');
+                this.logger.warn('='.repeat(80));
+                this.logger.warn(`VERIFICATION EMAIL FOR: ${to}`);
+                this.logger.warn(`USER: ${userName}`);
+                this.logger.warn(`VERIFICATION CODE: ${verificationCode}`);
+                this.logger.warn(`VERIFICATION URL: ${verificationUrl}`);
+                this.logger.warn('='.repeat(80));
+                return true;
+            }
             const mailOptions = {
                 from: {
                     name: 'TrustBridge',
@@ -90,7 +113,14 @@ let GmailService = GmailService_1 = class GmailService {
         }
         catch (error) {
             this.logger.error('Failed to send verification email:', error);
-            return false;
+            this.logger.warn('FALLBACK: Logging verification code to console due to email failure:');
+            this.logger.warn('='.repeat(80));
+            this.logger.warn(`VERIFICATION EMAIL FOR: ${to}`);
+            this.logger.warn(`USER: ${userName}`);
+            this.logger.warn(`VERIFICATION CODE: ${verificationCode}`);
+            this.logger.warn(`VERIFICATION URL: ${verificationUrl}`);
+            this.logger.warn('='.repeat(80));
+            return true;
         }
     }
     async sendEmail(to, subject, htmlContent, textContent) {

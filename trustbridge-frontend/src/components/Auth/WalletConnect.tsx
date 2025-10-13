@@ -6,13 +6,13 @@ import Button from '../UI/Button';
 const WalletConnect: React.FC = () => {
   const { connectWallet, isConnected, accountId, walletType, loading, error } = useWallet();
 
-  const handleConnect = async (type: 'metamask') => {
+  const handleConnect = async () => {
     try {
-      await connectWallet(type);
+      await connectWallet();
       // The AuthContext will automatically handle the flow progression
       // after wallet connection based on user status
     } catch (error) {
-      console.error(`Failed to connect ${type} wallet:`, error);
+      console.error('Failed to connect HashPack wallet:', error);
     }
   };
 
@@ -27,13 +27,13 @@ const WalletConnect: React.FC = () => {
           Connect Your Wallet
         </h2>
         <p className="text-gray-300">
-          Choose your preferred wallet to get started
+          Connect your HashPack wallet to get started
         </p>
       </div>
 
       <div className="space-y-4">
         <Button
-          onClick={() => handleConnect('metamask')}
+          onClick={handleConnect}
           className="w-full h-14 text-lg font-semibold"
           disabled={loading}
         >
@@ -44,13 +44,12 @@ const WalletConnect: React.FC = () => {
             </div>
           ) : (
             <div className="flex items-center justify-center">
-              <div className="w-6 h-6 bg-orange-500 rounded mr-3"></div>
-              Connect MetaMask
+              <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded mr-3"></div>
+              Connect HashPack
             </div>
           )}
         </Button>
 
-        {/* HashPack disabled - using MetaMask only */}
       </div>
 
       {error && (

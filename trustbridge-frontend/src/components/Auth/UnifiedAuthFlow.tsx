@@ -9,7 +9,6 @@ import {
   X, 
   Loader2,
   UserCheck,
-  Shield,
   AlertCircle
 } from 'lucide-react';
 import { useWallet } from '../../contexts/WalletContext';
@@ -26,19 +25,17 @@ interface UnifiedAuthFlowProps {
 }
 
 const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({ 
-  onComplete, 
   showAsModal = false,
   trigger 
 }) => {
   const navigate = useNavigate();
-  const { isConnected, connectWallet, disconnectWallet, address, loading: walletLoading } = useWallet();
+  const { isConnected, connectWallet, disconnectWallet, address, accountId, loading: walletLoading } = useWallet();
   const { 
     user, 
     authStep,
     completeProfile, 
     verifyEmail, 
     refreshUser, 
-    isLoading: authLoading,
     error: authError 
   } = useAuth();
   const { toast } = useToast();
@@ -61,36 +58,43 @@ const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     
-    console.log('UnifiedAuthFlow - Determining step:', {
+    console.log('UnifiedAuthFlow - Modal opened, determining step:', {
       isConnected,
       address,
+      accountId,
       hasUser: !!user,
       userEmail: user?.email,
       userName: user?.name,
       emailVerificationStatus: user?.emailVerificationStatus,
       hasEmail: !!user?.email,
       hasName: !!user?.name,
-      step: currentStep
+      currentStep,
+      authStep
     });
     
     // AuthContext now manages the authStep, so we don't need to set it here
     console.log('UnifiedAuthFlow - Current authStep from context:', authStep);
-  }, [isOpen, isConnected, user?.email, user?.name, user?.emailVerificationStatus]);
+  }, [isOpen, isConnected, accountId, user?.email, user?.name, user?.emailVerificationStatus, currentStep, authStep]);
 
   // Handle wallet connection
   const handleConnectWallet = async () => {
     try {
-      await connectWallet('metamask');
+      console.log('🔌 UnifiedAuthFlow: handleConnectWallet called');
+      
+      // Add a small delay to ensure wallet context is ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      await connectWallet();
       toast({
         title: 'Wallet Connected',
-        description: 'MetaMask wallet connected successfully!',
+        description: 'HashPack wallet connected successfully!',
         variant: 'default'
       });
     } catch (error) {
       console.error('Wallet connection failed:', error);
       toast({
         title: 'Connection Failed',
-        description: 'Failed to connect MetaMask wallet. Please try again.',
+        description: 'Failed to connect HashPack wallet. Please try again.',
         variant: 'destructive'
       });
     }
@@ -177,12 +181,33 @@ const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
 
   // Handle resend verification email
   const handleResendEmail = async () => {
-    // This would trigger a resend email API call
-    toast({
-      title: 'Verification Email Sent',
-      description: 'A new verification email has been sent to your inbox.',
-      variant: 'default'
-    });
+    if (!user?.email) {
+      toast({
+        title: 'Error',
+        description: 'No email address found. Please try again.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      console.log('Resending verification email to:', user.email);
+      const { apiService } = await import('../../services/api');
+      await apiService.resendVerification(user.email);
+      
+      toast({
+        title: 'Verification Email Sent',
+        description: 'A new verification email has been sent to your inbox.',
+        variant: 'default'
+      });
+    } catch (error) {
+      console.error('Failed to resend verification email:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to resend verification email. Please try again.',
+        variant: 'destructive'
+      });
+    }
   };
 
   // Get current step info
@@ -191,7 +216,7 @@ const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
       case 'wallet':
         return {
           title: 'Connect Your Wallet',
-          description: 'Connect your MetaMask wallet to get started',
+          description: 'Connect your HashPack wallet to get started',
           icon: Wallet,
           color: 'text-blue-400'
         };
@@ -219,7 +244,7 @@ const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
       default:
         return {
           title: 'Connect Your Wallet',
-          description: 'Connect your MetaMask wallet to get started',
+          description: 'Connect your HashPack wallet to get started',
           icon: Wallet,
           color: 'text-blue-400'
         };
@@ -302,7 +327,7 @@ const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
               ) : (
                 <Wallet className="w-4 h-4 mr-2" />
               )}
-              Connect MetaMask Wallet
+              Connect HashPack Wallet
             </Button>
             
             <div className="text-center">
@@ -317,33 +342,41 @@ const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
         {currentStep === 'profile' && (
           <div className="space-y-4">
             <div className="space-y-3">
-              <Input
-                label="Full Name"
-                value={profileData.name}
-                onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter your full name"
-                required
-              />
-              <Input
-                label="Email Address"
-                type="email"
-                value={profileData.email}
-                onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="Enter your email address"
-                required
-              />
-              <Input
-                label="Phone Number (Optional)"
-                value={profileData.phone}
-                onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
-                placeholder="Enter your phone number"
-              />
-              <Input
-                label="Country (Optional)"
-                value={profileData.country}
-                onChange={(e) => setProfileData(prev => ({ ...prev, country: e.target.value }))}
-                placeholder="Enter your country"
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+                <Input
+                  value={profileData.name}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter your full name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
+                <Input
+                  type="email"
+                  value={profileData.email}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="Enter your email address"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Phone Number (Optional)</label>
+                <Input
+                  value={profileData.phone}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="Enter your phone number"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Country (Optional)</label>
+                <Input
+                  value={profileData.country}
+                  onChange={(e) => setProfileData(prev => ({ ...prev, country: e.target.value }))}
+                  placeholder="Enter your country"
+                />
+              </div>
             </div>
             
             <Button
@@ -373,13 +406,15 @@ const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
               <p className="font-semibold text-blue-200">{user?.email}</p>
             </div>
             
-            <Input
-              label="Verification Code"
-              value={emailToken}
-              onChange={(e) => setEmailToken(e.target.value)}
-              placeholder="Enter 6-digit code"
-              maxLength={6}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Verification Code</label>
+              <Input
+                value={emailToken}
+                onChange={(e) => setEmailToken(e.target.value)}
+                placeholder="Enter 6-digit code"
+                maxLength={6}
+              />
+            </div>
             
             <div className="space-y-2">
               <Button
@@ -422,7 +457,10 @@ const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
     return (
       <>
         {trigger && (
-          <div onClick={() => setIsOpen(true)}>
+          <div onClick={() => {
+            console.log('Trigger clicked, opening modal');
+            setIsOpen(true);
+          }}>
             {trigger}
           </div>
         )}

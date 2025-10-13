@@ -34,4 +34,19 @@ export class TradingController {
   async getAssetTradingHistory(@Param('assetId') assetId: string) {
     return this.tradingService.getAssetTradingHistory(assetId);
   }
+
+  @Get('listings')
+  async getAllListings() {
+    return this.tradingService.getAllListings();
+  }
+
+  @Post('listings')
+  async createListing(@Body() listingData: any) {
+    return this.tradingService.createListing(listingData);
+  }
+
+  @Post('listings/:id/purchase')
+  async purchaseListing(@Param('id') id: string, @Body() purchaseData: any) {
+    return this.tradingService.purchaseListing(id, purchaseData);
+  }
 }

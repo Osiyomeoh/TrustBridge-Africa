@@ -36,7 +36,7 @@ class CreateAssetDto {
 }
 exports.CreateAssetDto = CreateAssetDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({ example: '0x1234567890123456789012345678901234567890' }),
+    (0, swagger_1.ApiProperty)({ example: '0.0.1234567' }),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateAssetDto.prototype, "owner", void 0);
@@ -91,4 +91,52 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Object)
 ], CreateAssetDto.prototype, "metadata", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ example: '0.0.1234567', description: 'HTS Token ID for the asset NFT', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "tokenId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ example: '0.0.1234567', description: 'HFS File ID for asset metadata', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "fileId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ example: '0.0.1234567', description: 'HCS Topic ID for asset events', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "topicId", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ example: 'digital', description: 'Asset type: digital or rwa', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "assetType", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ example: 'verified', description: 'Asset verification status', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "status", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ example: 'https://example.com/image.jpg', description: 'Asset image URI', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "imageURI", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ example: 'https://example.com/document.pdf', description: 'Asset document URI', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "documentURI", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ example: '0.0.1234567', description: 'TRUST token ID for trading', required: false }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateAssetDto.prototype, "trustTokenId", void 0);
 //# sourceMappingURL=create-asset.dto.js.map

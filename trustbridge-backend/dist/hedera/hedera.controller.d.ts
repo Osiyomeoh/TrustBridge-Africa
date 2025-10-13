@@ -1,4 +1,9 @@
 import { HederaService } from './hedera.service';
+import { TrustTokenService } from './trust-token.service';
+import { HscsContractService } from './hscs-contract.service';
+import { HscsHybridService } from './hscs-hybrid.service';
+import { MarketplaceService } from './marketplace.service';
+import { HcsService } from './hcs.service';
 import { TokenizationRequestDto } from './dto/tokenization-request.dto';
 export declare class SettlementRequestDto {
     assetId: string;
@@ -26,7 +31,12 @@ export declare class TokenAssociationRequestDto {
 }
 export declare class HederaController {
     private readonly hederaService;
-    constructor(hederaService: HederaService);
+    private readonly trustTokenService;
+    private readonly hscsContractService;
+    private readonly hscsHybridService;
+    private readonly marketplaceService;
+    private readonly hcsService;
+    constructor(hederaService: HederaService, trustTokenService: TrustTokenService, hscsContractService: HscsContractService, hscsHybridService: HscsHybridService, marketplaceService: MarketplaceService, hcsService: HcsService);
     getHederaOverview(): Promise<{
         success: boolean;
         data: {
@@ -300,5 +310,406 @@ export declare class HederaController {
             status: string;
         };
         message: string;
+    }>;
+    initializeTrustToken(): Promise<{
+        success: boolean;
+        data: {
+            tokenId: string;
+        };
+        message: string;
+    }>;
+    mintTrustTokens(body: {
+        toAccountId: string;
+        amount: number;
+    }): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+        };
+        message: string;
+    }>;
+    getTrustTokenBalance(accountId: string): Promise<{
+        success: boolean;
+        data: {
+            balance: number;
+        };
+        message: string;
+    }>;
+    getTrustTokenInfo(): Promise<{
+        success: boolean;
+        data: {
+            tokenId: string;
+        };
+        message: string;
+    }>;
+    exchangeHbarForTrust(exchangeRequest: any): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+            trustAmount: number;
+            distribution: any;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    burnTrustTokens(burnRequest: any): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    getExchangeInfo(): Promise<{
+        success: boolean;
+        data: any;
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    calculateNftCreationFee(feeRequest: any): Promise<{
+        success: boolean;
+        data: {
+            fee: number;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    stakeTrustTokens(stakeRequest: any): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    hybridExchangeHbarForTrust(exchangeRequest: any): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+            trustAmount: number;
+            distribution: any;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    hybridBurnTrustTokens(burnRequest: any): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    hybridCalculateNftCreationFee(feeRequest: any): Promise<{
+        success: boolean;
+        data: {
+            fee: number;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    hybridGetTrustTokenBalance(accountId: string): Promise<{
+        success: boolean;
+        data: {
+            balance: number;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    hybridStakeTrustTokens(stakeRequest: any): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    marketplaceListNFT(listingData: {
+        nftTokenId: string;
+        serialNumber: number;
+        price: number;
+        sellerAccountId: string;
+    }): Promise<{
+        success: boolean;
+        data: {
+            listingId: number;
+            transactionId: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    marketplaceBuyNFT(listingId: number, buyData: {
+        buyerAccountId: string;
+        buyerPrivateKey?: string;
+    }): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+            seller: string;
+            price: number;
+            platformFee: number;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    marketplaceCancelListing(listingId: number): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    marketplaceUpdatePrice(priceData: {
+        listingId: number;
+        newPrice: number;
+    }): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    marketplaceGetListing(listingId: number): Promise<{
+        success: boolean;
+        data: {
+            seller: string;
+            nftAddress: string;
+            serialNumber: number;
+            price: number;
+            isActive: boolean;
+            listedAt: number;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    marketplaceCheckListing(nftTokenId: string, serialNumber: number): Promise<{
+        success: boolean;
+        data: {
+            isListed: boolean;
+            listingId: number;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    marketplaceGetConfig(): Promise<{
+        success: boolean;
+        data: {
+            trustToken: string;
+            treasury: string;
+            feeBps: number;
+            owner: string;
+            activeListings: number;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    marketplaceTransferNFT(transferData: {
+        nftTokenId: string;
+        serialNumber: number;
+        buyerAccountId: string;
+        listingId: number;
+    }): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    marketplaceReturnNFT(returnData: {
+        nftTokenId: string;
+        serialNumber: number;
+        sellerAccountId: string;
+    }): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    submitMarketplaceEvent(event: any): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+            topicId: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    getMarketplaceEvents(limit?: number, assetTokenId?: string): Promise<{
+        success: boolean;
+        data: {
+            events: import("./hcs.service").MarketplaceEvent[];
+            topicId: string;
+            count: number;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    getAssetEvents(assetTokenId: string): Promise<{
+        success: boolean;
+        data: {
+            events: import("./hcs.service").MarketplaceEvent[];
+            assetTokenId: string;
+            count: number;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    submitOfferMessage(message: any): Promise<{
+        success: boolean;
+        data: {
+            transactionId: string;
+            topicId: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    getOfferMessages(assetTokenId: string): Promise<{
+        success: boolean;
+        data: {
+            messages: import("./hcs.service").OfferMessage[];
+            assetTokenId: string;
+            count: number;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    getTopicsInfo(): Promise<{
+        success: boolean;
+        data: {
+            marketplaceTopic: any;
+            offerTopic: any;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
     }>;
 }

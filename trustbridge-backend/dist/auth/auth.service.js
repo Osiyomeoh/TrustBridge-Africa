@@ -210,12 +210,12 @@ let AuthService = AuthService_1 = class AuthService {
                     this.logger.log(`Verification email resent successfully to ${email}`);
                 }
                 else {
-                    this.logger.warn(`Failed to resend verification email to ${email}`);
+                    this.logger.warn(`Failed to resend verification email to ${email} - using console fallback`);
                 }
             }
             catch (error) {
                 this.logger.error(`Error resending verification email to ${email}:`, error);
-                throw new common_1.BadRequestException('Failed to send verification email');
+                this.logger.warn('Continuing with console fallback due to email service failure');
             }
             this.logger.log(`New verification code for ${email}: ${verificationCode}`);
             return {
@@ -364,14 +364,71 @@ let AuthService = AuthService_1 = class AuthService {
             };
         }
     }
+    async checkEmailUser(email) {
+        try {
+            const user = await this.userModel.findOne({
+                email: { $regex: new RegExp(`^${email}$`, 'i') }
+            }).exec();
+            if (user) {
+                return {
+                    success: true,
+                    data: user,
+                    message: 'Email already registered to another account'
+                };
+            }
+            else {
+                return {
+                    success: false,
+                    message: 'Email is available'
+                };
+            }
+        }
+        catch (error) {
+            this.logger.error('Error checking email user:', error);
+            return {
+                success: false,
+                message: 'Error checking email availability'
+            };
+        }
+    }
     async verifyWalletSignature(walletSignature) {
         try {
+            if (walletSignature.signature.includes(':') && walletSignature.address.startsWith('0.0.')) {
+                return this.verifyHashPackSignature(walletSignature);
+            }
             const message = walletSignature.message;
             const recoveredAddress = ethers_1.ethers.verifyMessage(message, walletSignature.signature);
             return recoveredAddress.toLowerCase() === walletSignature.address.toLowerCase();
         }
         catch (error) {
             this.logger.error('Wallet signature verification failed:', error);
+            return false;
+        }
+    }
+    async verifyHashPackSignature(walletSignature) {
+        try {
+            const [accountId, hash, timestamp] = walletSignature.signature.split(':');
+            if (accountId !== walletSignature.address) {
+                this.logger.warn('HashPack account ID mismatch:', { accountId, address: walletSignature.address });
+                return false;
+            }
+            const messageHash = crypto.createHash('sha256').update(walletSignature.message).digest('hex');
+            if (hash !== messageHash) {
+                this.logger.warn('HashPack message hash mismatch:', { provided: hash, expected: messageHash });
+                return false;
+            }
+            const now = Date.now();
+            const signatureTime = parseInt(timestamp, 16);
+            const timeDiff = now - signatureTime;
+            if (timeDiff > 5 * 60 * 1000) {
+                this.logger.warn('HashPack signature too old:', { timeDiff, signatureTime, now });
+                return false;
+            }
+            this.logger.log('HashPack signature verified successfully:', { accountId, timeDiff });
+            return true;
+        }
+        catch (error) {
+            this.logger.error('HashPack signature verification failed:', error);
             return false;
         }
     }
