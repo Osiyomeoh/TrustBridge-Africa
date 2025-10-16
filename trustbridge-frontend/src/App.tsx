@@ -41,6 +41,8 @@ import GetTestTokens from './pages/GetTestTokens';
 import HederaWalletTest from './pages/HederaWalletTest';
 import HederaBasicTest from './pages/HederaBasicTest';
 import DiditCallback from './pages/DiditCallback';
+import Collections from './pages/Collections';
+import Activity from './pages/Activity';
 import GovernmentIdRequirements from './pages/help/GovernmentIdRequirements';
 import ProofOfAddressRequirements from './pages/help/ProofOfAddressRequirements';
 import ProfessionalLicenseRequirements from './pages/help/ProfessionalLicenseRequirements';
@@ -132,6 +134,22 @@ const App: React.FC = () => {
                     <div className="min-h-screen bg-black text-off-white">
                       <UniversalHeader />
                       <AssetMarketplace />
+                    </div>
+                  } />
+                  
+                  {/* Collections - Browse NFT Collections */}
+                  <Route path="/collections" element={
+                    <div className="min-h-screen bg-black text-off-white">
+                      <UniversalHeader />
+                      <Collections />
+                    </div>
+                  } />
+                  
+                  {/* Activity Feed - Recent Marketplace Activity */}
+                  <Route path="/activity" element={
+                    <div className="min-h-screen bg-black text-off-white">
+                      <UniversalHeader />
+                      <Activity />
                     </div>
                   } />
                   

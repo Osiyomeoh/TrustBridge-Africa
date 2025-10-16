@@ -2448,6 +2448,91 @@ class ContractService {
     }
   }
 
+  // Accept Offer on Digital Asset (Seller accepts buyer's offer)
+  async acceptOfferOnDigitalAsset(listingId: string, buyerAddress: string): Promise<{ transactionId: string }> {
+    try {
+      const signer = await this.getSigner();
+      
+      console.log('Accepting offer:', { listingId, buyerAddress });
+
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.trustMarketplace,
+        TRUST_MARKETPLACE_ABI,
+        signer
+      );
+
+      // Call acceptOffer function
+      const tx = await contract.acceptOffer(listingId, buyerAddress);
+      
+      console.log('Accept offer transaction sent:', tx.hash);
+      
+      const receipt = await tx.wait();
+      console.log('Offer accepted in block:', receipt.blockNumber);
+
+      return {
+        transactionId: tx.hash
+      };
+    } catch (error) {
+      console.error('Error accepting offer:', error);
+      throw error;
+    }
+  }
+
+  // Cancel/Reject Offer (Buyer cancels their own offer OR seller rejects)
+  async cancelOffer(listingId: string): Promise<{ transactionId: string }> {
+    try {
+      const signer = await this.getSigner();
+      
+      console.log('Canceling offer for listing:', listingId);
+
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.trustMarketplace,
+        TRUST_MARKETPLACE_ABI,
+        signer
+      );
+
+      // Call cancelOffer function
+      const tx = await contract.cancelOffer(listingId);
+      
+      console.log('Cancel offer transaction sent:', tx.hash);
+      
+      const receipt = await tx.wait();
+      console.log('Offer cancelled in block:', receipt.blockNumber);
+
+      return {
+        transactionId: tx.hash
+      };
+    } catch (error) {
+      console.error('Error canceling offer:', error);
+      throw error;
+    }
+  }
+
+  // Get all offers for a listing
+  async getOffersForListing(listingId: string): Promise<any[]> {
+    try {
+      const provider = new ethers.JsonRpcProvider(import.meta.env.VITE_JSON_RPC_RELAY_URL);
+      
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.trustMarketplace,
+        TRUST_MARKETPLACE_ABI,
+        provider
+      );
+
+      // Note: This requires the smart contract to have a function to get all offers
+      // For now, we'll return empty array and rely on events/backend
+      // In a production system, you'd query events or have a getOffers() function
+      
+      console.log('Getting offers for listing:', listingId);
+      
+      // Placeholder - in production, query OfferMade events
+      return [];
+    } catch (error) {
+      console.error('Error getting offers:', error);
+      return [];
+    }
+  }
+
   // Create Investment Pool
   async createPool(poolData: {
     name: string;
@@ -3280,6 +3365,273 @@ class ContractService {
       return bids;
     } catch (error) {
       console.error('Error getting user bids:', error);
+      throw error;
+    }
+  }
+
+  // ========================================
+  // TRUSTMARKETPLACEV2 WITH ROYALTIES
+  // ========================================
+
+  /**
+   * Set royalty info for an NFT (must be called by NFT owner before listing)
+   */
+  async setRoyaltyOnMarketplaceV2(
+    nftContractAddress: string,
+    tokenId: string,
+    royaltyPercentage: number,
+    signer: any
+  ): Promise<{ transactionId: string }> {
+    try {
+      console.log('👑 Setting royalty on MarketplaceV2:', {
+        nftContract: nftContractAddress,
+        tokenId,
+        royaltyPercentage
+      });
+
+      // Import V2 ABI
+      const MarketplaceV2ABI = await import('../contracts/TRUSTMarketplaceV2.json');
+      
+      // Connect to MarketplaceV2 contract
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.trustMarketplaceV2,
+        MarketplaceV2ABI.default || MarketplaceV2ABI,
+        signer
+      );
+
+      // Convert royalty percentage to basis points (5% = 500)
+      const basisPoints = Math.floor(royaltyPercentage * 100);
+
+      // Call setRoyalty function
+      const tx = await contract.setRoyalty(
+        nftContractAddress,
+        tokenId,
+        basisPoints
+      );
+
+      console.log('⏳ Waiting for royalty transaction...');
+      const receipt = await tx.wait();
+
+      console.log('✅ Royalty set successfully:', receipt.hash);
+
+      return {
+        transactionId: receipt.hash
+      };
+    } catch (error) {
+      console.error('❌ Failed to set royalty:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * List NFT on MarketplaceV2 smart contract
+   */
+  async listAssetOnMarketplaceV2(
+    nftContractAddress: string,
+    tokenId: string,
+    price: string,
+    duration: number,
+    signer: any
+  ): Promise<{ listingId: number; transactionId: string }> {
+    try {
+      console.log('📋 Listing asset on MarketplaceV2:', {
+        nftContract: nftContractAddress,
+        tokenId,
+        price,
+        duration
+      });
+
+      const MarketplaceV2ABI = await import('../contracts/TRUSTMarketplaceV2.json');
+      
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.trustMarketplaceV2,
+        MarketplaceV2ABI.default || MarketplaceV2ABI,
+        signer
+      );
+
+      // Convert price to wei (assuming 18 decimals for TRUST)
+      const priceInWei = ethers.parseUnits(price, 18);
+
+      // Call listAsset function
+      const tx = await contract.listAsset(
+        nftContractAddress,
+        tokenId,
+        priceInWei,
+        duration
+      );
+
+      console.log('⏳ Waiting for listing transaction...');
+      const receipt = await tx.wait();
+
+      // Get listingId from event
+      const event = receipt.logs.find((log: any) => {
+        try {
+          const parsed = contract.interface.parseLog(log);
+          return parsed?.name === 'AssetListed';
+        } catch {
+          return false;
+        }
+      });
+
+      let listingId = 0;
+      if (event) {
+        const parsed = contract.interface.parseLog(event);
+        listingId = Number(parsed?.args[0] || 0);
+      }
+
+      console.log('✅ Asset listed successfully:', {
+        listingId,
+        txHash: receipt.hash
+      });
+
+      return {
+        listingId,
+        transactionId: receipt.hash
+      };
+    } catch (error) {
+      console.error('❌ Failed to list asset:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Buy NFT from MarketplaceV2 (with automatic royalty distribution)
+   */
+  async buyNFTFromMarketplaceV2(
+    listingId: number,
+    signer: any
+  ): Promise<{ 
+    transactionId: string;
+    royaltyPaid: string;
+    platformFee: string;
+    sellerAmount: string;
+  }> {
+    try {
+      console.log('🛒 Buying NFT from MarketplaceV2:', { listingId });
+
+      const MarketplaceV2ABI = await import('../contracts/TRUSTMarketplaceV2.json');
+      
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.trustMarketplaceV2,
+        MarketplaceV2ABI.default || MarketplaceV2ABI,
+        signer
+      );
+
+      // Call buyNFT function
+      const tx = await contract.buyNFT(listingId);
+
+      console.log('⏳ Waiting for purchase transaction...');
+      const receipt = await tx.wait();
+
+      // Parse AssetSold event to get payment details
+      const saleEvent = receipt.logs.find((log: any) => {
+        try {
+          const parsed = contract.interface.parseLog(log);
+          return parsed?.name === 'AssetSold';
+        } catch {
+          return false;
+        }
+      });
+
+      let royaltyPaid = '0';
+      let platformFee = '0';
+      let sellerAmount = '0';
+
+      if (saleEvent) {
+        const parsed = contract.interface.parseLog(saleEvent);
+        platformFee = ethers.formatUnits(parsed?.args[4] || 0, 18);
+        royaltyPaid = ethers.formatUnits(parsed?.args[5] || 0, 18);
+        const totalPrice = ethers.formatUnits(parsed?.args[3] || 0, 18);
+        sellerAmount = (parseFloat(totalPrice) - parseFloat(platformFee) - parseFloat(royaltyPaid)).toString();
+      }
+
+      console.log('✅ NFT purchased successfully:', {
+        txHash: receipt.hash,
+        royaltyPaid: royaltyPaid + ' TRUST',
+        platformFee: platformFee + ' TRUST',
+        sellerAmount: sellerAmount + ' TRUST'
+      });
+
+      return {
+        transactionId: receipt.hash,
+        royaltyPaid,
+        platformFee,
+        sellerAmount
+      };
+    } catch (error) {
+      console.error('❌ Failed to buy NFT:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Approve NFT for MarketplaceV2 contract
+   */
+  async approveNFTForMarketplaceV2(
+    nftContractAddress: string,
+    tokenId: string,
+    signer: any
+  ): Promise<{ transactionId: string }> {
+    try {
+      console.log('✅ Approving NFT for MarketplaceV2...');
+
+      const nftContract = new ethers.Contract(
+        nftContractAddress,
+        ASSET_NFT_ABI,
+        signer
+      );
+
+      const tx = await nftContract.approve(
+        CONTRACT_ADDRESSES.trustMarketplaceV2,
+        tokenId
+      );
+
+      const receipt = await tx.wait();
+      
+      console.log('✅ NFT approved for marketplace');
+
+      return {
+        transactionId: receipt.hash
+      };
+    } catch (error) {
+      console.error('❌ Failed to approve NFT:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Approve TRUST tokens for MarketplaceV2 contract
+   */
+  async approveTRUSTForMarketplaceV2(
+    amount: string,
+    signer: any
+  ): Promise<{ transactionId: string }> {
+    try {
+      console.log('💰 Approving TRUST for MarketplaceV2:', amount);
+
+      const trustContract = new ethers.Contract(
+        CONTRACT_ADDRESSES.trustToken,
+        TRUST_TOKEN_ABI,
+        signer
+      );
+
+      // Convert to wei
+      const amountInWei = ethers.parseUnits(amount, 18);
+
+      const tx = await trustContract.approve(
+        CONTRACT_ADDRESSES.trustMarketplaceV2,
+        amountInWei
+      );
+
+      const receipt = await tx.wait();
+      
+      console.log('✅ TRUST tokens approved for marketplace');
+
+      return {
+        transactionId: receipt.hash
+      };
+    } catch (error) {
+      console.error('❌ Failed to approve TRUST:', error);
       throw error;
     }
   }

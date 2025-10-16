@@ -39,6 +39,9 @@ import { HealthModule } from './health/health.module';
 import { TradingModule } from './trading/trading.module';
 import { AMCModule } from './amc/amc.module';
 import { ApiModule } from './api/api.module';
+import { CollectionsModule } from './collections/collections.module';
+import { RoyaltiesModule } from './royalties/royalties.module';
+import { ActivityModule } from './activity/activity.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -119,6 +122,9 @@ import { AppController } from './app.controller';
     TradingModule,
     AMCModule,
     ApiModule,
+    CollectionsModule,
+    RoyaltiesModule,
+    ActivityModule,
   ],
 })
 export class AppModule {}

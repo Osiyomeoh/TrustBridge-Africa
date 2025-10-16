@@ -39,6 +39,9 @@ const health_module_1 = require("./health/health.module");
 const trading_module_1 = require("./trading/trading.module");
 const amc_module_1 = require("./amc/amc.module");
 const api_module_1 = require("./api/api.module");
+const collections_module_1 = require("./collections/collections.module");
+const royalties_module_1 = require("./royalties/royalties.module");
+const activity_module_1 = require("./activity/activity.module");
 const app_controller_1 = require("./app.controller");
 let AppModule = class AppModule {
 };
@@ -91,6 +94,9 @@ exports.AppModule = AppModule = __decorate([
             trading_module_1.TradingModule,
             amc_module_1.AMCModule,
             api_module_1.ApiModule,
+            collections_module_1.CollectionsModule,
+            royalties_module_1.RoyaltiesModule,
+            activity_module_1.ActivityModule,
         ],
     })
 ], AppModule);

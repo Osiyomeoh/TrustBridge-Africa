@@ -23,6 +23,42 @@ import type {
   TypedContractMethod,
 } from "../common";
 
+export declare namespace TrustBridgeMarketplace {
+  export type ListingStruct = {
+    listingId: BigNumberish;
+    seller: AddressLike;
+    nftAddress: AddressLike;
+    serialNumber: BigNumberish;
+    price: BigNumberish;
+    isActive: boolean;
+    listedAt: BigNumberish;
+    creator: AddressLike;
+    royaltyBps: BigNumberish;
+  };
+
+  export type ListingStructOutput = [
+    listingId: bigint,
+    seller: string,
+    nftAddress: string,
+    serialNumber: bigint,
+    price: bigint,
+    isActive: boolean,
+    listedAt: bigint,
+    creator: string,
+    royaltyBps: bigint
+  ] & {
+    listingId: bigint;
+    seller: string;
+    nftAddress: string;
+    serialNumber: bigint;
+    price: bigint;
+    isActive: boolean;
+    listedAt: bigint;
+    creator: string;
+    royaltyBps: bigint;
+  };
+}
+
 export interface TrustBridgeMarketplaceInterface extends Interface {
   getFunction(
     nameOrSignature:
@@ -30,12 +66,16 @@ export interface TrustBridgeMarketplaceInterface extends Interface {
       | "buyNFT"
       | "calculateFees"
       | "cancelListing"
+      | "getActiveListings"
       | "getConfig"
       | "getListing"
+      | "getListingById"
       | "isNFTListed"
       | "listNFT"
       | "listings"
       | "nextListingId"
+      | "nftCreators"
+      | "nftRoyalties"
       | "nftToListing"
       | "owner"
       | "platformFeeBps"
@@ -73,9 +113,17 @@ export interface TrustBridgeMarketplaceInterface extends Interface {
     functionFragment: "cancelListing",
     values: [BigNumberish]
   ): string;
+  encodeFunctionData(
+    functionFragment: "getActiveListings",
+    values: [BigNumberish]
+  ): string;
   encodeFunctionData(functionFragment: "getConfig", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "getListing",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getListingById",
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
@@ -84,7 +132,7 @@ export interface TrustBridgeMarketplaceInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "listNFT",
-    values: [AddressLike, BigNumberish, BigNumberish]
+    values: [AddressLike, BigNumberish, BigNumberish, AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "listings",
@@ -93,6 +141,14 @@ export interface TrustBridgeMarketplaceInterface extends Interface {
   encodeFunctionData(
     functionFragment: "nextListingId",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "nftCreators",
+    values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "nftRoyalties",
+    values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "nftToListing",
@@ -141,8 +197,16 @@ export interface TrustBridgeMarketplaceInterface extends Interface {
     functionFragment: "cancelListing",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "getActiveListings",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "getConfig", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "getListing", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "getListingById",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "isNFTListed",
     data: BytesLike
@@ -151,6 +215,14 @@ export interface TrustBridgeMarketplaceInterface extends Interface {
   decodeFunctionResult(functionFragment: "listings", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "nextListingId",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "nftCreators",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "nftRoyalties",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -294,6 +366,8 @@ export namespace SoldEvent {
     serialNumber: BigNumberish,
     price: BigNumberish,
     platformFee: BigNumberish,
+    royaltyFee: BigNumberish,
+    creator: AddressLike,
     timestamp: BigNumberish
   ];
   export type OutputTuple = [
@@ -304,6 +378,8 @@ export namespace SoldEvent {
     serialNumber: bigint,
     price: bigint,
     platformFee: bigint,
+    royaltyFee: bigint,
+    creator: string,
     timestamp: bigint
   ];
   export interface OutputObject {
@@ -314,6 +390,8 @@ export namespace SoldEvent {
     serialNumber: bigint;
     price: bigint;
     platformFee: bigint;
+    royaltyFee: bigint;
+    creator: string;
     timestamp: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
@@ -394,6 +472,12 @@ export interface TrustBridgeMarketplace extends BaseContract {
     "nonpayable"
   >;
 
+  getActiveListings: TypedContractMethod<
+    [_limit: BigNumberish],
+    [TrustBridgeMarketplace.ListingStructOutput[]],
+    "view"
+  >;
+
   getConfig: TypedContractMethod<
     [],
     [
@@ -423,6 +507,12 @@ export interface TrustBridgeMarketplace extends BaseContract {
     "view"
   >;
 
+  getListingById: TypedContractMethod<
+    [_listingId: BigNumberish],
+    [TrustBridgeMarketplace.ListingStructOutput],
+    "view"
+  >;
+
   isNFTListed: TypedContractMethod<
     [_nftAddress: AddressLike, _serialNumber: BigNumberish],
     [[boolean, bigint]],
@@ -433,7 +523,9 @@ export interface TrustBridgeMarketplace extends BaseContract {
     [
       _nftAddress: AddressLike,
       _serialNumber: BigNumberish,
-      _price: BigNumberish
+      _price: BigNumberish,
+      _creator: AddressLike,
+      _royaltyBps: BigNumberish
     ],
     [bigint],
     "nonpayable"
@@ -442,7 +534,17 @@ export interface TrustBridgeMarketplace extends BaseContract {
   listings: TypedContractMethod<
     [arg0: BigNumberish],
     [
-      [bigint, string, string, bigint, bigint, boolean, bigint] & {
+      [
+        bigint,
+        string,
+        string,
+        bigint,
+        bigint,
+        boolean,
+        bigint,
+        string,
+        bigint
+      ] & {
         listingId: bigint;
         seller: string;
         nftAddress: string;
@@ -450,12 +552,26 @@ export interface TrustBridgeMarketplace extends BaseContract {
         price: bigint;
         isActive: boolean;
         listedAt: bigint;
+        creator: string;
+        royaltyBps: bigint;
       }
     ],
     "view"
   >;
 
   nextListingId: TypedContractMethod<[], [bigint], "view">;
+
+  nftCreators: TypedContractMethod<
+    [arg0: AddressLike, arg1: BigNumberish],
+    [string],
+    "view"
+  >;
+
+  nftRoyalties: TypedContractMethod<
+    [arg0: AddressLike, arg1: BigNumberish],
+    [bigint],
+    "view"
+  >;
 
   nftToListing: TypedContractMethod<
     [arg0: AddressLike, arg1: BigNumberish],
@@ -516,6 +632,13 @@ export interface TrustBridgeMarketplace extends BaseContract {
     nameOrSignature: "cancelListing"
   ): TypedContractMethod<[_listingId: BigNumberish], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "getActiveListings"
+  ): TypedContractMethod<
+    [_limit: BigNumberish],
+    [TrustBridgeMarketplace.ListingStructOutput[]],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "getConfig"
   ): TypedContractMethod<
     [],
@@ -547,6 +670,13 @@ export interface TrustBridgeMarketplace extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "getListingById"
+  ): TypedContractMethod<
+    [_listingId: BigNumberish],
+    [TrustBridgeMarketplace.ListingStructOutput],
+    "view"
+  >;
+  getFunction(
     nameOrSignature: "isNFTListed"
   ): TypedContractMethod<
     [_nftAddress: AddressLike, _serialNumber: BigNumberish],
@@ -559,7 +689,9 @@ export interface TrustBridgeMarketplace extends BaseContract {
     [
       _nftAddress: AddressLike,
       _serialNumber: BigNumberish,
-      _price: BigNumberish
+      _price: BigNumberish,
+      _creator: AddressLike,
+      _royaltyBps: BigNumberish
     ],
     [bigint],
     "nonpayable"
@@ -569,7 +701,17 @@ export interface TrustBridgeMarketplace extends BaseContract {
   ): TypedContractMethod<
     [arg0: BigNumberish],
     [
-      [bigint, string, string, bigint, bigint, boolean, bigint] & {
+      [
+        bigint,
+        string,
+        string,
+        bigint,
+        bigint,
+        boolean,
+        bigint,
+        string,
+        bigint
+      ] & {
         listingId: bigint;
         seller: string;
         nftAddress: string;
@@ -577,6 +719,8 @@ export interface TrustBridgeMarketplace extends BaseContract {
         price: bigint;
         isActive: boolean;
         listedAt: bigint;
+        creator: string;
+        royaltyBps: bigint;
       }
     ],
     "view"
@@ -584,6 +728,20 @@ export interface TrustBridgeMarketplace extends BaseContract {
   getFunction(
     nameOrSignature: "nextListingId"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "nftCreators"
+  ): TypedContractMethod<
+    [arg0: AddressLike, arg1: BigNumberish],
+    [string],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "nftRoyalties"
+  ): TypedContractMethod<
+    [arg0: AddressLike, arg1: BigNumberish],
+    [bigint],
+    "view"
+  >;
   getFunction(
     nameOrSignature: "nftToListing"
   ): TypedContractMethod<
@@ -708,7 +866,7 @@ export interface TrustBridgeMarketplace extends BaseContract {
       PriceUpdatedEvent.OutputObject
     >;
 
-    "Sold(uint256,address,address,address,uint256,uint256,uint256,uint256)": TypedContractEvent<
+    "Sold(uint256,address,address,address,uint256,uint256,uint256,uint256,address,uint256)": TypedContractEvent<
       SoldEvent.InputTuple,
       SoldEvent.OutputTuple,
       SoldEvent.OutputObject

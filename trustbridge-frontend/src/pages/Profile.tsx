@@ -1003,84 +1003,98 @@ const Profile: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Portfolio Stats */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                    <div className="text-center p-1.5 min-w-0">
-                      <p className="text-xs sm:text-sm font-semibold text-neon-green truncate" title={userStats.portfolioValue}>
-                        {portfolioLoading ? (
-                          <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mx-auto" />
-                        ) : (
-                          userStats.portfolioValue
-                        )}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5 leading-tight">Portfolio Value</p>
-                    </div>
-                    <div className="text-center p-1.5 min-w-0">
-                      <p className="text-xs sm:text-sm font-semibold text-electric-mint truncate" title={userStats.usdValue}>
-                        {portfolioLoading ? (
-                          <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mx-auto" />
-                        ) : (
-                          userStats.usdValue
-                        )}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5 leading-tight">USD Value</p>
-                    </div>
-                    <div className="text-center p-1.5 min-w-0">
-                      <p className="text-xs sm:text-sm font-semibold text-off-white">
-                        {assetsLoading ? (
-                          <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mx-auto" />
-                        ) : (
-                          userStats.assetsCount
-                        )}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5 leading-tight">Assets</p>
-                    </div>
-                    <div className="text-center p-1.5 min-w-0">
-                      <p className="text-xs sm:text-sm font-semibold text-purple-400">
-                        {assetsLoading ? (
-                          <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin mx-auto" />
-                        ) : (
-                          userStats.createdCount
-                        )}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5 leading-tight">Created</p>
+                  {/* Portfolio Stats - Professional Layout */}
+                  <div className="mt-6 pt-6 border-t border-gray-800">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-4">
+                      {/* Portfolio Value */}
+                      <div className="space-y-2 min-w-0">
+                        <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide truncate">Portfolio</p>
+                        <p className="text-base sm:text-lg lg:text-xl font-bold text-neon-green truncate" title={userStats.portfolioValue}>
+                          {portfolioLoading ? (
+                            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                          ) : (
+                            userStats.portfolioValue
+                          )}
+                        </p>
+                      </div>
+
+                      {/* USD Value */}
+                      <div className="space-y-2 min-w-0">
+                        <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide truncate">USD Value</p>
+                        <p className="text-base sm:text-lg lg:text-xl font-bold text-electric-mint truncate" title={userStats.usdValue}>
+                          {portfolioLoading ? (
+                            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                          ) : (
+                            userStats.usdValue
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Assets */}
+                      <div className="space-y-2 min-w-0">
+                        <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide truncate">Assets</p>
+                        <p className="text-base sm:text-lg lg:text-xl font-bold text-off-white truncate">
+                          {assetsLoading ? (
+                            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                          ) : (
+                            userStats.assetsCount
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Created */}
+                      <div className="space-y-2 min-w-0">
+                        <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide truncate">Created</p>
+                        <p className="text-base sm:text-lg lg:text-xl font-bold text-purple-400 truncate">
+                          {assetsLoading ? (
+                            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                          ) : (
+                            userStats.createdCount
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Royalties */}
+                      <div className="space-y-2 min-w-0">
+                        <p className="text-[10px] sm:text-xs text-purple-300 uppercase tracking-wide flex items-center gap-1">
+                          <span>👑</span>
+                          <span className="truncate">Royalties</span>
+                        </p>
+                        <p className="text-base sm:text-lg lg:text-xl font-bold text-purple-400 whitespace-nowrap overflow-hidden text-ellipsis">
+                          0 TRUST
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-2">
+                {/* Action Buttons - Compact */}
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="neon"
                     onClick={() => navigate('/dashboard/create-digital-asset')}
-                    className="px-4 py-2 text-sm font-medium"
+                    className="px-3 py-1.5 text-xs font-medium"
                   >
-                    <Plus className="w-4 h-4 mr-1.5" />
-                    Create Digital Asset
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Digital Asset
                   </Button>
                   <Button
                     variant="outline"
                     onClick={() => handleCreateAsset('rwa')}
-                    className="px-4 py-2 text-sm font-medium border-neon-green/30 text-neon-green hover:bg-neon-green/10"
+                    className="px-3 py-1.5 text-xs font-medium border-neon-green/30 text-neon-green hover:bg-neon-green/10"
                     disabled={user?.kycStatus?.toLowerCase() !== 'approved'}
                   >
-                    <Building2 className="w-4 h-4 mr-1.5" />
-                    Create RWA
-                    {user?.kycStatus?.toLowerCase() !== 'approved' && (
-                      <span className="ml-1 text-xs">(KYC Required)</span>
-                    )}
+                    <Building2 className="w-3.5 h-3.5 mr-1" />
+                    RWA {user?.kycStatus?.toLowerCase() !== 'approved' && '(KYC)'}
                   </Button>
                   <Button
                     variant="outline"
                     onClick={handleCreateAMC}
-                    className="px-4 py-2 text-sm font-medium border-purple-400/30 text-purple-400 hover:bg-purple-400/10"
+                    className="px-3 py-1.5 text-xs font-medium border-purple-400/30 text-purple-400 hover:bg-purple-400/10"
                     disabled={user?.kycStatus?.toLowerCase() !== 'approved'}
                   >
-                    <Shield className="w-4 h-4 mr-1.5" />
-                    Create AMC
-                    {user?.kycStatus?.toLowerCase() !== 'approved' && (
-                      <span className="ml-1 text-xs">(KYC Required)</span>
-                    )}
+                    <Shield className="w-3.5 h-3.5 mr-1" />
+                    AMC {user?.kycStatus?.toLowerCase() !== 'approved' && '(KYC)'}
                   </Button>
                 </div>
               </div>

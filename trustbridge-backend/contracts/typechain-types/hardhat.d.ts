@@ -166,6 +166,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TrustBridgeMarketplace__factory>;
     getContractFactory(
+      name: "TrustBridgeOffers",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TrustBridgeOffers__factory>;
+    getContractFactory(
       name: "TRUSTFaucet",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TRUSTFaucet__factory>;
@@ -173,6 +177,10 @@ declare module "hardhat/types/runtime" {
       name: "TRUSTMarketplace",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TRUSTMarketplace__factory>;
+    getContractFactory(
+      name: "TRUSTMarketplaceV2",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TRUSTMarketplaceV2__factory>;
     getContractFactory(
       name: "TrustToken",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -385,6 +393,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.TrustBridgeMarketplace>;
     getContractAt(
+      name: "TrustBridgeOffers",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TrustBridgeOffers>;
+    getContractAt(
       name: "TRUSTFaucet",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -394,6 +407,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.TRUSTMarketplace>;
+    getContractAt(
+      name: "TRUSTMarketplaceV2",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TRUSTMarketplaceV2>;
     getContractAt(
       name: "TrustToken",
       address: string | ethers.Addressable,
@@ -573,6 +591,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TrustBridgeMarketplace>;
     deployContract(
+      name: "TrustBridgeOffers",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TrustBridgeOffers>;
+    deployContract(
       name: "TRUSTFaucet",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TRUSTFaucet>;
@@ -580,6 +602,10 @@ declare module "hardhat/types/runtime" {
       name: "TRUSTMarketplace",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TRUSTMarketplace>;
+    deployContract(
+      name: "TRUSTMarketplaceV2",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TRUSTMarketplaceV2>;
     deployContract(
       name: "TrustToken",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -792,6 +818,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TrustBridgeMarketplace>;
     deployContract(
+      name: "TrustBridgeOffers",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TrustBridgeOffers>;
+    deployContract(
       name: "TRUSTFaucet",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -801,6 +832,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TRUSTMarketplace>;
+    deployContract(
+      name: "TRUSTMarketplaceV2",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TRUSTMarketplaceV2>;
     deployContract(
       name: "TrustToken",
       args: any[],

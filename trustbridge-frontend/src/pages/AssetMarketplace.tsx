@@ -771,6 +771,15 @@ const AssetMarketplace: React.FC = () => {
                             </div>
                           </div>
                         )}
+                        {/* Royalty Badge */}
+                        {asset.royaltyPercentage && parseFloat(asset.royaltyPercentage) > 0 && (
+                          <div className="absolute bottom-3 left-3">
+                            <div className="px-2 py-1 bg-purple-600/90 text-white text-xs font-semibold rounded-full flex items-center gap-1">
+                              <span>👑</span>
+                              <span>{asset.royaltyPercentage}% Royalty</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <CardContent className="p-3">
                         <div className="flex items-center space-x-2 mb-2">

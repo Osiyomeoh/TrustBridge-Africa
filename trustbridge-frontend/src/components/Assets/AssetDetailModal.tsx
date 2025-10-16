@@ -8,6 +8,7 @@ import { useToast } from '../../hooks/useToast';
 import { useWallet } from '../../contexts/WalletContext';
 import { TrustTokenService } from '../../services/trust-token.service';
 import { marketplaceContractService } from '../../services/marketplace-contract.service';
+import { marketplaceV2Service } from '../../services/marketplaceV2Service';
 import { trackActivity } from '../../utils/activityTracker';
 import { apiService } from '../../services/api';
 import { 
@@ -175,6 +176,9 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
         throw new Error('Please connect your wallet to list assets');
       }
 
+      const assetPrice = parseFloat(asset.price || asset.totalValue || '100');
+      const royaltyPercentage = parseFloat(asset.royaltyPercentage || asset.metadata?.royaltyPercentage || '0');
+
       console.log('📋 Listing asset - transferring to marketplace escrow:', asset.name);
 
       // ESCROW MODEL: Transfer NFT to marketplace, marketplace holds it until sold
@@ -235,8 +239,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
         isLoading: false
       });
 
-      // No localStorage - blockchain is source of truth
-
       // Track activity
       trackActivity({
         type: 'listing',
@@ -260,8 +262,10 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
       });
 
       toast({
-        title: 'Asset Listed on Marketplace!',
-        description: `${asset.name} is now available for purchase on the decentralized marketplace.`,
+        title: 'Asset Listed Successfully!',
+        description: royaltyPercentage > 0 
+          ? `${asset.name} listed with ${royaltyPercentage}% royalty!`
+          : `${asset.name} is now listed on the marketplace`,
         variant: 'default'
       });
 
@@ -269,7 +273,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
       if (onAssetUpdate) {
         setTimeout(() => {
           onAssetUpdate();
-          onClose(); // Close modal after update
+          onClose();
         }, 1500);
       }
 
@@ -304,19 +308,76 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
         throw new Error('Please connect your wallet to unlist assets');
       }
 
-      console.log('🔓 Unlisting asset - requesting return from marketplace escrow:', asset.name);
-
-      // Call backend to transfer NFT back from marketplace escrow to seller
-      console.log('📞 Calling backend to return NFT from escrow...');
-      const cancelResult = await apiService.post('/hedera/marketplace/return-nft', {
-        nftTokenId: asset.tokenId,
-        serialNumber: parseInt(asset.serialNumber || '1'),
-        sellerAccountId: accountId
+      console.log('🔓 Unlisting asset:', {
+        name: asset.name,
+        tokenId: asset.tokenId,
+        currentOwner: asset.owner
       });
 
-      console.log('✅ NFT returned from escrow:', cancelResult.data.transactionId);
+      // Check where the NFT currently is
+      const marketplaceEscrowAccount = '0.0.6916959'; // Marketplace escrow account
+      const isInEscrow = asset.owner === marketplaceEscrowAccount;
+
+      if (isInEscrow) {
+        // ESCROW MODEL: Transfer NFT back from marketplace to seller
+        console.log('🏦 Asset is in escrow - transferring back to seller');
+
+        const transferTx = new TransferTransaction()
+          .addNftTransfer(
+            TokenId.fromString(asset.tokenId),
+            parseInt(asset.serialNumber || '1'),
+            AccountId.fromString(marketplaceEscrowAccount), // From marketplace escrow
+            AccountId.fromString(accountId) // Back to seller
+          )
+          .setTransactionMemo(`Unlist from sale: ${asset.name}`)
+          .setMaxTransactionFee(new Hbar(2));
+
+        transferTx.freezeWithSigner(signer);
+        const signedTx = await signer.signTransaction(transferTx);
+        const response = await signedTx.execute(hederaClient);
+        await response.getReceipt(hederaClient);
+
+        console.log('✅ NFT transferred back to seller from escrow');
+      } else {
+        // SMART CONTRACT MODEL: Try to cancel listing on contract
+        console.log('📝 Asset is in smart contract - attempting to cancel listing');
+        
+        try {
+          // Try to cancel listing on smart contract
+          const cancelResult = await marketplaceV2Service.cancelListing(
+            marketplaceListingStatus.listingId || 1,
+            accountId,
+            signer,
+            hederaClient
+          );
+          
+          console.log('✅ Listing cancelled on smart contract:', cancelResult.transactionId);
+        } catch (contractError) {
+          console.warn('⚠️ Smart contract cancellation failed, trying direct transfer...');
+          
+          // Fallback: Try direct transfer from current owner
+          const transferTx = new TransferTransaction()
+            .addNftTransfer(
+              TokenId.fromString(asset.tokenId),
+              parseInt(asset.serialNumber || '1'),
+              AccountId.fromString(asset.owner), // From current owner (could be contract)
+              AccountId.fromString(accountId) // Back to seller
+            )
+            .setTransactionMemo(`Unlist from sale: ${asset.name}`)
+            .setMaxTransactionFee(new Hbar(2));
+
+          transferTx.freezeWithSigner(signer);
+          const signedTx = await signer.signTransaction(transferTx);
+          const response = await signedTx.execute(hederaClient);
+          await response.getReceipt(hederaClient);
+
+          console.log('✅ NFT transferred back to seller via direct transfer');
+        }
+      }
+
+      console.log('✅ Asset is now UNLISTED (returned to seller)');
       
-      // Optimistic UI update - immediately show as unlisted after transaction executes
+      // Optimistic UI update
       setLocalListingStatus(false);
 
       // Update marketplace status state
@@ -326,8 +387,6 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
         isLoading: false
       });
 
-      // No localStorage - blockchain is source of truth
-
       // Track activity
       trackActivity({
         type: 'unlisting',
@@ -335,7 +394,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
         assetName: asset.name,
         assetImage: asset.imageURI || asset.image,
         from: accountId,
-        transactionId: cancelResult.transactionId
+        transactionId: 'unlisted-' + Date.now() // Generate unique ID for tracking
       });
 
       // Submit to HCS for immutable audit trail
@@ -345,12 +404,12 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
         assetName: asset.name,
         from: accountId,
         timestamp: new Date().toISOString(),
-        transactionId: cancelResult.transactionId
+        transactionId: 'unlisted-' + Date.now()
       });
 
       toast({
-        title: 'Asset Unlisted from Marketplace!',
-        description: `${asset.name} is no longer for sale on the decentralized marketplace.`,
+        title: 'Asset Unlisted Successfully!',
+        description: `${asset.name} is no longer for sale and has been returned to you.`,
         variant: 'default'
       });
 
@@ -358,15 +417,23 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
       if (onAssetUpdate) {
         setTimeout(() => {
           onAssetUpdate();
-          onClose(); // Close modal after update
+          onClose();
         }, 1500);
       }
 
     } catch (error) {
       console.error('Failed to unlist asset:', error);
+      
+      let errorMessage = error instanceof Error ? error.message : 'Failed to remove blockchain listing';
+      
+      // Provide helpful error message for common issues
+      if (errorMessage.includes('INVALID_SIGNATURE')) {
+        errorMessage = 'Unable to unlist this asset. It may be from the old system. Please try listing it again with the new escrow system.';
+      }
+      
       toast({
         title: 'Unlisting Failed',
-        description: error instanceof Error ? error.message : 'Failed to remove blockchain listing',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {
@@ -602,118 +669,111 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
         throw new Error(`Insufficient TRUST tokens. You need ${assetPrice} TRUST but only have ${buyerBalance} TRUST.`);
       }
 
-      console.log('💰 Buying asset:', {
+      const royaltyPercentage = parseFloat(asset.royaltyPercentage || asset.metadata?.royaltyPercentage || '0');
+      
+      console.log('💰 Buying asset from marketplace escrow:', {
         asset: asset.name,
         price: assetPrice,
-        from: accountId,
-        to: asset.owner
+        royalty: royaltyPercentage + '%',
+        from: '0.0.6916959', // Marketplace escrow
+        to: accountId
       });
 
-      // Use listing ID from marketplace contract state
-      const listingId = marketplaceListingStatus.listingId;
+      // ESCROW MODEL: Manual royalty distribution
+      const marketplaceAccountId = '0.0.6916959'; // Marketplace escrow account
+      const creatorAccountId = asset.owner; // Original creator
+      const platformFeePercentage = 2.5; // 2.5% platform fee
+      
+      // Calculate payments
+      const platformFee = (assetPrice * platformFeePercentage) / 100;
+      const royaltyAmount = royaltyPercentage > 0 ? (assetPrice * royaltyPercentage) / 100 : 0;
+      const sellerAmount = assetPrice - platformFee - royaltyAmount;
 
-      if (!listingId || listingId === 0) {
-        throw new Error('Asset is not listed on the marketplace');
-      }
+      console.log('💸 Payment breakdown:', {
+        totalPrice: assetPrice,
+        platformFee: platformFee,
+        royaltyAmount: royaltyAmount,
+        sellerAmount: sellerAmount
+      });
 
-      // Call marketplace contract to buy NFT
-      // This handles:
-      // 1. TRUST token transfer (buyer → seller + platform fee)
-      // Use HTS direct transfer instead of smart contract (HTS NFTs cannot be transferred via Solidity)
-      console.log('🛒 Buying NFT using HTS direct transfer:');
-      console.log('   Asset:', asset.name);
-      console.log('   Token ID:', asset.tokenId);
-      console.log('   Serial Number:', asset.serialNumber);
-      console.log('   Price:', assetPrice, 'TRUST');
-      console.log('   From:', asset.owner);
-      console.log('   To:', accountId);
-      
-      // Calculate platform fee (5%)
-      const platformFeePercent = 5;
-      const platformFee = Math.floor((parseFloat(assetPrice) * platformFeePercent) / 100);
-      const sellerAmount = parseFloat(assetPrice) - platformFee;
-      const marketplaceAccount = '0.0.6916959'; // Platform treasury
-      const trustTokenId = '0.0.6935064'; // TRUST token ID (correct)
-      
-      console.log('💰 Payment breakdown:');
-      console.log('   Total price:', assetPrice, 'TRUST');
-      console.log('   Platform fee (5%):', platformFee, 'TRUST');
-      console.log('   Seller receives:', sellerAmount, 'TRUST');
-      
-      // Step 1: Transfer TRUST tokens (buyer -> seller + marketplace)
-      const trustTransferTx = new TransferTransaction()
-        .addTokenTransfer(trustTokenId, accountId, -parseFloat(assetPrice)) // Debit from buyer
-        .addTokenTransfer(trustTokenId, asset.owner, sellerAmount) // Credit to seller
-        .addTokenTransfer(trustTokenId, marketplaceAccount, platformFee) // Platform fee
-        .setTransactionMemo(`Buy: ${asset.name}`)
-        .freezeWithSigner(signer);
-      
-      console.log('💸 Step 1/3: Transferring TRUST tokens...');
-      console.log('   ⚠️ This will open HashPack for approval');
-      const signedTrustTx = await signer.signTransaction(trustTransferTx);
-      const trustTxResponse = await signedTrustTx.execute(hederaClient);
-      await trustTxResponse.getReceipt(hederaClient);
-      console.log('✅ TRUST tokens transferred:', trustTxResponse.transactionId.toString());
-      console.log('   View: https://hashscan.io/testnet/transaction/' + trustTxResponse.transactionId.toString());
-      
-      // Step 2: Associate token if needed (buyer must be associated with the NFT token)
-      console.log('🔗 Step 2/3: Associating NFT token...');
-      console.log('   Token to associate:', asset.tokenId);
-      try {
-        const { TokenAssociateTransaction } = await import('@hashgraph/sdk');
-        console.log('   ⚠️ This will open HashPack for approval');
-        const associateTx = new TokenAssociateTransaction()
-          .setAccountId(accountId)
-          .setTokenIds([TokenId.fromString(asset.tokenId)])
-          .freezeWithSigner(signer);
+      // STEP 1: Transfer TRUST tokens to seller
+      toast({
+        title: 'Processing Payment...',
+        description: `Sending ${sellerAmount} TRUST to seller`,
+        variant: 'default'
+      });
+
+      const sellerTransferTx = new TransferTransaction()
+        .addHbarTransfer(AccountId.fromString(accountId), new Hbar(-sellerAmount)) // From buyer
+        .addHbarTransfer(AccountId.fromString(creatorAccountId), new Hbar(sellerAmount)) // To seller
+        .setTransactionMemo(`Payment for ${asset.name}`)
+        .setMaxTransactionFee(new Hbar(2));
+
+      sellerTransferTx.freezeWithSigner(signer);
+      const signedSellerTx = await signer.signTransaction(sellerTransferTx);
+      const sellerResponse = await signedSellerTx.execute(hederaClient);
+      await sellerResponse.getReceipt(hederaClient);
+
+      console.log('✅ Payment sent to seller');
+
+      // STEP 2: Transfer royalty to creator (if any)
+      if (royaltyAmount > 0) {
+        console.log(`👑 Sending ${royaltyAmount} TRUST royalty to creator`);
         
-        const signedAssociateTx = await signer.signTransaction(associateTx);
-        const associateResponse = await signedAssociateTx.execute(hederaClient);
-        await associateResponse.getReceipt(hederaClient);
-        console.log('✅ Token associated:', associateResponse.transactionId.toString());
-        console.log('   View: https://hashscan.io/testnet/transaction/' + associateResponse.transactionId.toString());
-      } catch (associateError: any) {
-        // If already associated, that's fine
-        if (associateError.message?.includes('TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT')) {
-          console.log('✅ Token already associated - skipping');
-        } else {
-          console.error('❌ Token association FAILED:', associateError.message);
-          throw new Error(`Token association failed: ${associateError.message}`);
-        }
+        const royaltyTransferTx = new TransferTransaction()
+          .addHbarTransfer(AccountId.fromString(accountId), new Hbar(-royaltyAmount)) // From buyer
+          .addHbarTransfer(AccountId.fromString(creatorAccountId), new Hbar(royaltyAmount)) // To creator
+          .setTransactionMemo(`Royalty for ${asset.name}`)
+          .setMaxTransactionFee(new Hbar(2));
+
+        royaltyTransferTx.freezeWithSigner(signer);
+        const signedRoyaltyTx = await signer.signTransaction(royaltyTransferTx);
+        const royaltyResponse = await signedRoyaltyTx.execute(hederaClient);
+        await royaltyResponse.getReceipt(hederaClient);
+
+        console.log('✅ Royalty sent to creator');
       }
+
+      // STEP 3: Transfer platform fee to treasury
+      console.log(`💰 Sending ${platformFee} TRUST platform fee to treasury`);
       
-      // Step 3: Transfer NFT (seller -> buyer using allowance)
-      console.log('🎨 Step 3/3: Transferring NFT...');
-      console.log('   NFT:', asset.tokenId, 'Serial:', asset.serialNumber);
-      console.log('   From:', asset.owner);
-      console.log('   To:', accountId);
-      console.log('   ⚠️ This will open HashPack for approval');
+      const treasuryAccountId = '0.0.6916959'; // Use marketplace account as treasury
+      const platformTransferTx = new TransferTransaction()
+        .addHbarTransfer(AccountId.fromString(accountId), new Hbar(-platformFee)) // From buyer
+        .addHbarTransfer(AccountId.fromString(treasuryAccountId), new Hbar(platformFee)) // To treasury
+        .setTransactionMemo(`Platform fee for ${asset.name}`)
+        .setMaxTransactionFee(new Hbar(2));
+
+      platformTransferTx.freezeWithSigner(signer);
+      const signedPlatformTx = await signer.signTransaction(platformTransferTx);
+      const platformResponse = await signedPlatformTx.execute(hederaClient);
+      await platformResponse.getReceipt(hederaClient);
+
+      console.log('✅ Platform fee sent to treasury');
+
+      // STEP 4: Transfer NFT from marketplace escrow to buyer
+      console.log('🎨 Transferring NFT to buyer...');
       
       const nftTransferTx = new TransferTransaction()
-        .addApprovedNftTransfer(TokenId.fromString(asset.tokenId), asset.serialNumber, AccountId.fromString(asset.owner), AccountId.fromString(accountId))
-        .setTransactionMemo(`NFT Transfer: ${asset.name}`)
-        .freezeWithSigner(signer);
-      
+        .addNftTransfer(
+          TokenId.fromString(asset.tokenId),
+          parseInt(asset.serialNumber || '1'),
+          AccountId.fromString(marketplaceAccountId), // From marketplace escrow
+          AccountId.fromString(accountId) // To buyer
+        )
+        .setTransactionMemo(`Purchase: ${asset.name}`)
+        .setMaxTransactionFee(new Hbar(2));
+
+      nftTransferTx.freezeWithSigner(signer);
       const signedNftTx = await signer.signTransaction(nftTransferTx);
-      const nftTxResponse = await signedNftTx.execute(hederaClient);
-      await nftTxResponse.getReceipt(hederaClient);
-      console.log('✅ NFT transferred:', nftTxResponse.transactionId.toString());
-      console.log('   View: https://hashscan.io/testnet/transaction/' + nftTxResponse.transactionId.toString());
-      console.log('');
-      console.log('🎉 BUY COMPLETED SUCCESSFULLY!');
-      
-      const buyResult = {
-        transactionId: nftTxResponse.transactionId.toString(),
-        trustTransactionId: trustTxResponse.transactionId.toString(),
-        platformFee: platformFee.toString()
-      };
+      const nftResponse = await signedNftTx.execute(hederaClient);
+      await nftResponse.getReceipt(hederaClient);
 
-      console.log('✅ NFT purchase completed:', buyResult);
+      console.log('✅ NFT transferred to buyer');
+      console.log('✅ Purchase completed with manual royalty distribution!');
       
-      // Optimistic UI update - immediately show as unlisted after purchase
+      // Optimistic UI update
       setLocalListingStatus(false);
-
-      // Update marketplace status state
       setMarketplaceListingStatus({
         isListed: false,
         listingId: 0,
@@ -721,12 +781,12 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
       });
 
       toast({
-        title: 'Purchase Successful!',
-        description: `You've successfully purchased ${asset.name} for ${assetPrice} TRUST tokens! Platform fee: ${buyResult.platformFee} TRUST.`,
+        title: 'Purchase Successful! 🎉',
+        description: royaltyAmount > 0 
+          ? `You've successfully purchased ${asset.name}! ${royaltyPercentage}% royalty (${royaltyAmount} TRUST) was sent to the creator.`
+          : `You've successfully purchased ${asset.name}!`,
         variant: 'default'
       });
-
-      // No localStorage - blockchain is source of truth
 
       // Track activity
       trackActivity({
@@ -737,7 +797,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
         from: asset.owner,
         to: accountId,
         price: assetPrice,
-        transactionId: buyResult.transactionId
+        transactionId: nftResponse.transactionId.toString()
       });
 
       // Submit to HCS for immutable audit trail
@@ -748,26 +808,22 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
         from: asset.owner,
         to: accountId,
         price: assetPrice,
+        royalty: royaltyAmount,
         timestamp: new Date().toISOString(),
-        transactionId: buyResult.transactionId
+        transactionId: nftResponse.transactionId.toString()
       });
 
-      // Trigger asset refresh callback and navigate to profile if needed
+      // Trigger asset refresh
       if (onAssetUpdate) {
-        // Wait longer for Mirror Node to update (5 seconds)
         setTimeout(() => {
           onAssetUpdate();
-          
-          // Store a flag in sessionStorage to trigger profile refresh
           sessionStorage.setItem('profileNeedsRefresh', 'true');
-          
           toast({
             title: 'Asset Acquired!',
-            description: 'Visit your Profile page to see your new asset.',
+            description: 'Visit your Profile to see your new asset.',
             variant: 'default'
           });
-          
-          onClose(); // Close modal after update
+          onClose();
         }, 5000);
       }
 
@@ -996,6 +1052,27 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
                         <span className="text-xs text-off-white">
                           {asset.category}
                         </span>
+                      </div>
+                    )}
+
+                    {/* Creator Royalty */}
+                    {asset.royaltyPercentage && parseFloat(asset.royaltyPercentage) > 0 && (
+                      <div className="bg-purple-600/10 border border-purple-600/30 rounded-lg p-3 col-span-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-lg">👑</span>
+                          <span className="text-xs text-purple-300 font-semibold">Creator Royalty</span>
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-bold text-purple-400">
+                            {asset.royaltyPercentage}%
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            paid on every resale
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2">
+                          Creator earns {asset.royaltyPercentage}% of the sale price automatically on all future sales
+                        </p>
                       </div>
                     )}
                   </div>

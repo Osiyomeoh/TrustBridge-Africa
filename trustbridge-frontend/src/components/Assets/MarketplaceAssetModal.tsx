@@ -164,6 +164,12 @@ const MarketplaceAssetModal: React.FC<MarketplaceAssetModalProps> = ({
       // Check buyer's TRUST balance
       const buyerBalance = await TrustTokenService.hybridGetTrustTokenBalance(accountId);
       
+      console.log('🔍 Balance check:', {
+        buyerBalance: buyerBalance,
+        assetPrice: assetPrice,
+        hasEnough: buyerBalance >= assetPrice
+      });
+      
       if (buyerBalance < assetPrice) {
         throw new Error(`Insufficient TRUST tokens. You need ${assetPrice} TRUST but only have ${buyerBalance} TRUST.`);
       }
@@ -183,32 +189,87 @@ const MarketplaceAssetModal: React.FC<MarketplaceAssetModalProps> = ({
       
       const { TransferTransaction, TokenId, AccountId, TokenAssociateTransaction } = await import('@hashgraph/sdk');
       
-      // Calculate fees
-      const platformFeePercent = 5;
-      const platformFee = Math.floor((parseFloat(assetPrice) * platformFeePercent) / 100);
-      const sellerAmount = parseFloat(assetPrice) - platformFee;
+      // Calculate fees and royalties
+      const platformFeePercent = 2.5; // 2.5% platform fee
+      const royaltyPercentage = parseFloat(asset.royaltyPercentage || asset.metadata?.royaltyPercentage || '0');
+      const totalPrice = parseFloat(assetPrice);
+      
       const marketplaceAccount = '0.0.6916959';
       const trustTokenId = '0.0.6935064';
-      
-      console.log('💰 Payment: Total', assetPrice, 'TRUST | Seller', sellerAmount, '| Fee', platformFee);
       
       // Step 1: Transfer TRUST tokens
       console.log('💸 Step 1/3: Transferring TRUST tokens...');
       
       const { Hbar } = await import('@hashgraph/sdk');
       
-      const trustTransferTx = new TransferTransaction()
-        .addTokenTransfer(trustTokenId, accountId, -parseFloat(assetPrice))
-        .addTokenTransfer(trustTokenId, asset.owner, sellerAmount)
-        .addTokenTransfer(trustTokenId, marketplaceAccount, platformFee)
-        .setTransactionMemo(`Buy: ${asset.name}`)
-        .setMaxTransactionFee(new Hbar(2));
+      // Create TRUST token transfers with royalty distribution
+      // Use toFixed(8) to ensure exactly 8 decimal places
+      const exactPlatformFee = Number.parseFloat(((totalPrice * platformFeePercent) / 100).toFixed(8));
+      const exactRoyaltyAmount = Number.parseFloat(((totalPrice * royaltyPercentage) / 100).toFixed(8));
       
-      trustTransferTx.freezeWithSigner(signer);
-      const signedTrustTx = await signer.signTransaction(trustTransferTx);
-      const trustTxResponse = await signedTrustTx.execute(hederaClient);
-      await trustTxResponse.getReceipt(hederaClient);
-      console.log('✅ TRUST paid:', trustTxResponse.transactionId.toString());
+      // Calculate seller amount as exact remainder to guarantee zero-sum
+      const exactSellerAmount = Number.parseFloat((totalPrice - exactPlatformFee - exactRoyaltyAmount).toFixed(8));
+      
+      // Debug transfer amounts
+      console.log('🔍 Transfer amounts:', {
+        fromBuyer: -totalPrice,
+        toSeller: exactSellerAmount,
+        toSellerRoyalty: exactRoyaltyAmount,
+        toPlatform: exactPlatformFee,
+        sum: -totalPrice + exactSellerAmount + exactRoyaltyAmount + exactPlatformFee,
+        zeroSumCheck: {
+          totalPrice: totalPrice,
+          exactPlatformFee: exactPlatformFee,
+          exactRoyaltyAmount: exactRoyaltyAmount,
+          exactSellerAmount: exactSellerAmount,
+          calculated: totalPrice - exactPlatformFee - exactRoyaltyAmount,
+          remainder: totalPrice - exactPlatformFee - exactRoyaltyAmount - exactSellerAmount,
+          isExactlyZero: (-totalPrice + exactSellerAmount + exactRoyaltyAmount + exactPlatformFee) === 0
+        },
+        percentageCheck: {
+          royaltyPercentage: royaltyPercentage + '%',
+          platformFeePercent: platformFeePercent + '%',
+          royaltyCalculation: `${totalPrice} * ${royaltyPercentage} / 100 = ${exactRoyaltyAmount}`,
+          platformCalculation: `${totalPrice} * ${platformFeePercent} / 100 = ${exactPlatformFee}`
+        }
+      });
+      
+      // Use separate transfers to avoid zero-sum validation
+      // Transfer 1: From buyer to seller (base payment + royalty)
+      const sellerTransferTx = new TransferTransaction()
+        .addTokenTransfer(trustTokenId, accountId, -(exactSellerAmount + exactRoyaltyAmount)) // From buyer
+        .addTokenTransfer(trustTokenId, asset.owner, exactSellerAmount + exactRoyaltyAmount) // To seller
+        .setMaxTransactionFee(new Hbar(2));
+
+      // Transfer 2: From buyer to platform
+      const platformTransferTx = new TransferTransaction()
+        .addTokenTransfer(trustTokenId, accountId, -exactPlatformFee) // From buyer
+        .addTokenTransfer(trustTokenId, marketplaceAccount, exactPlatformFee) // To platform
+        .setMaxTransactionFee(new Hbar(2));
+
+      if (exactRoyaltyAmount > 0) {
+        const totalSellerAmount = exactSellerAmount + exactRoyaltyAmount;
+        console.log(`👑 Seller receives ${exactSellerAmount.toFixed(8)} TRUST base + ${exactRoyaltyAmount.toFixed(8)} TRUST royalty = ${totalSellerAmount.toFixed(8)} TRUST total`);
+        sellerTransferTx.setTransactionMemo(`Buy: ${asset.name} | Seller: ${exactSellerAmount.toFixed(8)} + Royalty: ${exactRoyaltyAmount.toFixed(8)}`);
+        platformTransferTx.setTransactionMemo(`Buy: ${asset.name} | Platform: ${exactPlatformFee.toFixed(8)}`);
+      } else {
+        console.log(`💵 Seller receives ${exactSellerAmount.toFixed(8)} TRUST (no royalty)`);
+        sellerTransferTx.setTransactionMemo(`Buy: ${asset.name} | Seller: ${exactSellerAmount.toFixed(8)}`);
+        platformTransferTx.setTransactionMemo(`Buy: ${asset.name} | Platform: ${exactPlatformFee.toFixed(8)}`);
+      }
+      
+      // Execute seller transfer
+      sellerTransferTx.freezeWithSigner(signer);
+      const signedSellerTx = await signer.signTransaction(sellerTransferTx);
+      const sellerTxResponse = await signedSellerTx.execute(hederaClient);
+      await sellerTxResponse.getReceipt(hederaClient);
+      
+      // Execute platform transfer
+      platformTransferTx.freezeWithSigner(signer);
+      const signedPlatformTx = await signer.signTransaction(platformTransferTx);
+      const platformTxResponse = await signedPlatformTx.execute(hederaClient);
+      await platformTxResponse.getReceipt(hederaClient);
+      console.log('✅ TRUST paid:', sellerTxResponse.transactionId.toString(), platformTxResponse.transactionId.toString());
       
       // Step 2: Associate token
       console.log('🔗 Step 2/3: Associating NFT token...');
@@ -248,11 +309,22 @@ const MarketplaceAssetModal: React.FC<MarketplaceAssetModalProps> = ({
       
       const buyResult = {
         transactionId: nftTransferResult.data.transactionId,
-        trustTransactionId: trustTxResponse.transactionId.toString(),
-        platformFee: platformFee.toString()
+        sellerTransactionId: sellerTxResponse.transactionId.toString(),
+        platformTransactionId: platformTxResponse.transactionId.toString(),
+        platformFee: exactPlatformFee.toString()
       };
 
       console.log('🎉 Purchase completed:', buyResult);
+      
+      // Show royalty information in console
+      if (exactRoyaltyAmount > 0) {
+        const totalSellerAmount = exactSellerAmount + exactRoyaltyAmount;
+        console.log(`👑 Royalty included: ${exactRoyaltyAmount.toFixed(2)} TRUST in seller payment`);
+        console.log(`💵 Seller received: ${exactSellerAmount.toFixed(2)} TRUST base + ${exactRoyaltyAmount.toFixed(2)} TRUST royalty = ${totalSellerAmount.toFixed(2)} TRUST total`);
+      } else {
+        console.log(`💵 Seller received: ${exactSellerAmount.toFixed(2)} TRUST`);
+      }
+      console.log(`💰 Platform fee: ${exactPlatformFee.toFixed(2)} TRUST`);
 
       // Track activity
       trackActivity({
@@ -274,6 +346,7 @@ const MarketplaceAssetModal: React.FC<MarketplaceAssetModalProps> = ({
         from: asset.owner,
         to: accountId,
         price: assetPrice,
+        royalty: exactRoyaltyAmount,
         timestamp: new Date().toISOString(),
         transactionId: buyResult.transactionId
       });
@@ -284,8 +357,10 @@ const MarketplaceAssetModal: React.FC<MarketplaceAssetModalProps> = ({
       setActualOwner(accountId);
 
       toast({
-        title: 'Purchase Successful!',
-        description: `You've successfully purchased ${asset.name} for ${assetPrice} TRUST tokens! Check your Profile to see it.`,
+        title: 'Purchase Successful! 🎉',
+        description: exactRoyaltyAmount > 0 
+          ? `You've successfully purchased ${asset.name}! ${royaltyPercentage}% royalty (${exactRoyaltyAmount.toFixed(2)} TRUST) was sent to the creator.`
+          : `You've successfully purchased ${asset.name} for ${assetPrice} TRUST tokens!`,
         variant: 'default'
       });
 

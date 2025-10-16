@@ -9,6 +9,7 @@ export const CONTRACT_ADDRESSES = {
   trustAssetFactory: '0x044e4e033978af17102C69E1B79B6Ddc6078A0D9', // Keep existing
   attestorVerificationSystem: '0x5a109F8e0405Fa0034fFC41Dab805E1DBc84aE56', // Keep existing
   trustMarketplace: '0x962aFC4e76AD564608f02Af09673C61e990ed339', // NEW - Zero listings
+  trustMarketplaceV2: '0.0.7060267', // Enhanced with Royalties - FIXED WITH GETTERS
   poolManager: '0x4F863bDAaE4611dF7df5C5eBa2fd42aAaA984646',
   poolToken: '0x3262BBF6c5d3Af2cdA1B4E44A10eF16af3A6662e',
   tradingEngine: '0xc326cF6Ab5EF03B2Df5390463634Db9d778e01E7',

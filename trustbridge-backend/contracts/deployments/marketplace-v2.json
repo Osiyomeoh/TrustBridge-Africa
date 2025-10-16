@@ -1,0 +1,11 @@
+{
+  "network": "testnet",
+  "contractId": "0.0.7060267",
+  "trustTokenId": "0.0.6935064",
+  "feeRecipient": "0.0.6916959",
+  "tradingFee": "250",
+  "maxRoyalty": "1000",
+  "deployedAt": "2025-10-15T01:55:39.989Z",
+  "deployedBy": "0.0.6916959",
+  "txHash": "0.0.6916959@1760493331.434788808"
+}
