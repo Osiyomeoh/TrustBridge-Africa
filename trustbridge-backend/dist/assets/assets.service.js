@@ -208,6 +208,9 @@ let AssetsService = AssetsService_1 = class AssetsService {
             .exec();
     }
     async getAssetById(id) {
+        if (!id || typeof id !== 'string' || !/^[0-9a-fA-F]{24}$/.test(id)) {
+            throw new common_1.BadRequestException('Invalid asset ID format');
+        }
         const asset = await this.assetModel.findById(id).exec();
         if (!asset) {
             throw new common_1.NotFoundException('Asset not found');

@@ -5,9 +5,13 @@ import { AssetV2 } from '../schemas/asset-v2.schema';
 export declare class AssetsController {
     private readonly assetsService;
     constructor(assetsService: AssetsService);
-    getAssets(type?: string, status?: string, country?: string, minValue?: number, maxValue?: number, limit?: number, offset?: number): Promise<{
+    getAssets(): Promise<{
         success: boolean;
-        data: Asset[];
+        message: string;
+    }>;
+    getAssetsByOwner(owner: string): Promise<{
+        success: boolean;
+        message: string;
     }>;
     getAssetById(id: string): Promise<{
         success: boolean;
@@ -25,10 +29,6 @@ export declare class AssetsController {
         message?: string;
     }>;
     getFeaturedAssets(limit?: number): Promise<{
-        success: boolean;
-        data: Asset[];
-    }>;
-    getAssetsByOwner(owner: string): Promise<{
         success: boolean;
         data: Asset[];
     }>;

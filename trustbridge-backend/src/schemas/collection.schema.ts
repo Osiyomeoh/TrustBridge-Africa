@@ -47,7 +47,19 @@ export class Collection {
   @Prop({ default: 0 })
   listedCount: number; // Currently listed for sale
 
-  @Prop({ type: Object, default: {} })
+  @Prop({ 
+    type: {
+      sales24h: { type: Number, default: 0 },
+      volume24h: { type: Number, default: 0 },
+      sales7d: { type: Number, default: 0 },
+      volume7d: { type: Number, default: 0 },
+      sales30d: { type: Number, default: 0 },
+      volume30d: { type: Number, default: 0 },
+      avgPrice: { type: Number, default: 0 },
+      highestSale: { type: Number, default: 0 }
+    },
+    default: {}
+  })
   stats: {
     sales24h?: number;
     volume24h?: number;
@@ -59,7 +71,13 @@ export class Collection {
     highestSale?: number;
   };
 
-  @Prop({ type: Object, default: {} })
+  @Prop({ 
+    type: {
+      percentage: { type: Number, default: 0 },
+      receiver: { type: String, default: '' }
+    },
+    default: {}
+  })
   royalty: {
     percentage: number; // e.g., 5 for 5%
     receiver: string; // Hedera account ID
@@ -68,7 +86,15 @@ export class Collection {
   @Prop({ type: [String], default: [] })
   category: string[]; // Art, Music, Photography, etc.
 
-  @Prop({ type: Object, default: {} })
+  @Prop({ 
+    type: {
+      twitter: { type: String, default: '' },
+      discord: { type: String, default: '' },
+      website: { type: String, default: '' },
+      instagram: { type: String, default: '' }
+    },
+    default: {}
+  })
   socialLinks: {
     twitter?: string;
     discord?: string;

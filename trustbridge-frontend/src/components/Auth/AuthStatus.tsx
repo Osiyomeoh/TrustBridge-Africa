@@ -58,14 +58,27 @@ const AuthStatus: React.FC<AuthStatusProps> = ({
     );
   }
 
-  // Not connected - don't show anything
+  // Not connected - show Connect Wallet
   if (!isConnected || !accountId) {
-    console.log('AuthStatus - Not connected, not showing connect button:', {
+    console.log('AuthStatus - Showing Connect Wallet button:', {
       isConnected,
       accountId,
       hasUser: !!user
     });
-    return null;
+    return (
+      <UnifiedAuthFlow
+        showAsModal={true}
+        trigger={
+          <Button
+            variant="neon"
+            size="sm"
+            className={className}
+          >
+            Connect Wallet
+          </Button>
+        }
+      />
+    );
   }
 
   // Connected but no user profile - show Complete Profile

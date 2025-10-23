@@ -71,11 +71,29 @@ __decorate([
     __metadata("design:type", Number)
 ], Collection.prototype, "listedCount", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Object, default: {} }),
+    (0, mongoose_1.Prop)({
+        type: {
+            sales24h: { type: Number, default: 0 },
+            volume24h: { type: Number, default: 0 },
+            sales7d: { type: Number, default: 0 },
+            volume7d: { type: Number, default: 0 },
+            sales30d: { type: Number, default: 0 },
+            volume30d: { type: Number, default: 0 },
+            avgPrice: { type: Number, default: 0 },
+            highestSale: { type: Number, default: 0 }
+        },
+        default: {}
+    }),
     __metadata("design:type", Object)
 ], Collection.prototype, "stats", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Object, default: {} }),
+    (0, mongoose_1.Prop)({
+        type: {
+            percentage: { type: Number, default: 0 },
+            receiver: { type: String, default: '' }
+        },
+        default: {}
+    }),
     __metadata("design:type", Object)
 ], Collection.prototype, "royalty", void 0);
 __decorate([
@@ -83,7 +101,15 @@ __decorate([
     __metadata("design:type", Array)
 ], Collection.prototype, "category", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Object, default: {} }),
+    (0, mongoose_1.Prop)({
+        type: {
+            twitter: { type: String, default: '' },
+            discord: { type: String, default: '' },
+            website: { type: String, default: '' },
+            instagram: { type: String, default: '' }
+        },
+        default: {}
+    }),
     __metadata("design:type", Object)
 ], Collection.prototype, "socialLinks", void 0);
 __decorate([

@@ -1,4 +1,6 @@
 import { ConfigService } from '@nestjs/config';
+import { Model } from 'mongoose';
+import { User } from '../schemas/user.schema';
 import { PrivateKey } from '@hashgraph/sdk';
 export interface HederaConfig {
     accountId: string;
@@ -97,6 +99,7 @@ export interface HFSFileUpload {
 }
 export declare class HederaService {
     private configService;
+    private userModel;
     private readonly logger;
     private client;
     private operatorId;
@@ -104,13 +107,25 @@ export declare class HederaService {
     private network;
     private readonly contracts;
     private isValidHederaEntityId;
-    constructor(configService: ConfigService);
+    constructor(configService: ConfigService, userModel: Model<User>);
     private initializeClient;
     getNetworkStatus(): Promise<any>;
     createAssetToken(request: TokenizationRequest): Promise<{
         tokenId: string;
         transactionId: string;
     }>;
+    createPoolToken(tokenData: {
+        name: string;
+        symbol: string;
+        decimals: number;
+        initialSupply: number;
+        maxSupply: number;
+        treasury: string;
+        adminKey: string;
+        supplyKey: string;
+        freezeKey: string;
+        wipeKey: string;
+    }): Promise<string>;
     mintTokens(tokenId: string, amount: number, recipient: string): Promise<string>;
     transferTokens(tokenId: string, from: string, to: string, amount: number): Promise<string>;
     submitVerification(verification: VerificationSubmission): Promise<string>;
@@ -285,6 +300,8 @@ export declare class HederaService {
     }>;
     private getERC721Assets;
     private getHTSAssets;
+    approveRWAAsset(tokenId: string, approved: boolean, comments?: string, verificationScore?: number): Promise<any>;
+    rejectRWAAsset(tokenId: string, comments?: string): Promise<any>;
     getMarketplaceData(): Promise<{
         assets: any[];
         totalListings: number;
@@ -335,4 +352,32 @@ export declare class HederaService {
         hfsTransactionId: string;
         hcsTransactionId: string;
     }>;
+    createAdminAccount(adminName: string): Promise<{
+        accountId: string;
+        privateKey: string;
+        publicKey: string;
+        accountInfo: any;
+    }>;
+    transferHbarToAdmin(adminAccountId: string, amount: number): Promise<string>;
+    isHederaAdminAccount(accountId: string): Promise<boolean>;
+    private checkHederaAdminInDatabase;
+    getHederaAdminRole(accountId: string): Promise<string | null>;
+    createInitialHederaSuperAdmin(): Promise<{
+        accountId: string;
+        privateKey: string;
+        publicKey: string;
+        accountInfo: any;
+    }>;
+    private addHederaAdminToDatabase;
+    createAdminAccounts(): Promise<{
+        superAdmin: any;
+        platformAdmins: any[];
+        amcAdmins: any[];
+        regularAdmins: any[];
+    }>;
+    createOrGetTrustBridgeTopic(): Promise<string>;
+    submitToTrustBridgeTopic(message: any): Promise<string>;
+    getTrustBridgeTopicMessages(): Promise<any[]>;
+    createRWAAssetWithHCS(assetData: any): Promise<string>;
+    updateRWAAssetStatus(tokenId: string, status: string, adminAddress: string, notes?: string): Promise<void>;
 }

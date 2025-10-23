@@ -3,10 +3,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { VerificationRequest, VerificationRequestDocument, VerificationStatus, IPFSFile } from '../schemas/verification-request.schema';
 import { Asset, AssetDocument } from '../schemas/asset.schema';
-import { Attestor, AttestorDocument } from '../schemas/attestor.schema';
+// import { Attestor, AttestorDocument } from '../schemas/attestor.schema'; // Removed - attestor functionality deprecated
 import { HederaService } from '../hedera/hedera.service';
 import { ChainlinkService } from '../chainlink/chainlink.service';
-import { AttestorsService, AttestorRequirements } from '../attestors/attestors.service';
+// import { AttestorsService, AttestorRequirements } from '../attestors/attestors.service'; // Removed - attestor functionality deprecated
 import { ExternalApisService } from '../external-apis/external-apis.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { IPFSService } from '../services/ipfs.service';
@@ -23,7 +23,7 @@ export interface VerificationResult {
 }
 
 export interface AttestorMatch {
-  attestor: Attestor;
+  attestor: any; // Removed - attestor functionality deprecated
   score: number;
   reason: string;
 }
@@ -33,10 +33,10 @@ export class VerificationService {
   constructor(
     @InjectModel(VerificationRequest.name) private verificationModel: Model<VerificationRequestDocument>,
     @InjectModel(Asset.name) private assetModel: Model<AssetDocument>,
-    @InjectModel(Attestor.name) private attestorModel: Model<AttestorDocument>,
+    // @InjectModel(Attestor.name) private attestorModel: Model<AttestorDocument>, // Removed - attestor functionality deprecated
     private hederaService: HederaService,
     private chainlinkService: ChainlinkService,
-    private attestorsService: AttestorsService,
+    // private attestorsService: AttestorsService, // Removed - attestor functionality deprecated
     private externalApisService: ExternalApisService,
     private eventEmitter: EventEmitter2,
     private ipfsService: IPFSService,
@@ -75,7 +75,7 @@ export class VerificationService {
       await this.approveVerification(savedRequest._id.toString(), null, automatedResult.score);
     } else {
       // Find and assign attestors using the new AttestorsService
-      const requirements: AttestorRequirements = {
+      const requirements: any = { // Removed - attestor functionality deprecated
         assetType: asset.type,
         location: {
           country: asset.location.country,
@@ -87,7 +87,8 @@ export class VerificationService {
         maxDistance: 100, // 100km radius
       };
       
-      const assignedAttestors = await this.attestorsService.assignAttestors(assetId, requirements);
+      // const assignedAttestors = await this.attestorsService.assignAttestors(assetId, requirements); // Removed - attestor functionality deprecated
+      const assignedAttestors = []; // Placeholder - attestor functionality deprecated
       if (assignedAttestors.length > 0) {
         // Convert Attestor[] to AttestorMatch[] for compatibility
         const attestorMatches = assignedAttestors.map(attestor => ({
@@ -381,11 +382,9 @@ export class VerificationService {
   }
 
   private async findMatchingAttestors(asset: Asset, evidence: any): Promise<AttestorMatch[]> {
-    const attestors = await this.attestorModel.find({
-      isActive: true,
-      specialties: { $in: [asset.type] },
-      reputation: { $gte: 70 },
-    });
+    // const attestors = await this.attestorModel.find({ // Removed - attestor functionality deprecated
+    const attestors = []; // Placeholder - attestor functionality deprecated
+    // if (attestors && attestors.length > 0) {
 
     const matches: AttestorMatch[] = [];
 
@@ -616,7 +615,7 @@ export class VerificationService {
     return attestorCountry === assetLocation.country;
   }
 
-  private async notifyAttestor(attestor: Attestor, verification: VerificationRequest): Promise<void> {
+  private async notifyAttestor(attestor: any, verification: VerificationRequest): Promise<void> { // Removed - attestor functionality deprecated
     // TODO: Implement attestor notification
     console.log(`Notifying attestor ${attestor.organizationName} about verification ${(verification as any)._id?.toString()}`);
   }

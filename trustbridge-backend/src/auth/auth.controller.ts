@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Put, Body, Param, UseGuards, Request, Logger, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { IsEmail, IsString, IsOptional, IsNotEmpty, MinLength } from 'class-validator';
 import { AuthService, WalletSignature } from './auth.service';
@@ -163,6 +163,8 @@ export class UpdateKYCStatusDto {
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+  
   constructor(private readonly authService: AuthService) {}
 
   @Get('check-wallet/:address')
@@ -455,24 +457,37 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Webhook processed successfully' })
   @ApiResponse({ status: 400, description: 'Invalid webhook data' })
   @ApiResponse({ status: 401, description: 'Invalid webhook signature' })
-  async diditWebhook(@Body() webhookData: DiditWebhookDto, @Request() req: any) {
+  async diditWebhook(@Body() webhookData: any, @Request() req: any) {
     try {
-      // Verify webhook signature
+      this.logger.log('Received DidIt webhook:', {
+        session_id: webhookData.session_id,
+        status: webhookData.status,
+        webhook_type: webhookData.webhook_type,
+        vendor_data: webhookData.vendor_data
+      });
+
+      // Verify webhook signature for security
       const isValidSignature = await this.authService.verifyDiditWebhookSignature(req);
       if (!isValidSignature) {
+        this.logger.warn('Invalid DidIt webhook signature');
         return {
           success: false,
           message: 'Invalid webhook signature',
         };
       }
 
-      await this.authService.processDiditWebhook(webhookData);
+      // Process the webhook data
+      const result = await this.authService.processDiditWebhook(webhookData);
+      
+      this.logger.log('DidIt webhook processed successfully:', result);
       
       return {
         success: true,
         message: 'Webhook processed successfully',
+        data: result
       };
     } catch (error) {
+      this.logger.error('Error processing DidIt webhook:', error);
       return {
         success: false,
         message: 'Webhook processing failed',
@@ -521,6 +536,38 @@ export class AuthController {
       },
       message: 'KYC status retrieved successfully',
     };
+  }
+
+  // Didit Callback Endpoint
+  @Get('didit/callback')
+  @ApiOperation({ summary: 'Didit KYC callback' })
+  @ApiResponse({ status: 200, description: 'Callback processed successfully' })
+  async diditCallback(@Query() query: any) {
+    try {
+      const { verificationSessionId, status } = query;
+      
+      if (!verificationSessionId) {
+        return {
+          success: false,
+          message: 'Missing verification session ID',
+        };
+      }
+
+      // Process the callback
+      const result = await this.authService.processDiditCallback(verificationSessionId, status);
+      
+      return {
+        success: true,
+        data: result,
+        message: 'Callback processed successfully',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to process callback',
+        error: error.message,
+      };
+    }
   }
 
   // Didit API Proxy Endpoints

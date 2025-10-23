@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { X, ExternalLink, Copy, Tag, MapPin, Calendar, User, TrendingUp, Share2, Heart, Edit, Send, Loader2, ChevronDown } from 'lucide-react';
+import { X, ExternalLink, Copy, Tag, MapPin, Calendar, User, TrendingUp, Share2, Heart, Send, Loader2, ChevronDown, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '../UI/Card';
 import Button from '../UI/Button';
 import { useToast } from '../../hooks/useToast';
@@ -11,13 +10,12 @@ import { marketplaceContractService } from '../../services/marketplace-contract.
 import { marketplaceV2Service } from '../../services/marketplaceV2Service';
 import { trackActivity } from '../../utils/activityTracker';
 import { apiService } from '../../services/api';
+import { trustToUSD, formatUSD } from '../../utils/priceUtils';
 import { 
   TransferTransaction, 
   TokenId, 
   AccountId, 
-  Hbar,
-  AccountAllowanceApproveTransaction,
-  NftId
+  Hbar
 } from '@hashgraph/sdk';
 
 interface AssetDetailModalProps {
@@ -30,10 +28,7 @@ interface AssetDetailModalProps {
 const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, asset, onAssetUpdate }) => {
   const { toast } = useToast();
   const { accountId, signer, hederaClient } = useWallet();
-  const navigate = useNavigate();
-  const location = useLocation();
   const [isBuying, setIsBuying] = useState(false);
-  const [isTransferring, setIsTransferring] = useState(false);
   const [isListing, setIsListing] = useState(false);
   const [isUnlisting, setIsUnlisting] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
@@ -41,8 +36,27 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
   const [offerDuration, setOfferDuration] = useState('7'); // Default 7 days
   const [isMakingOffer, setIsMakingOffer] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [usdValue, setUsdValue] = useState<number | null>(null);
   const [assetOffers, setAssetOffers] = useState<any[]>([]);
   const [showOffersSection, setShowOffersSection] = useState(false);
+
+  // Calculate USD value when asset changes
+  useEffect(() => {
+    const calculateUSDValue = async () => {
+      if (asset) {
+        const trustAmount = parseFloat(asset.price || asset.totalValue || '100');
+        try {
+          const usd = await trustToUSD(trustAmount);
+          setUsdValue(usd);
+        } catch (error) {
+          console.error('Failed to calculate USD value:', error);
+          setUsdValue(null);
+        }
+      }
+    };
+    
+    calculateUSDValue();
+  }, [asset]);
 
   // Check if asset is favorited on mount
   useEffect(() => {
@@ -221,7 +235,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
       console.log('📡 Executing transfer...');
       const response = await signedTx.execute(hederaClient);
       console.log('⏳ Getting receipt...');
-      const receipt = await response.getReceipt(hederaClient);
+      await response.getReceipt(hederaClient);
 
       console.log('✅ NFT transferred to marketplace escrow:', response.transactionId.toString());
 
@@ -493,7 +507,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
       console.log('✅ Accepting offer:', offer);
 
       // Call marketplace buy with the offer price
-      const buyResult = await marketplaceContractService.buyNFT(
+      await marketplaceContractService.buyNFT(
         marketplaceListingStatus.listingId || 0,
         offer.buyer,
         offer.offerPrice,
@@ -957,7 +971,7 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
                       <span className="text-lg text-electric-mint">TRUST</span>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">
-                      ≈ ${parseFloat(asset.price || asset.totalValue || '100') * 0.01} USD
+                      {usdValue !== null ? `≈ ${formatUSD(usdValue)}` : '≈ Loading USD...'}
                     </p>
                   </CardContent>
                 </Card>
@@ -1025,9 +1039,17 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
                           <MapPin className="w-3 h-3 text-gray-400" />
                           <span className="text-xs text-gray-400">Location</span>
                         </div>
-                        <span className="text-xs text-off-white">
-                          {asset.location}
-                        </span>
+                        <div className="text-xs text-off-white">
+                          {typeof asset.location === 'string' ? asset.location : (
+                            <>
+                              {asset.location.address && <div>{asset.location.address}</div>}
+                              {asset.location.city && asset.location.state && (
+                                <div>{asset.location.city}, {asset.location.state}</div>
+                              )}
+                              {asset.location.country && <div>{asset.location.country}</div>}
+                            </>
+                          )}
+                        </div>
                       </div>
                     )}
 
@@ -1077,6 +1099,196 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
                     )}
                   </div>
                 </div>
+
+                {/* RWA Specific Information */}
+                {asset.type === 'RWA' && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-off-white">Real World Asset Details</h3>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Property Address */}
+                      {asset.propertyAddress && (
+                        <div className="bg-midnight-800 rounded-lg p-3 col-span-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <MapPin className="w-3 h-3 text-gray-400" />
+                            <span className="text-xs text-gray-400">Property Address</span>
+                          </div>
+                          <span className="text-xs text-off-white">
+                            {asset.propertyAddress}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Location Details */}
+                      {asset.location && (
+                        <div className="bg-midnight-800 rounded-lg p-3 col-span-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <MapPin className="w-3 h-3 text-gray-400" />
+                            <span className="text-xs text-gray-400">Location</span>
+                          </div>
+                          <div className="text-xs text-off-white">
+                            {asset.location.address && (
+                              <div>{asset.location.address}</div>
+                            )}
+                            {asset.location.city && asset.location.state && (
+                              <div>{asset.location.city}, {asset.location.state}</div>
+                            )}
+                            {asset.location.country && (
+                              <div>{asset.location.country}</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Asset Type */}
+                      {asset.assetType && (
+                        <div className="bg-midnight-800 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Tag className="w-3 h-3 text-gray-400" />
+                            <span className="text-xs text-gray-400">Asset Type</span>
+                          </div>
+                          <span className="text-xs text-off-white">
+                            {asset.assetType}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Expected APY */}
+                      {asset.expectedAPY && (
+                        <div className="bg-midnight-800 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <TrendingUp className="w-3 h-3 text-gray-400" />
+                            <span className="text-xs text-gray-400">Expected APY</span>
+                          </div>
+                          <span className="text-xs text-green-400 font-semibold">
+                            {asset.expectedAPY}%
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Maturity Date */}
+                      {asset.maturityDate && (
+                        <div className="bg-midnight-800 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Calendar className="w-3 h-3 text-gray-400" />
+                            <span className="text-xs text-gray-400">Maturity Date</span>
+                          </div>
+                          <span className="text-xs text-off-white">
+                            {new Date(asset.maturityDate).toLocaleDateString()}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Square Footage */}
+                      {asset.squareFootage && asset.squareFootage > 0 && (
+                        <div className="bg-midnight-800 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs text-gray-400">Square Footage</span>
+                          </div>
+                          <span className="text-xs text-off-white">
+                            {asset.squareFootage.toLocaleString()} sq ft
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Year Built */}
+                      {asset.yearBuilt && (
+                        <div className="bg-midnight-800 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Calendar className="w-3 h-3 text-gray-400" />
+                            <span className="text-xs text-gray-400">Year Built</span>
+                          </div>
+                          <span className="text-xs text-off-white">
+                            {asset.yearBuilt}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Zoning Type */}
+                      {asset.zoningType && (
+                        <div className="bg-midnight-800 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Tag className="w-3 h-3 text-gray-400" />
+                            <span className="text-xs text-gray-400">Zoning</span>
+                          </div>
+                          <span className="text-xs text-off-white">
+                            {asset.zoningType}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Legal Description */}
+                      {asset.legalDescription && (
+                        <div className="bg-midnight-800 rounded-lg p-3 col-span-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs text-gray-400">Legal Description</span>
+                          </div>
+                          <span className="text-xs text-off-white">
+                            {asset.legalDescription}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Verification Status */}
+                      <div className="bg-midnight-800 rounded-lg p-3 col-span-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs text-gray-400">Verification Status</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {asset.status === 'ACTIVE' && asset.verification?.allFilesStoredOnHedera ? (
+                            <span className="text-xs text-yellow-400 flex items-center">
+                              <AlertCircle className="w-3 h-3 mr-1" />
+                              Pending AMC Approval
+                            </span>
+                          ) : asset.verification?.allFilesStoredOnHedera ? (
+                            <span className="text-xs text-green-400 flex items-center">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Verified
+                            </span>
+                          ) : (
+                            <span className="text-xs text-red-400 flex items-center">
+                              <AlertCircle className="w-3 h-3 mr-1" />
+                              Not Verified
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* File Access */}
+                      {(asset.evidenceFiles?.length > 0 || asset.legalDocuments?.length > 0) && (
+                        <div className="bg-midnight-800 rounded-lg p-3 col-span-2">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xs text-gray-400">Document Access</span>
+                          </div>
+                          <div className="flex gap-2">
+                            {asset.evidenceFiles?.length > 0 && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                                onClick={() => window.open(asset.evidenceFiles[0].url, '_blank')}
+                              >
+                                <FileText className="w-3 h-3 mr-1" />
+                                Evidence Files ({asset.evidenceFiles.length})
+                              </Button>
+                            )}
+                            {asset.legalDocuments?.length > 0 && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                                onClick={() => window.open(asset.legalDocuments[0].url, '_blank')}
+                              >
+                                <FileText className="w-3 h-3 mr-1" />
+                                Legal Documents ({asset.legalDocuments.length})
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Properties */}
                 {asset.royaltyPercentage && (

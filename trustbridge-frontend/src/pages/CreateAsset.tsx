@@ -1,309 +1,253 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/UI/Card';
-import Button from '../components/UI/Button';
-import Input from '../components/UI/Input';
-import FileUpload from '../components/UI/FileUpload';
-import { UploadedFile } from '../components/UI/FileUpload';
-import Breadcrumb from '../components/UI/Breadcrumb';
-import StepNavigation from '../components/UI/StepNavigation';
 import { 
+  Upload, 
+  MapPin, 
+  Calendar, 
+  DollarSign, 
   FileText, 
+  Image, 
   CheckCircle, 
-  Building2,
+  AlertCircle,
+  Building,
   TreePine,
-  Loader2,
-  Shield,
-  TrendingUp,
+  Factory,
   Package,
-  Palette,
-  Car
+  Truck,
+  Wrench
 } from 'lucide-react';
-import { useToast } from '../hooks/useToast';
 import { useWallet } from '../contexts/WalletContext';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  TokenCreateTransaction, 
-  FileCreateTransaction, 
-  TopicCreateTransaction, 
-  TopicMessageSubmitTransaction,
-  AccountId,
-  TokenType,
-  TokenSupplyType
-} from '@hashgraph/sdk';
-import { TrustTokenService } from '../services/trust-token.service';
-import KYCRequired from '../components/Auth/KYCRequired';
+import Card from '../components/UI/Card';
+import Button from '../components/UI/Button';
+
+interface RWAAssetData {
+  // Basic Information
+  name: string;
+  description: string;
+  type: string;
+  category: string;
+  
+  // Location
+  country: string;
+  region: string;
+  address: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+  
+  // Financial
+  totalValue: number;
+  expectedAPY: number;
+  maturityDate: string;
+  
+  // Documentation
+  ownershipDocuments: File[];
+  photos: File[];
+  inspectionReports: File[];
+  certificates: File[];
+  
+  // Additional Details
+  condition: string;
+  maintenanceHistory: string;
+  insuranceInfo: string;
+  complianceStatus: string;
+}
 
 const CreateAsset: React.FC = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { accountId, isConnected, signer, hederaClient } = useWallet();
+  const { address } = useWallet();
   const { user } = useAuth();
-  
   const [currentStep, setCurrentStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   
-  // Asset form data - Updated for dual asset system
-  const [formData, setFormData] = useState({
+  const [assetData, setAssetData] = useState<RWAAssetData>({
     name: '',
     description: '',
-    category: 0,
-    assetType: '',
-    location: '', // Simplified to string for both digital and RWA
-    totalValue: '',
-    imageURI: '',
-    documentURI: '',
+    type: '',
+    category: '',
+    country: '',
+    region: '',
+      address: '',
+    coordinates: { lat: 0, lng: 0 },
+    totalValue: 0,
+    expectedAPY: 0,
     maturityDate: '',
-    evidenceFiles: [] as File[],
-    evidenceHashes: [] as string[],
-    documentTypes: [] as string[]
+    ownershipDocuments: [],
+    photos: [],
+    inspectionReports: [],
+    certificates: [],
+    condition: '',
+    maintenanceHistory: '',
+    insuranceInfo: '',
+    complianceStatus: ''
   });
 
-  // Asset type selection
-  const [selectedAssetType, setSelectedAssetType] = useState<'digital' | 'rwa'>('digital');
-
-  // RWA Categories (0-5)
-  const rwaCategories = [
-    { id: 0, name: 'Farm Produce', icon: TreePine, description: 'Agricultural products and crops' },
-    { id: 1, name: 'Farmland', icon: TreePine, description: 'Agricultural land and properties' },
-    { id: 2, name: 'Real Estate', icon: Building2, description: 'Residential and commercial properties' },
-    { id: 3, name: 'Vehicles', icon: Car, description: 'Cars, trucks, and other vehicles' },
-    { id: 4, name: 'Art & Collectibles', icon: Palette, description: 'Artwork, antiques, and collectibles' },
-    { id: 5, name: 'Commodities', icon: Package, description: 'Gold, oil, and other commodities' }
+  const assetTypes = [
+    { value: 'AGRICULTURAL', label: 'Agricultural Land', icon: TreePine, description: 'Farmland, plantations, agricultural facilities' },
+    { value: 'REAL_ESTATE', label: 'Real Estate', icon: Building, description: 'Commercial buildings, residential properties' },
+    { value: 'EQUIPMENT', label: 'Equipment', icon: Wrench, description: 'Machinery, vehicles, industrial equipment' },
+    { value: 'INVENTORY', label: 'Inventory', icon: Package, description: 'Goods, commodities, raw materials' },
+    { value: 'COMMODITY', label: 'Commodity', icon: Truck, description: 'Precious metals, energy, agricultural products' }
   ];
 
-  // Digital Categories (6+)
-  const digitalCategories = [
-    { id: 6, name: 'Digital Art', icon: Palette, description: 'Digital artwork and NFTs' },
-    { id: 7, name: 'NFT', icon: Package, description: 'Non-fungible tokens' },
-    { id: 8, name: 'Cryptocurrency', icon: TrendingUp, description: 'Digital currencies' },
-    { id: 9, name: 'Digital Collectibles', icon: Package, description: 'Digital collectible items' },
-    { id: 10, name: 'Virtual Real Estate', icon: Building2, description: 'Virtual land and properties' },
-    { id: 11, name: 'Digital Music', icon: FileText, description: 'Digital music and audio' },
-    { id: 12, name: 'Digital Books', icon: FileText, description: 'Digital books and publications' },
-    { id: 13, name: 'Digital Games', icon: Package, description: 'Digital games and gaming assets' },
-    { id: 14, name: 'Digital Tokens', icon: Package, description: 'Digital utility tokens' },
-    { id: 15, name: 'Digital Certificates', icon: Shield, description: 'Digital certificates and credentials' }
-  ];
-
-  const categories = selectedAssetType === 'digital' ? digitalCategories : rwaCategories;
-
-  const verificationLevels = [
-    { id: 0, name: 'Basic', description: 'Basic verification with minimal documentation', fee: '100 TRUST' },
-    { id: 1, name: 'Professional', description: 'Professional verification with comprehensive documentation', fee: '200 TRUST' },
-    { id: 2, name: 'Expert', description: 'Expert verification with detailed analysis', fee: '300 TRUST' },
-    { id: 3, name: 'Master', description: 'Master verification with full due diligence', fee: '500 TRUST' }
-  ];
-
-  const steps = selectedAssetType === 'digital' ? [
-    { id: '1', title: 'Asset Details', description: 'Basic information about your digital asset' },
-    { id: '2', title: 'Location & Value', description: 'Where is it located and what is it worth?' },
-    { id: '3', title: 'Image & Description', description: 'Add image and describe your digital asset' },
-    { id: '4', title: 'Ready to Create', description: 'Your digital asset is ready for instant creation' },
-    { id: '5', title: 'Review & Submit', description: 'Review and create your digital asset' }
-  ] : [
-    { id: '1', title: 'Asset Details', description: 'Basic information about your real-world asset' },
-    { id: '2', title: 'Location & Value', description: 'Where is it located and what is it worth?' },
-    { id: '3', title: 'Evidence Upload', description: 'Upload supporting documents and images' },
-    { id: '4', title: 'Maturity & Verification', description: 'Set maturity date and verification level' },
-    { id: '5', title: 'Review & Submit', description: 'Review and submit for verification' }
-  ];
-
-  const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({
+  const handleInputChange = (field: keyof RWAAssetData, value: any) => {
+    setAssetData(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-
-  const handleFileUpload = (uploadedFiles: UploadedFile[]) => {
-    const files = uploadedFiles.map(uf => uf.file);
-    setFormData(prev => ({
+  const handleFileUpload = (field: 'ownershipDocuments' | 'photos' | 'inspectionReports' | 'certificates', files: File[]) => {
+    setAssetData(prev => ({
       ...prev,
-      evidenceFiles: [...prev.evidenceFiles, ...files]
+      [field]: [...prev[field], ...files]
     }));
   };
 
-  const removeFile = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      evidenceFiles: prev.evidenceFiles.filter((_, i) => i !== index)
-    }));
+  const uploadFiles = async (files: File[]) => {
+    // In a real implementation, upload to IPFS or cloud storage
+    const uploadPromises = files.map(async (file) => {
+      // Simulate file upload
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return {
+        filename: file.name,
+        size: file.size,
+        type: file.type,
+        cid: `bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi${Math.random().toString(36).substring(2)}`
+      };
+    });
+    
+    return Promise.all(uploadPromises);
+  };
+
+  // Compress multiple IPFS CIDs into a single hash for token memo storage
+  const compressIPFSHashes = (cids: string[]): string => {
+    // Create a compressed hash from multiple IPFS CIDs
+    // This allows us to store multiple document references in the token memo
+    const combinedCids = cids.join('|');
+    
+    // Create a hash of the combined CIDs to fit in token memo (100 char limit)
+    const encoder = new TextEncoder();
+    const data = encoder.encode(combinedCids);
+    
+    // Use a simple hash function to create a shorter representation
+    let hash = 0;
+    for (let i = 0; i < data.length; i++) {
+      hash = ((hash << 5) - hash + data[i]) & 0xffffffff;
+    }
+    
+    // Convert to base36 for shorter representation
+    return hash.toString(36);
+  };
+
+  // Decode compressed hash back to IPFS CIDs
+  const decodeIPFSHashes = (compressedHash: string, originalCids: string[]): string[] => {
+    // In a real implementation, this would decode the compressed hash
+    // For now, we'll return the original CIDs
+    return originalCids;
   };
 
   const handleSubmit = async () => {
-    if (!isConnected || !accountId || !signer || !hederaClient) {
-      toast({
-        title: 'Wallet Not Connected',
-        description: 'Please connect your HashPack wallet to create an asset.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    setIsLoading(true);
     try {
-      let assetTokenId: string | undefined;
-      let assetFileId: string | undefined;
-      let assetTopicId: string | undefined;
+      setLoading(true);
+      setError(null);
 
-      // Step 1: Upload asset metadata to HFS (small JSON file)
-      // Note: Images are stored on IPFS, only metadata goes to HFS
-      const assetMetadata = {
-        name: formData.name,
-        description: formData.description,
-        category: formData.category,
-        assetType: formData.assetType,
-        location: formData.location,
-        totalValue: formData.totalValue,
-        maturityDate: selectedAssetType === 'rwa' ? formData.maturityDate : undefined,
-        imageURI: formData.imageURI, // This is an IPFS URL from file upload
-        documentURI: formData.documentURI,
-        evidenceFiles: formData.evidenceFiles.map(file => ({
-          name: file.name,
-          type: file.type,
-          size: file.size
-        })),
-        createdBy: accountId,
-        createdAt: new Date().toISOString(),
-      };
-
-      // Upload metadata to HFS
-      const metadataContent = new TextEncoder().encode(JSON.stringify(assetMetadata));
-      const fileCreateTx = new FileCreateTransaction()
-        .setContents(metadataContent)
-        .setMaxTransactionFee(1000);
-
-      fileCreateTx.freezeWithSigner(signer);
-      const signedFileTx = await signer.signTransaction(fileCreateTx);
-      const fileResponse = await signedFileTx.execute(hederaClient);
-      const fileReceipt = await fileResponse.getReceipt(hederaClient);
-      assetFileId = fileReceipt.fileId?.toString();
-
-      // Step 2: Create HTS NFT for the asset
-      const tokenCreateTx = new TokenCreateTransaction()
-        .setTokenName(formData.name)
-        .setTokenSymbol(formData.assetType.toUpperCase().slice(0, 5))
-        .setTokenType(TokenType.NonFungibleUnique) // NON_FUNGIBLE_UNIQUE
-        .setInitialSupply(0) // NFT tokens start with 0 supply
-        .setTreasuryAccountId(AccountId.fromString(accountId))
-        .setSupplyType(TokenSupplyType.Infinite) // Allow unlimited minting
-        .setMaxTransactionFee(1000);
-
-      tokenCreateTx.freezeWithSigner(signer);
-      const signedTokenTx = await signer.signTransaction(tokenCreateTx);
-      const tokenResponse = await signedTokenTx.execute(hederaClient);
-      const tokenReceipt = await tokenResponse.getReceipt(hederaClient);
-      assetTokenId = tokenReceipt.tokenId?.toString();
-
-      // Step 3: Create HCS topic for asset events
-      const topicCreateTx = new TopicCreateTransaction()
-        .setTopicMemo(`Asset events for ${formData.name}`)
-        .setMaxTransactionFee(1000);
-
-      topicCreateTx.freezeWithSigner(signer);
-      const signedTopicTx = await signer.signTransaction(topicCreateTx);
-      const topicResponse = await signedTopicTx.execute(hederaClient);
-      const topicReceipt = await topicResponse.getReceipt(hederaClient);
-      assetTopicId = topicReceipt.topicId?.toString();
-
-      // Step 4: Submit asset creation event to HCS
-      const assetEvent = {
-        event: 'AssetCreated',
-        assetId: assetTokenId,
-        assetType: selectedAssetType,
-        owner: accountId,
-        metadataFileId: assetFileId,
-        topicId: assetTopicId,
-        timestamp: new Date().toISOString()
-      };
-
-      const messageContent = new TextEncoder().encode(JSON.stringify(assetEvent));
-      const messageSubmitTx = new TopicMessageSubmitTransaction()
-        .setTopicId(topicReceipt.topicId!)
-        .setMessage(messageContent)
-        .setMaxTransactionFee(1000);
-
-      messageSubmitTx.freezeWithSigner(signer);
-      const signedMessageTx = await signer.signTransaction(messageSubmitTx);
-      await signedMessageTx.execute(hederaClient);
-
-      // Step 5: Get TRUST token ID for trading
-      const trustTokenInfo = await TrustTokenService.getTrustTokenInfo();
-      if (!trustTokenInfo.tokenId) {
-        throw new Error('TRUST token not initialized. Please contact support.');
+      if (!address) {
+        throw new Error('Wallet not connected');
       }
 
-      // Step 6: Store asset data in backend
-      const assetData = {
-        tokenId: assetTokenId,
-        fileId: assetFileId,
-        topicId: assetTopicId,
-        trustTokenId: trustTokenInfo.tokenId,
-        name: formData.name,
-        description: formData.description,
-        category: formData.category,
-        assetType: selectedAssetType,
-        location: formData.location,
-        totalValue: formData.totalValue,
-        maturityDate: selectedAssetType === 'rwa' ? formData.maturityDate : undefined,
-        imageURI: formData.imageURI,
-        documentURI: formData.documentURI,
-        owner: accountId,
-        status: selectedAssetType === 'digital' ? 'VERIFIED' : 'PENDING'
+      // Upload all files to IPFS (simplified for now)
+      const uploadedFiles = {
+        ownershipDocuments: await uploadFiles(assetData.ownershipDocuments),
+        photos: await uploadFiles(assetData.photos),
+        inspectionReports: await uploadFiles(assetData.inspectionReports),
+        certificates: await uploadFiles(assetData.certificates)
       };
 
-      // Store in backend database
-      const response = await fetch('http://localhost:4001/api/assets', {
+      // Extract all IPFS CIDs from uploaded files
+      const allCids: string[] = [
+        ...uploadedFiles.ownershipDocuments.map(f => f.cid),
+        ...uploadedFiles.photos.map(f => f.cid),
+        ...uploadedFiles.inspectionReports.map(f => f.cid),
+        ...uploadedFiles.certificates.map(f => f.cid)
+      ];
+
+      // Create IPFS metadata hash (simplified)
+      const metadata = {
+        name: assetData.name,
+        description: assetData.description,
+        type: assetData.type,
+        category: assetData.category,
+        location: {
+          country: assetData.country,
+          region: assetData.region,
+          address: assetData.address,
+          coordinates: assetData.coordinates
+        },
+        totalValue: assetData.totalValue,
+        expectedAPY: assetData.expectedAPY,
+        maturityDate: assetData.maturityDate,
+        documents: uploadedFiles,
+        condition: assetData.condition,
+        maintenanceHistory: assetData.maintenanceHistory,
+        insuranceInfo: assetData.insuranceInfo,
+        complianceStatus: assetData.complianceStatus,
+        createdAt: new Date().toISOString()
+      };
+
+      // Simulate IPFS upload for metadata (in real implementation, upload to IPFS and get CID)
+      const metadataCid = `bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi-${Date.now()}`;
+
+      // Compress multiple IPFS CIDs into a single hash for token memo storage
+      const compressedHash = compressIPFSHashes(allCids);
+
+      // Create RWA asset with HCS submission
+      const assetPayload = {
+        name: assetData.name,
+        type: assetData.type,
+        value: assetData.totalValue,
+        location: `${assetData.country}, ${assetData.region}`,
+        description: assetData.description,
+        expectedAPY: assetData.expectedAPY,
+        creator: address,
+        metadataCid: metadataCid,
+        compressedHash: compressedHash,
+        documentCids: allCids
+      };
+
+      // Submit to TrustBridge HCS endpoint
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4001'}/api/hedera/rwa/create-with-hcs`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(assetData)
+        body: JSON.stringify(assetPayload),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to store asset data');
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to submit asset: ${response.statusText}`);
       }
 
-      toast({
-        title: 'Asset Created Successfully!',
-        description: `Your ${selectedAssetType} asset has been created with Hedera token ID: ${assetTokenId}`,
-        variant: 'default'
-      });
+      const result = await response.json();
+      console.log('RWA asset created with HCS:', result);
 
-      // Navigate to assets page
-      navigate('/dashboard/assets');
+      setSuccess(true);
     } catch (error) {
-      console.error('Error creating asset:', error);
-      
-      let errorMessage = 'Failed to create asset';
-      if (error instanceof Error) {
-        if (error.message.includes('TOKEN_HAS_NO_SUPPLY_KEY')) {
-          errorMessage = 'Token creation failed: Missing supply key. Please try again.';
-        } else if (error.message.includes('INSUFFICIENT_TX_FEE')) {
-          errorMessage = 'Insufficient HBAR for transaction fees. Please add more HBAR to your account.';
-        } else if (error.message.includes('TRANSACTION_EXPIRED')) {
-          errorMessage = 'Transaction expired. Please try again.';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      toast({
-        title: 'Error Creating Asset',
-        description: errorMessage,
-        variant: 'destructive'
-      });
+      console.error('Error submitting asset:', error);
+      setError(error instanceof Error ? error.message : 'Failed to submit asset');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const nextStep = () => {
-    if (currentStep < steps.length) {
+    if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -314,16 +258,16 @@ const CreateAsset: React.FC = () => {
     }
   };
 
-  const canProceed = () => {
-    switch (currentStep) {
+  const isStepValid = (step: number) => {
+    switch (step) {
       case 1:
-        return formData.name && formData.assetType;
+        return assetData.name && assetData.description && assetData.type;
       case 2:
-        return formData.location && formData.totalValue;
+        return assetData.country && assetData.region && assetData.address;
       case 3:
-        return selectedAssetType === 'digital' || formData.evidenceFiles.length > 0;
+        return assetData.totalValue > 0 && assetData.expectedAPY > 0 && assetData.maturityDate;
       case 4:
-        return true;
+        return assetData.ownershipDocuments.length > 0 && assetData.photos.length > 0;
       case 5:
         return true;
       default:
@@ -331,490 +275,474 @@ const CreateAsset: React.FC = () => {
     }
   };
 
-  // Check if KYC is required for RWA creation
-  const requiresKYC = selectedAssetType === 'rwa' && user && user.kycStatus !== 'approved';
-  
-  // Show KYC required modal if needed
-  if (requiresKYC) {
+  if (success) {
     return (
-      <KYCRequired 
-        onStartKYC={() => navigate('/auth')} 
-      />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <Card className="p-8 text-center max-w-md">
+          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Asset Submitted Successfully!
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-6">
+            Your RWA asset has been created on Hedera and submitted to the TrustBridge HCS topic for AMC approval. Our team will review it and contact you for physical inspection.
+          </p>
+          <Button onClick={() => window.location.href = '/portfolio'}>
+            View Portfolio
+          </Button>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-off-white p-4 sm:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Breadcrumb */}
-        <Breadcrumb
-          items={[
-            { label: 'Dashboard', href: '/dashboard' },
-            { label: 'Assets', href: '/dashboard/assets' },
-            { label: 'Create Asset' }
-          ]}
-        />
-
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <motion.h1
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-4xl font-bold text-off-white mb-4"
-          >
-            Create New Asset
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-electric-mint text-lg"
-          >
-            Choose your asset type and tokenize on the blockchain
-          </motion.p>
-        </motion.div>
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Submit RWA Asset for Tokenization
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300">
+            Complete the form below to submit your real-world asset for verification and tokenization
+          </p>
+        </div>
 
-        {/* Asset Type Selection */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5 text-neon-green" />
-                Choose Asset Type
-              </CardTitle>
-              <p className="text-electric-mint">Select whether you want to create a digital asset or a real-world asset (RWA)</p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Digital Asset Option */}
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedAssetType === 'digital'
-                      ? 'border-neon-green bg-neon-green/10'
-                      : 'border-gray-700 hover:border-gray-600'
-                  }`}
-                  onClick={() => setSelectedAssetType('digital')}
-                >
-                  <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neon-green/20 flex items-center justify-center">
-                      <Palette className="w-8 h-8 text-neon-green" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-off-white mb-2">Digital Asset</h3>
-                    <p className="text-electric-mint text-sm mb-4">
-                      Create digital assets like NFTs, digital art, or virtual items. Instant creation and verification.
-                    </p>
-                    <div className="text-xs text-gray-400">
-                      <div>✓ Instant creation</div>
-                      <div>✓ No verification needed</div>
-                      <div>✓ Lower fees (10 TRUST)</div>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* RWA Asset Option */}
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedAssetType === 'rwa'
-                      ? 'border-neon-green bg-neon-green/10'
-                      : 'border-gray-700 hover:border-gray-600'
-                  }`}
-                  onClick={() => setSelectedAssetType('rwa')}
-                >
-                  <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neon-green/20 flex items-center justify-center">
-                      <Building2 className="w-8 h-8 text-neon-green" />
-                    </div>
-                    <h3 className="text-xl font-semibold text-off-white mb-2">Real-World Asset (RWA)</h3>
-                    <p className="text-electric-mint text-sm mb-4">
-                      Tokenize physical assets like real estate, vehicles, or commodities. Requires verification.
-                    </p>
-                    <div className="text-xs text-gray-400 mb-2">
-                      <div>✓ Physical asset backing</div>
-                      <div>✓ Professional verification</div>
-                      <div>✓ Higher fees (100 TRUST)</div>
-                    </div>
-                    <div className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded">
-                      <Shield className="w-3 h-3 inline mr-1" />
-                      KYC Required
-                    </div>
-                  </div>
-                </motion.div>
+        {/* Progress Steps */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            {[1, 2, 3, 4, 5].map((step) => (
+              <div key={step} className="flex items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  currentStep >= step 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                }`}>
+                  {step}
+                </div>
+                {step < 5 && (
+                  <div className={`w-16 h-1 mx-2 ${
+                    currentStep > step ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                  }`} />
+                )}
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+            ))}
+          </div>
+          <div className="flex justify-between mt-2 text-xs text-gray-600 dark:text-gray-400">
+            <span>Basic Info</span>
+            <span>Location</span>
+            <span>Financial</span>
+            <span>Documents</span>
+            <span>Review</span>
+          </div>
+        </div>
 
-        {/* Step Navigation */}
-        <StepNavigation
-          steps={steps}
-          onStepClick={(stepId) => setCurrentStep(parseInt(stepId))}
-        />
-
-        {/* Form Content */}
+        {/* Form Steps */}
+        <Card className="p-6">
+          {/* Step 1: Basic Information */}
+          {currentStep === 1 && (
         <motion.div
-          key={currentStep}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Card className="mt-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-neon-green" />
-                {steps[currentStep - 1].title}
-              </CardTitle>
-              <p className="text-electric-mint">{steps[currentStep - 1].description}</p>
-            </CardHeader>
-            <CardContent>
-              {/* Step 1: Asset Details */}
-              {currentStep === 1 && (
-                <div className="space-y-6">
+              className="space-y-6"
+            >
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Basic Information
+              </h2>
+              
                   <div>
-                    <label className="block text-sm font-medium text-off-white mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Asset Name *
                     </label>
-                    <Input
-                      value={formData.name}
+                <input
+                  type="text"
+                  value={assetData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Enter asset name"
-                      className="w-full"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-off-white mb-2">
-                      Asset Type *
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Description *
                     </label>
-                    <Input
-                      value={formData.assetType}
-                      onChange={(e) => handleInputChange('assetType', e.target.value)}
-                      placeholder="e.g., Commercial Building, Farm Land, Vehicle"
-                      className="w-full"
+                <textarea
+                  value={assetData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Describe your asset in detail"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-off-white mb-2">
-                      Category *
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Asset Type *
                     </label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {categories.map((category) => {
-                        const Icon = category.icon;
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {assetTypes.map((type) => {
+                    const Icon = type.icon;
                         return (
-                          <button
-                            key={category.id}
-                            onClick={() => handleInputChange('category', category.id)}
-                            className={`p-4 rounded-lg border-2 transition-all ${
-                              formData.category === category.id
-                                ? 'border-neon-green bg-neon-green/10 text-neon-green'
-                                : 'border-gray-600 hover:border-electric-mint text-gray-300'
-                            }`}
-                          >
-                            <Icon className="w-8 h-8 mx-auto mb-2" />
-                            <div className="text-sm font-medium">{category.name}</div>
-                          </button>
+                      <div
+                        key={type.value}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                          assetData.type === type.value
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                        onClick={() => handleInputChange('type', type.value)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Icon className="w-6 h-6 text-blue-500" />
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-white">
+                              {type.label}
+                            </div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                              {type.description}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                         );
                       })}
                     </div>
                   </div>
-                </div>
-              )}
+            </motion.div>
+          )}
 
-              {/* Step 2: Location & Value */}
-              {currentStep === 2 && (
-                <div className="space-y-6">
+          {/* Step 2: Location */}
+          {currentStep === 2 && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-6"
+            >
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Asset Location
+              </h2>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-off-white mb-2">
-                      Location *
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Country *
                     </label>
-                    <Input
-                      value={formData.location}
-                      onChange={(e) => handleInputChange('location', e.target.value)}
-                      placeholder={selectedAssetType === 'digital' ? 'e.g., Metaverse, Virtual World, Online Platform' : 'e.g., 123 Main St, Lagos, Nigeria'}
-                      className="w-full"
+                  <input
+                    type="text"
+                    value={assetData.country}
+                    onChange={(e) => handleInputChange('country', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Country"
                     />
-                    <p className="text-sm text-electric-mint mt-1">
-                      {selectedAssetType === 'digital' 
-                        ? 'Specify the virtual location or platform where this digital asset exists'
-                        : 'Enter the physical address where this asset is located'
-                      }
-                    </p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Region/State *
+                  </label>
+                  <input
+                    type="text"
+                    value={assetData.region}
+                    onChange={(e) => handleInputChange('region', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Region or State"
+                  />
+                </div>
+              </div>
+
+                  <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Full Address *
+                    </label>
+                <textarea
+                  value={assetData.address}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Complete address"
+                    />
+                  </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-off-white mb-2">
-                        Total Value (USD) *
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Latitude
                       </label>
-                      <Input
+                  <input
+                    type="number"
+                    step="any"
+                    value={assetData.coordinates.lat}
+                    onChange={(e) => handleInputChange('coordinates', { ...assetData.coordinates, lat: parseFloat(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Latitude"
+                      />
+                    </div>
+                
+                    <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Longitude
+                      </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={assetData.coordinates.lng}
+                    onChange={(e) => handleInputChange('coordinates', { ...assetData.coordinates, lng: parseFloat(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Longitude"
+                      />
+                    </div>
+                  </div>
+            </motion.div>
+          )}
+
+          {/* Step 3: Financial Details */}
+          {currentStep === 3 && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-6"
+            >
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Financial Details
+              </h2>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Total Asset Value (USD) *
+                    </label>
+                  <input
+                      type="number"
+                    value={assetData.totalValue}
+                    onChange={(e) => handleInputChange('totalValue', parseFloat(e.target.value))}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Asset value in USD"
+                  />
+                  </div>
+
+                    <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Expected APY (%) *
+                      </label>
+                  <input
                         type="number"
-                        value={formData.totalValue}
-                        onChange={(e) => handleInputChange('totalValue', e.target.value)}
-                        placeholder="Enter value in USD"
-                        className="w-full"
+                    step="0.1"
+                    value={assetData.expectedAPY}
+                    onChange={(e) => handleInputChange('expectedAPY', parseFloat(e.target.value))}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Expected annual return"
                       />
                     </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-off-white mb-2">
-                        Maturity Date
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Maturity Date *
                       </label>
-                      <Input
+                  <input
                         type="date"
-                        value={formData.maturityDate}
+                    value={assetData.maturityDate}
                         onChange={(e) => handleInputChange('maturityDate', e.target.value)}
-                        className="w-full"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
-                  </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Asset Condition
+                  </label>
+                  <select
+                    value={assetData.condition}
+                    onChange={(e) => handleInputChange('condition', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select condition</option>
+                    <option value="excellent">Excellent</option>
+                    <option value="good">Good</option>
+                    <option value="fair">Fair</option>
+                    <option value="poor">Poor</option>
+                  </select>
                 </div>
-              )}
+              </div>
+            </motion.div>
+          )}
 
-              {/* Step 3: Evidence Upload (RWA) or Image Upload (Digital) */}
-              {currentStep === 3 && (
-                <div className="space-y-6">
-                  {selectedAssetType === 'digital' ? (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-off-white mb-2">
-                          Asset Image *
-                        </label>
-                        <Input
-                          value={formData.imageURI}
-                          onChange={(e) => handleInputChange('imageURI', e.target.value)}
-                          placeholder="https://example.com/your-asset-image.jpg"
-                          className="w-full"
-                        />
-                        <p className="text-sm text-electric-mint mt-1">
-                          Enter the URL of your digital asset image or upload to IPFS
-                        </p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-off-white mb-2">
-                          Description *
-                        </label>
-                        <textarea
-                          value={formData.description}
-                          onChange={(e) => handleInputChange('description', e.target.value)}
-                          placeholder="Describe your digital asset..."
-                          className="w-full h-32 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-off-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-neon-green"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-off-white mb-2">
-                          Upload Evidence Documents *
-                        </label>
-                        <FileUpload
-                          onFilesChange={handleFileUpload}
-                          acceptedTypes={['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png']}
-                          allowMultiple={true}
-                        />
-                      </div>
+          {/* Step 4: Documents */}
+          {currentStep === 4 && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-6"
+            >
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Required Documents
+              </h2>
+              
+              {/* Ownership Documents */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Ownership Documents * (Deed, Title, Certificate of Ownership)
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => handleFileUpload('ownershipDocuments', Array.from(e.target.files || []))}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Upload legal documents proving ownership
+                </p>
+              </div>
 
-                      {formData.evidenceFiles.length > 0 && (
-                        <div>
-                          <h4 className="text-sm font-medium text-off-white mb-2">Uploaded Files:</h4>
-                          <div className="space-y-2">
-                            {formData.evidenceFiles.map((file, index) => (
-                              <div key={index} className="flex items-center justify-between p-2 bg-gray-800 rounded">
-                                <span className="text-sm text-off-white">{file.name}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => removeFile(index)}
-                                  className="text-red-400 hover:text-red-300"
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+              {/* Photos */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Asset Photos * (Multiple angles, current condition)
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  accept=".jpg,.jpeg,.png,.gif"
+                  onChange={(e) => handleFileUpload('photos', Array.from(e.target.files || []))}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Upload clear photos showing the asset from different angles
+                </p>
+              </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-off-white mb-2">
-                          Asset Image
-                        </label>
-                        <Input
-                          value={formData.imageURI}
-                          onChange={(e) => handleInputChange('imageURI', e.target.value)}
-                          placeholder="https://example.com/your-asset-image.jpg"
-                          className="w-full"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-off-white mb-2">
-                          Document Bundle URI
-                        </label>
-                        <Input
-                          value={formData.documentURI}
-                          onChange={(e) => handleInputChange('documentURI', e.target.value)}
-                          placeholder="https://example.com/your-documents.zip"
-                          className="w-full"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-off-white mb-2">
-                          Description *
-                        </label>
-                        <textarea
-                          value={formData.description}
-                          onChange={(e) => handleInputChange('description', e.target.value)}
-                          placeholder="Describe your real-world asset..."
-                          className="w-full h-32 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-off-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-neon-green"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* Step 4: Verification Level (RWA only) or Maturity Date (RWA) */}
-              {currentStep === 4 && (
-                <div className="space-y-6">
-                  {selectedAssetType === 'digital' ? (
-                    <div className="text-center py-8">
-                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-neon-green/20 flex items-center justify-center">
-                        <CheckCircle className="w-8 h-8 text-neon-green" />
-                      </div>
-                      <h3 className="text-xl font-semibold text-off-white mb-2">Digital Asset Ready</h3>
-                      <p className="text-electric-mint">
-                        Your digital asset will be created instantly with automatic verification. No additional steps required.
+              {/* Inspection Reports */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Inspection Reports (If available)
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => handleFileUpload('inspectionReports', Array.from(e.target.files || []))}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Professional inspection reports, appraisals, or assessments
                       </p>
                     </div>
-                  ) : (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-off-white mb-2">
-                          Maturity Date *
-                        </label>
-                        <Input
-                          type="date"
-                          value={formData.maturityDate}
-                          onChange={(e) => handleInputChange('maturityDate', e.target.value)}
-                          className="w-full"
-                        />
-                        <p className="text-sm text-electric-mint mt-1">
-                          When will this asset mature or reach its expected value?
-                        </p>
+                    
+              {/* Certificates */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Certificates & Compliance Documents
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => handleFileUpload('certificates', Array.from(e.target.files || []))}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Compliance certificates, permits, licenses, insurance documents
+                </p>
                       </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-off-white mb-2">
-                          Choose Verification Level
-                        </label>
-                        <div className="space-y-4">
-                          {verificationLevels.map((level) => (
-                            <div
-                              key={level.id}
-                              className="p-4 rounded-lg border-2 border-gray-600 hover:border-electric-mint transition-all cursor-pointer"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h4 className="font-medium text-off-white">{level.name}</h4>
-                                  <p className="text-sm text-electric-mint">{level.description}</p>
-                                </div>
-                                <div className="text-neon-green font-medium">{level.fee}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+            </motion.div>
+          )}
 
-              {/* Step 5: Review & Submit */}
-              {currentStep === 5 && (
-                <div className="space-y-6">
-                  <div className="bg-gray-800 p-6 rounded-lg">
-                    <h4 className="font-medium text-off-white mb-4">Review Your {selectedAssetType === 'digital' ? 'Digital' : 'RWA'} Asset</h4>
-                    <div className="space-y-2 text-sm">
-                      <div><span className="text-electric-mint">Asset Type:</span> {selectedAssetType === 'digital' ? 'Digital Asset' : 'Real-World Asset'}</div>
-                      <div><span className="text-electric-mint">Name:</span> {formData.name}</div>
-                      <div><span className="text-electric-mint">Type:</span> {formData.assetType}</div>
-                      <div><span className="text-electric-mint">Category:</span> {categories[formData.category]?.name}</div>
-                      <div><span className="text-electric-mint">Location:</span> {formData.location}</div>
-                      <div><span className="text-electric-mint">Value:</span> ${formData.totalValue}</div>
-                      {selectedAssetType === 'rwa' && (
-                        <>
-                          <div><span className="text-electric-mint">Maturity Date:</span> {formData.maturityDate}</div>
-                          <div><span className="text-electric-mint">Documents:</span> {formData.evidenceFiles.length} files</div>
-                        </>
-                      )}
-                      {selectedAssetType === 'digital' && (
-                        <div><span className="text-electric-mint">Image URI:</span> {formData.imageURI || 'Not provided'}</div>
-                      )}
-                      <div><span className="text-electric-mint">Description:</span> {formData.description || 'Not provided'}</div>
+          {/* Step 5: Review & Submit */}
+          {currentStep === 5 && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-6"
+            >
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Review & Submit
+              </h2>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-medium text-gray-900 dark:text-white mb-2">Basic Information</h3>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                      <p><strong>Name:</strong> {assetData.name}</p>
+                      <p><strong>Type:</strong> {assetData.type}</p>
+                      <p><strong>Description:</strong> {assetData.description}</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="font-medium text-gray-900 dark:text-white mb-2">Location</h3>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                      <p><strong>Country:</strong> {assetData.country}</p>
+                      <p><strong>Region:</strong> {assetData.region}</p>
+                      <p><strong>Address:</strong> {assetData.address}</p>
+                  </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-medium text-gray-900 dark:text-white mb-2">Financial Details</h3>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                      <p><strong>Value:</strong> ${assetData.totalValue.toLocaleString()}</p>
+                      <p><strong>APY:</strong> {assetData.expectedAPY}%</p>
+                      <p><strong>Maturity:</strong> {assetData.maturityDate}</p>
+                      <p><strong>Condition:</strong> {assetData.condition || 'Not specified'}</p>
+                    </div>
                     </div>
                     
-                    <div className="mt-4 p-4 bg-gray-700 rounded-lg">
-                      <h5 className="font-medium text-off-white mb-2">Creation Summary</h5>
-                      <div className="text-sm space-y-1">
-                        <div><span className="text-electric-mint">Creation Fee:</span> {selectedAssetType === 'digital' ? '10 TRUST' : '100 TRUST'}</div>
-                        <div><span className="text-electric-mint">Verification:</span> {selectedAssetType === 'digital' ? 'Instant (Automatic)' : 'Required (Attestor Review)'}</div>
-                        <div><span className="text-electric-mint">Trading:</span> {selectedAssetType === 'digital' ? 'Immediate' : 'After Verification'}</div>
-                      </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900 dark:text-white mb-2">Documents</h3>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                      <p><strong>Ownership Docs:</strong> {assetData.ownershipDocuments.length}</p>
+                      <p><strong>Photos:</strong> {assetData.photos.length}</p>
+                      <p><strong>Inspection Reports:</strong> {assetData.inspectionReports.length}</p>
+                      <p><strong>Certificates:</strong> {assetData.certificates.length}</p>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {error && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <div className="flex items-center">
+                    <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+                    <p className="text-red-700 dark:text-red-300">{error}</p>
+                  </div>
+                </div>
+              )}
+            </motion.div>
               )}
 
               {/* Navigation Buttons */}
               <div className="flex justify-between mt-8">
                 <Button
+              variant="outline"
                   onClick={prevStep}
                   disabled={currentStep === 1}
-                  variant="outline"
                 >
                   Previous
                 </Button>
 
-                {currentStep === steps.length ? (
+            {currentStep < 5 ? (
                   <Button
-                    onClick={handleSubmit}
-                    disabled={!canProceed() || isLoading}
-                    className="bg-neon-green text-black hover:bg-electric-mint"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Creating Asset...
-                      </>
-                    ) : (
-                      'Create Asset'
-                    )}
+                onClick={nextStep}
+                disabled={!isStepValid(currentStep)}
+              >
+                Next
                   </Button>
                 ) : (
                   <Button
-                    onClick={nextStep}
-                    disabled={!canProceed()}
-                    className="bg-neon-green text-black hover:bg-electric-mint"
-                  >
-                    Next
+                onClick={handleSubmit}
+                disabled={loading}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {loading ? 'Submitting...' : 'Submit Asset'}
                   </Button>
                 )}
               </div>
-            </CardContent>
           </Card>
-        </motion.div>
       </div>
     </div>
   );

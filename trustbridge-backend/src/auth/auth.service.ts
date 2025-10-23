@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { User, UserDocument, EmailVerificationStatus } from '../schemas/user.schema';
+import { User, UserDocument, EmailVerificationStatus, KycStatus } from '../schemas/user.schema';
 import { ethers } from 'ethers';
 import * as crypto from 'crypto';
 import { GmailService } from '../services/gmail.service';
@@ -754,42 +754,68 @@ export class AuthService {
   }
 
   // Didit KYC Integration
-  async processDiditWebhook(webhookData: any): Promise<void> {
+  async processDiditWebhook(webhookData: any): Promise<any> {
     try {
-      this.logger.log('Processing Didit webhook:', webhookData);
+      this.logger.log('Processing DidIt webhook:', {
+        session_id: webhookData.session_id,
+        status: webhookData.status,
+        webhook_type: webhookData.webhook_type,
+        vendor_data: webhookData.vendor_data
+      });
       
-      const { session_id, status, vendor_data } = webhookData;
+      const { session_id, status, vendor_data, webhook_type } = webhookData;
       
       if (!session_id || !status) {
-        throw new Error('Missing required webhook fields');
+        throw new Error('Missing required webhook fields: session_id and status');
       }
 
-      // Parse vendor data to get wallet address
-      let walletAddress: string | null = null;
-      if (vendor_data) {
+      // Only process status.updated webhooks for now
+      if (webhook_type && webhook_type !== 'status.updated') {
+        this.logger.log(`Skipping webhook type: ${webhook_type}`);
+        return { message: `Skipped webhook type: ${webhook_type}` };
+      }
+
+      // Find user by session_id (stored as kycInquiryId) or vendor_data
+      let user;
+      
+      // First try to find by kycInquiryId (session_id)
+      user = await this.userModel.findOne({ kycInquiryId: session_id });
+      
+      // If not found, try to parse vendor_data for wallet address
+      if (!user && vendor_data) {
         try {
-          const parsedVendorData = JSON.parse(vendor_data);
-          walletAddress = parsedVendorData.walletAddress;
+          // vendor_data might be a string or object
+          let walletAddress = null;
+          if (typeof vendor_data === 'string') {
+            // Try to parse as JSON first
+            try {
+              const parsed = JSON.parse(vendor_data);
+              walletAddress = parsed.walletAddress || parsed;
+            } catch {
+              // If not JSON, treat as wallet address directly
+              walletAddress = vendor_data;
+            }
+          } else if (vendor_data.walletAddress) {
+            walletAddress = vendor_data.walletAddress;
+          }
+          
+          if (walletAddress) {
+            user = await this.userModel.findOne({ 
+              walletAddress: { $regex: new RegExp(`^${walletAddress}$`, 'i') } 
+            });
+          }
         } catch (err) {
-          this.logger.warn('Failed to parse vendor data:', err);
+          this.logger.warn('Failed to parse vendor_data:', err);
         }
       }
 
-      // Find user by wallet address
-      let user;
-      if (walletAddress) {
-        user = await this.userModel.findOne({ 
-          walletAddress: { $regex: new RegExp(`^${walletAddress}$`, 'i') } 
-        });
-      }
-
       if (!user) {
-        this.logger.warn(`User not found for Didit webhook: sessionId=${session_id}, walletAddress=${walletAddress}`);
-        return;
+        this.logger.warn(`User not found for DidIt webhook: sessionId=${session_id}, vendor_data=${vendor_data}`);
+        return { message: 'User not found for this webhook' };
       }
 
-      // Map Didit status to our KYC status
-      let kycStatus: string;
+      // Map DidIt status to our KYC status
+      let kycStatus: 'pending' | 'in_progress' | 'approved' | 'rejected' | 'not_started';
       switch (status.toLowerCase()) {
         case 'completed':
         case 'verified':
@@ -804,38 +830,63 @@ export class AuthService {
         case 'pending':
         case 'in_progress':
         case 'processing':
-          kycStatus = 'pending';
+        case 'in review':
+          kycStatus = 'in_progress';
+          break;
+        case 'not started':
+        case 'abandoned':
+          kycStatus = 'not_started';
           break;
         default:
-          kycStatus = 'pending';
+          this.logger.warn(`Unknown DidIt status: ${status}, defaulting to in_progress`);
+          kycStatus = 'in_progress';
       }
 
       // Update user KYC status
-      (user as any).kycStatus = kycStatus as any;
-      (user as any).kycInquiryId = session_id; // Using session_id as inquiry ID
-      (user as any).updatedAt = new Date();
+      user.kycStatus = kycStatus;
+      user.kycInquiryId = session_id;
+      user.updatedAt = new Date();
+      
+      // Add decision data if available
+      if (webhookData.decision) {
+        user.kycDecision = webhookData.decision;
+      }
       
       await user.save();
 
-      this.logger.log(`KYC status updated for user ${user._id}: ${kycStatus}`);
+      this.logger.log(`KYC status updated for user ${user.email}: ${kycStatus} (session: ${session_id})`);
       
-      // Send notification to user
-      if (user.profile?.email) {
-        await this.gmailService.sendEmail(
-          user.profile.email,
-          'KYC Verification Update',
-          `
-            <h2>KYC Verification Update</h2>
-            <p>Your identity verification status has been updated to: <strong>${kycStatus}</strong></p>
-            <p>Session ID: ${session_id}</p>
-            <p>Thank you for using TrustBridge!</p>
-          `,
-          `Your KYC verification status has been updated to: ${kycStatus}`
-        );
+      // Send notification to user if status is final
+      if (kycStatus === 'approved' || kycStatus === 'rejected') {
+        try {
+          if (user.email) {
+            await this.gmailService.sendEmail(
+              user.email,
+              'KYC Verification Update',
+              `
+                <h2>KYC Verification Update</h2>
+                <p>Your identity verification status has been updated to: <strong>${kycStatus}</strong></p>
+                <p>Session ID: ${session_id}</p>
+                <p>Thank you for using TrustBridge!</p>
+              `,
+              `Your KYC verification status has been updated to: ${kycStatus}`
+            );
+          }
+        } catch (emailError) {
+          this.logger.warn('Failed to send KYC notification email:', emailError);
+        }
       }
 
+      return {
+        success: true,
+        userId: user._id,
+        email: user.email,
+        kycStatus,
+        sessionId: session_id,
+        message: `KYC status updated to ${kycStatus}`
+      };
     } catch (error) {
-      this.logger.error('Didit webhook processing failed:', error);
+      this.logger.error('Failed to process DidIt webhook:', error);
       throw error;
     }
   }
@@ -849,26 +900,36 @@ export class AuthService {
         return true; // Allow if not configured
       }
 
-      const signature = req.headers['x-didit-signature'];
-      if (!signature) {
-        this.logger.warn('Missing Didit webhook signature');
+      const signature = req.headers['x-signature'];
+      const timestamp = req.headers['x-timestamp'];
+      
+      if (!signature || !timestamp) {
+        this.logger.warn('Missing DidIt webhook signature or timestamp');
+        return false;
+      }
+
+      // Validate timestamp (within 5 minutes)
+      const currentTime = Math.floor(Date.now() / 1000);
+      const incomingTime = parseInt(timestamp, 10);
+      if (Math.abs(currentTime - incomingTime) > 300) {
+        this.logger.warn('DidIt webhook timestamp is stale');
         return false;
       }
 
       // Get raw body for signature verification
-      const rawBody = JSON.stringify(req.body);
+      const rawBody = req.rawBody || JSON.stringify(req.body);
       
-      // Create HMAC signature
+      // Create HMAC signature using DidIt format
       const crypto = require('crypto');
       const expectedSignature = crypto
         .createHmac('sha256', webhookSecret)
         .update(rawBody)
         .digest('hex');
 
-      // Compare signatures
+      // Compare signatures using timingSafeEqual for security
       const isValid = crypto.timingSafeEqual(
-        Buffer.from(signature),
-        Buffer.from(expectedSignature)
+        Buffer.from(expectedSignature, 'utf8'),
+        Buffer.from(signature, 'utf8')
       );
 
       if (!isValid) {
@@ -922,7 +983,7 @@ export class AuthService {
         body: JSON.stringify({
           workflow_id: finalWorkflowId,
           vendor_data: vendorData || '',
-          callback: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/api/auth/didit/callback`,
+          callback: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/kyc-callback`,
         }),
       });
 
@@ -1098,4 +1159,63 @@ export class AuthService {
       throw error;
     }
   }
+
+  async processDiditCallback(verificationSessionId: string, status: string) {
+    try {
+      this.logger.log(`Processing DidIt callback for session ${verificationSessionId} with status ${status}`);
+
+      // Find user by verification session ID
+      const user = await this.userModel.findOne({ 
+        kycInquiryId: verificationSessionId 
+      });
+
+      if (!user) {
+        this.logger.warn(`No user found for verification session ${verificationSessionId}`);
+        return {
+          success: false,
+          message: 'User not found for this verification session',
+        };
+      }
+
+      // Map DidIt status to our internal status
+      let internalStatus: KycStatus;
+      switch (status) {
+        case 'Not Started':
+          internalStatus = KycStatus.NOT_STARTED;
+          break;
+        case 'In Progress':
+        case 'Pending':
+          internalStatus = KycStatus.IN_PROGRESS;
+          break;
+        case 'Completed':
+        case 'Approved':
+          internalStatus = KycStatus.VERIFIED;
+          break;
+        case 'Failed':
+        case 'Rejected':
+        case 'Declined':
+          internalStatus = KycStatus.REJECTED;
+          break;
+        default:
+          internalStatus = KycStatus.PENDING;
+      }
+
+      // Update user KYC status
+      user.kycStatus = internalStatus;
+      await user.save();
+
+      this.logger.log(`Updated KYC status for user ${user.email} to ${internalStatus}`);
+
+      return {
+        success: true,
+        userId: user._id,
+        kycStatus: internalStatus,
+        message: `KYC status updated to ${internalStatus}`,
+      };
+    } catch (error) {
+      this.logger.error('Failed to process DidIt callback:', error);
+      throw error;
+    }
+  }
+
 }

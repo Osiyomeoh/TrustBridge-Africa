@@ -219,6 +219,40 @@ let HederaController = class HederaController {
             message: 'Marketplace data retrieved successfully'
         };
     }
+    async approveAsset(body) {
+        try {
+            const result = await this.hederaService.approveRWAAsset(body.tokenId, body.approved, body.comments, body.verificationScore);
+            return {
+                success: true,
+                data: result,
+                message: 'Asset approved successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to approve asset'
+            };
+        }
+    }
+    async rejectAsset(body) {
+        try {
+            const result = await this.hederaService.rejectRWAAsset(body.tokenId, body.comments);
+            return {
+                success: true,
+                data: result,
+                message: 'Asset rejected successfully'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to reject asset'
+            };
+        }
+    }
     async updateDualTokenization(body) {
         const result = await this.hederaService.updateDualTokenization(body);
         return {
@@ -842,6 +876,125 @@ let HederaController = class HederaController {
             };
         }
     }
+    async createRWAAssetWithHCS(assetData) {
+        try {
+            const hcsMessage = {
+                type: 'TRUSTBRIDGE_ASSET_CREATED',
+                rwaTokenId: assetData.nftTokenId,
+                creator: assetData.creator,
+                timestamp: new Date().toISOString(),
+                status: 'SUBMITTED_FOR_APPROVAL',
+                assetData: {
+                    name: assetData.name,
+                    type: assetData.type,
+                    assetType: assetData.assetType,
+                    category: assetData.category,
+                    totalValue: assetData.totalValue,
+                    expectedAPY: assetData.expectedAPY,
+                    maturityDate: assetData.maturityDate,
+                    location: assetData.location,
+                    description: assetData.description,
+                    metadataCid: assetData.metadataCid,
+                    displayImage: assetData.displayImage,
+                    documentUrls: assetData.documentUrls,
+                    compressedHash: assetData.compressedHash
+                }
+            };
+            const transactionId = await this.hederaService.submitToTrustBridgeTopic(hcsMessage);
+            return {
+                success: true,
+                data: {
+                    nftTokenId: assetData.nftTokenId,
+                    hcsTransactionId: transactionId,
+                    topicId: '0.0.7102808'
+                },
+                message: 'RWA asset registered in HCS for AMC approval'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to register RWA asset in HCS'
+            };
+        }
+    }
+    async getTrustBridgeRWAAssets() {
+        try {
+            console.log('🔧 Getting TrustBridge RWA assets...');
+            const messages = await this.hederaService.getTrustBridgeTopicMessages();
+            console.log('🔧 Total messages retrieved:', messages.length);
+            const assetMessages = messages.filter(msg => msg.type === 'TRUSTBRIDGE_ASSET_CREATED');
+            console.log('🔧 Asset creation messages found:', assetMessages.length);
+            const statusMessages = messages.filter(msg => msg.type === 'TRUSTBRIDGE_ASSET_STATUS_UPDATE');
+            console.log('🔧 Status update messages found:', statusMessages.length);
+            const currentStatuses = new Map();
+            statusMessages.forEach(statusMsg => {
+                currentStatuses.set(statusMsg.rwaTokenId, statusMsg.status);
+            });
+            const assetsWithStatus = assetMessages.map(asset => ({
+                ...asset,
+                status: currentStatuses.get(asset.rwaTokenId) || asset.status
+            }));
+            console.log('🔧 Assets with updated statuses:', assetsWithStatus.length);
+            return {
+                success: true,
+                data: {
+                    assets: assetsWithStatus,
+                    count: assetsWithStatus.length,
+                    totalMessages: messages.length
+                },
+                message: 'TrustBridge RWA assets retrieved from HCS topic'
+            };
+        }
+        catch (error) {
+            console.error('❌ Error in getTrustBridgeRWAAssets:', error);
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to get TrustBridge RWA assets'
+            };
+        }
+    }
+    async updateRWAAssetStatus(statusData) {
+        try {
+            await this.hederaService.updateRWAAssetStatus(statusData.tokenId, statusData.status, statusData.adminAddress, statusData.notes);
+            return {
+                success: true,
+                data: {
+                    tokenId: statusData.tokenId,
+                    status: statusData.status,
+                    adminAddress: statusData.adminAddress,
+                    timestamp: Date.now()
+                },
+                message: 'RWA asset status updated in HCS topic'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to update RWA asset status'
+            };
+        }
+    }
+    async getTrustBridgeTopicInfo() {
+        try {
+            const topicId = await this.hederaService.createOrGetTrustBridgeTopic();
+            return {
+                success: true,
+                data: { topicId },
+                message: 'TrustBridge HCS topic information retrieved'
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error.message,
+                message: 'Failed to get TrustBridge topic information'
+            };
+        }
+    }
 };
 exports.HederaController = HederaController;
 __decorate([
@@ -962,6 +1115,24 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], HederaController.prototype, "getMarketplaceData", null);
+__decorate([
+    (0, common_1.Post)('approve-asset'),
+    (0, swagger_1.ApiOperation)({ summary: 'Approve RWA asset on Hedera network' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Asset approved successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "approveAsset", null);
+__decorate([
+    (0, common_1.Post)('reject-asset'),
+    (0, swagger_1.ApiOperation)({ summary: 'Reject RWA asset on Hedera network' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Asset rejected successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "rejectAsset", null);
 __decorate([
     (0, common_1.Post)('update-dual-tokenization'),
     (0, swagger_1.ApiOperation)({ summary: 'Update dual tokenization with ERC-721 data' }),
@@ -1370,6 +1541,40 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], HederaController.prototype, "getTopicsInfo", null);
+__decorate([
+    (0, common_1.Post)('rwa/create-with-hcs'),
+    (0, swagger_1.ApiOperation)({ summary: 'Create RWA asset with HCS submission for AMC approval' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'RWA asset created and submitted for approval' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "createRWAAssetWithHCS", null);
+__decorate([
+    (0, common_1.Get)('rwa/trustbridge-assets'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all TrustBridge RWA assets from HCS topic' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'TrustBridge RWA assets retrieved' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "getTrustBridgeRWAAssets", null);
+__decorate([
+    (0, common_1.Post)('rwa/update-status'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update RWA asset status in HCS topic' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Asset status updated successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "updateRWAAssetStatus", null);
+__decorate([
+    (0, common_1.Get)('rwa/topic-info'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get TrustBridge HCS topic information' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Topic information retrieved' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], HederaController.prototype, "getTrustBridgeTopicInfo", null);
 exports.HederaController = HederaController = __decorate([
     (0, swagger_1.ApiTags)('Hedera'),
     (0, common_1.Controller)('hedera'),

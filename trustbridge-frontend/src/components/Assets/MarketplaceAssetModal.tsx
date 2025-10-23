@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ExternalLink, Copy, Tag, MapPin, Calendar, User, TrendingUp, Share2, Heart, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '../UI/Card';
 import Button from '../UI/Button';
 import { useToast } from '../../hooks/useToast';
 import { useWallet } from '../../contexts/WalletContext';
+import { TransferTransaction, TokenId, AccountId, Hbar, TokenMintTransaction, TokenBurnTransaction, AccountBalanceQuery } from '@hashgraph/sdk';
 import { TrustTokenService } from '../../services/trust-token.service';
 import { marketplaceContractService } from '../../services/marketplace-contract.service';
 import { trackActivity } from '../../utils/activityTracker';
 import { apiService } from '../../services/api';
-import { 
-  TransferTransaction, 
-  TokenId, 
-  AccountId, 
-  Hbar,
-} from '@hashgraph/sdk';
+import { AdvancedOrderBook } from '../Trading/AdvancedOrderBook';
+import { YieldDashboard } from '../Trading/YieldDashboard';
+import { RiskDashboard } from '../Trading/RiskDashboard';
 
 /**
  * Marketplace Asset Modal
@@ -35,8 +34,9 @@ const MarketplaceAssetModal: React.FC<MarketplaceAssetModalProps> = ({
   asset,
   onAssetUpdate
 }) => {
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const { accountId, signer, hederaClient } = useWallet();
+  const { isConnected, accountId, signer, hederaClient } = useWallet();
   
   const [isBuying, setIsBuying] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
@@ -44,6 +44,16 @@ const MarketplaceAssetModal: React.FC<MarketplaceAssetModalProps> = ({
   const [offerDuration, setOfferDuration] = useState('7');
   const [isMakingOffer, setIsMakingOffer] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [showPoolTrading, setShowPoolTrading] = useState(false);
+  const [investmentAmount, setInvestmentAmount] = useState<string>('');
+  const [redeemAmount, setRedeemAmount] = useState<string>('');
+  const [userPoolBalance, setUserPoolBalance] = useState<number>(0);
+  const [isInvesting, setIsInvesting] = useState(false);
+  const [isRedeeming, setIsRedeeming] = useState(false);
+  const [showPoolDetails, setShowPoolDetails] = useState(false);
+  const [showAdvancedTrading, setShowAdvancedTrading] = useState(false);
+  const [showYieldDashboard, setShowYieldDashboard] = useState(false);
+  const [showRiskDashboard, setShowRiskDashboard] = useState(false);
   const [marketplaceListingStatus, setMarketplaceListingStatus] = useState<{
     isListed: boolean;
     listingId: number;
@@ -122,6 +132,7 @@ const MarketplaceAssetModal: React.FC<MarketplaceAssetModalProps> = ({
   // Helper: Submit event to HCS
   const submitToHCS = async (event: any) => {
     try {
+      // Use marketplace HCS endpoint for all events (pool and marketplace events)
       await apiService.post('/hedera/hcs/marketplace/event', event);
       console.log('📋 Event submitted to HCS:', event.type);
     } catch (error) {
@@ -136,6 +147,501 @@ const MarketplaceAssetModal: React.FC<MarketplaceAssetModalProps> = ({
       description: 'Favorites feature will be implemented with blockchain storage',
       variant: 'default'
     });
+  };
+
+  const handleInvest = async () => {
+    if (!isInvesting) {
+      // First click - show investment form
+      setIsInvesting(true);
+      return;
+    }
+
+    try {
+      const amount = parseFloat(investmentAmount);
+      
+      if (!amount || amount < (asset.minimumInvestment || 100)) {
+        toast({
+          title: 'Invalid Investment Amount',
+          description: `Minimum investment is ${asset.minimumInvestment || 100} TRUST`,
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Check wallet connection
+      if (!isConnected || !accountId || !signer || !hederaClient) {
+        toast({
+          title: 'Wallet Not Connected',
+          description: 'Please connect your HashPack wallet to invest.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Skip wallet responsiveness check to avoid protobuf errors
+      console.log('🔧 Skipping wallet balance check to avoid protobuf errors');
+
+      // Validate account ID format
+      if (!accountId || !accountId.match(/^\d+\.\d+\.\d+$/)) {
+        console.error('❌ Invalid account ID format:', accountId);
+        toast({
+          title: 'Invalid Account ID',
+          description: 'Account ID must be in format X.Y.Z (e.g., 0.0.123456)',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Check user's TRUST token balance before investment
+      try {
+        console.log('🔧 Checking user TRUST token balance...');
+        const trustTokenId = TokenId.fromString('0.0.6935064'); // Use the same TRUST token ID as backend
+        const userAccountId = AccountId.fromString(accountId);
+        
+        const balanceQuery = new AccountBalanceQuery().setAccountId(userAccountId);
+        const balance = await balanceQuery.execute(hederaClient);
+        
+        // Find TRUST token balance
+        const trustBalance = balance.tokens?.get(trustTokenId);
+        const trustBalanceAmount = trustBalance ? Number(trustBalance) : 0; // TRUST token has 0 decimals, no conversion needed
+        
+        console.log('🔧 User TRUST balance:', trustBalanceAmount);
+        console.log('🔧 Investment amount requested:', amount);
+        
+        if (trustBalanceAmount < amount) {
+          toast({
+            title: 'Insufficient TRUST Balance',
+            description: `You have ${trustBalanceAmount.toFixed(2)} TRUST but need ${amount} TRUST for this investment.`,
+            variant: 'destructive'
+          });
+          return;
+        }
+        
+        console.log('✅ Sufficient TRUST balance confirmed');
+      } catch (balanceError) {
+        console.warn('⚠️ Could not check balance, proceeding with investment:', (balanceError as Error).message);
+        // Continue with investment attempt even if balance check fails
+      }
+
+      console.log('🚀 Starting pool investment process...');
+      console.log('Pool ID:', asset.poolId);
+      console.log('Investment Amount:', amount, 'TRUST');
+      console.log('User Account:', accountId);
+
+      // Step 1: Transfer TRUST tokens from user to pool
+      console.log('🔧 Creating TRUST token transfer transaction...');
+      
+      // TRUST token has 0 decimals, so no conversion needed
+      const tokenAmount = Math.floor(amount); // TRUST token has 0 decimals, use amount as-is
+      console.log('🔧 Investment amount (TRUST):', amount);
+      console.log('🔧 Token amount (no conversion needed):', tokenAmount);
+      console.log('🔧 Token amount check:', tokenAmount, 'should equal', amount);
+      
+      // Create token IDs and account IDs first
+      const trustTokenId = TokenId.fromString('0.0.6935064'); // Use the same TRUST token ID as backend
+      const userAccountId = AccountId.fromString(accountId);
+      const treasuryAccountId = AccountId.fromString('0.0.6916959'); // Use the same treasury account ID as backend
+      
+      console.log('🔧 Token ID:', trustTokenId.toString());
+      console.log('🔧 User Account ID:', userAccountId.toString());
+      console.log('🔧 Treasury Account ID:', treasuryAccountId.toString());
+      
+      // Create transaction step by step
+      let transferTx = new TransferTransaction();
+      transferTx = transferTx.addTokenTransfer(trustTokenId, userAccountId, -tokenAmount);
+      transferTx = transferTx.addTokenTransfer(trustTokenId, treasuryAccountId, tokenAmount);
+      transferTx = transferTx.setTransactionMemo(`Pool Investment: ${asset.poolId}`);
+      transferTx = transferTx.setMaxTransactionFee(new Hbar(5));
+      transferTx = transferTx.setTransactionValidDuration(120);
+      
+      console.log('🔧 Transaction constructed successfully');
+
+      // Final balance check right before transaction execution
+      try {
+        console.log('🔧 Final balance check before transaction execution...');
+        const finalBalanceQuery = new AccountBalanceQuery().setAccountId(userAccountId);
+        const finalBalance = await finalBalanceQuery.execute(hederaClient);
+        const finalTrustBalance = finalBalance.tokens?.get(trustTokenId);
+        const finalTrustBalanceAmount = finalTrustBalance ? Number(finalTrustBalance) : 0; // TRUST token has 0 decimals, no conversion needed
+        
+        console.log('🔧 Final TRUST balance before transaction:', finalTrustBalanceAmount);
+        console.log('🔧 Required amount for transaction:', amount);
+        
+        if (finalTrustBalanceAmount < amount) {
+          toast({
+            title: 'Balance Changed',
+            description: `Your balance changed to ${finalTrustBalanceAmount.toFixed(2)} TRUST. Please try again.`,
+            variant: 'destructive'
+          });
+          return;
+        }
+      } catch (finalBalanceError) {
+        console.warn('⚠️ Final balance check failed, proceeding with transaction:', (finalBalanceError as Error).message);
+      }
+
+      console.log('🔧 Freezing transaction with signer...');
+      transferTx.freezeWithSigner(signer);
+      
+      console.log('🔧 Requesting signature from HashPack...');
+      const signedTx = await signer.signTransaction(transferTx);
+      
+      if (!signedTx) {
+        throw new Error('Transaction signing failed - no signed transaction received');
+      }
+      
+      console.log('🔧 Executing TRUST transfer...');
+      const transferResponse = await signedTx.execute(hederaClient);
+      
+      if (!transferResponse) {
+        throw new Error('Transaction execution failed - no response received');
+      }
+      
+      console.log('✅ Transaction submitted, getting receipt...');
+      console.log('🔧 Transaction response:', transferResponse);
+      console.log('🔧 Transaction ID from response:', transferResponse.transactionId?.toString());
+      
+      // Add timeout for receipt retrieval
+      const transferReceipt = await Promise.race([
+        transferResponse.getReceipt(hederaClient),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Receipt timeout after 30 seconds')), 30000)
+        )
+      ]) as any;
+      
+      console.log('🔧 Transaction receipt:', transferReceipt);
+      console.log('🔧 Receipt transaction ID:', transferReceipt.transactionId?.toString());
+      console.log('🔧 Receipt status:', transferReceipt.status);
+      console.log('🔧 Receipt keys:', Object.keys(transferReceipt));
+      
+      if (!transferReceipt) {
+        throw new Error('Transaction receipt failed - no receipt received');
+      }
+      
+      // Try different ways to get the transaction ID
+      let transactionId = null;
+      if (transferReceipt.transactionId) {
+        transactionId = transferReceipt.transactionId.toString();
+      } else if (transferReceipt.transactionId) {
+        transactionId = transferReceipt.transactionId.toString();
+      } else if (transferResponse.transactionId) {
+        transactionId = transferResponse.transactionId.toString();
+      }
+      
+      console.log('🔧 Extracted transaction ID:', transactionId);
+      
+      // Check if transaction was successful
+      const receiptStatus = transferReceipt.status?.toString();
+      console.log('🔧 Receipt status string:', receiptStatus);
+      
+      if (receiptStatus && receiptStatus !== 'SUCCESS' && receiptStatus !== '22') {
+        throw new Error(`Transaction failed with status: ${receiptStatus}`);
+      }
+      
+      if (!transactionId) {
+        // If we can't get transaction ID from receipt, use the response transaction ID
+        if (transferResponse.transactionId) {
+          transactionId = transferResponse.transactionId.toString();
+          console.log('⚠️ Using transaction ID from response instead of receipt:', transactionId);
+        } else {
+          throw new Error('Transaction receipt failed - no transaction ID found in receipt or response');
+        }
+      }
+      
+      console.log('✅ TRUST transfer successful:', transactionId);
+
+      // Step 2: Mint pool tokens to user
+      console.log('🔧 Creating pool token mint transaction...');
+      
+      const poolTokenAmount = Math.floor(amount / (asset.price || 1)); // Calculate pool tokens
+      const poolTokenId = asset.hederaTokenId || asset.poolTokenId || '0.0.123456'; // Pool token ID
+      
+      console.log('🔧 Pool token amount:', poolTokenAmount);
+      console.log('🔧 Pool token ID:', poolTokenId);
+      
+      // Create pool token ID and user account ID
+      const poolTokenIdObj = TokenId.fromString(poolTokenId);
+      const userAccountIdObj = AccountId.fromString(accountId);
+      
+      // Create mint transaction
+      let mintTx = new TokenMintTransaction();
+      mintTx = mintTx.setTokenId(poolTokenIdObj);
+      mintTx = mintTx.setAmount(poolTokenAmount);
+      mintTx = mintTx.setTransactionMemo(`Pool Token Mint: ${asset.poolId}`);
+      mintTx = mintTx.setMaxTransactionFee(new Hbar(5));
+      mintTx = mintTx.setTransactionValidDuration(120);
+      
+      console.log('🔧 Pool token mint transaction constructed successfully');
+      
+      // Execute pool token mint
+      console.log('🔧 Freezing pool token mint transaction...');
+      mintTx.freezeWithSigner(signer);
+      
+      console.log('🔧 Requesting signature for pool token mint...');
+      const signedMintTx = await signer.signTransaction(mintTx);
+      
+      if (!signedMintTx) {
+        throw new Error('Pool token mint signing failed');
+      }
+      
+      console.log('🔧 Executing pool token mint...');
+      const mintResponse = await signedMintTx.execute(hederaClient);
+      
+      if (!mintResponse) {
+        throw new Error('Pool token mint execution failed');
+      }
+      
+      console.log('✅ Pool token mint successful');
+      
+      // Step 3: Transfer minted pool tokens to user
+      console.log('🔧 Creating pool token transfer transaction...');
+      
+      let transferPoolTx = new TransferTransaction();
+      transferPoolTx = transferPoolTx.addTokenTransfer(poolTokenIdObj, treasuryAccountId, -poolTokenAmount);
+      transferPoolTx = transferPoolTx.addTokenTransfer(poolTokenIdObj, userAccountIdObj, poolTokenAmount);
+      transferPoolTx = transferPoolTx.setTransactionMemo(`Pool Token Transfer: ${asset.poolId}`);
+      transferPoolTx = transferPoolTx.setMaxTransactionFee(new Hbar(5));
+      transferPoolTx = transferPoolTx.setTransactionValidDuration(120);
+      
+      console.log('🔧 Pool token transfer transaction constructed successfully');
+      
+      // Execute pool token transfer
+      console.log('🔧 Freezing pool token transfer transaction...');
+      transferPoolTx.freezeWithSigner(signer);
+      
+      console.log('🔧 Requesting signature for pool token transfer...');
+      const signedTransferPoolTx = await signer.signTransaction(transferPoolTx);
+      
+      if (!signedTransferPoolTx) {
+        throw new Error('Pool token transfer signing failed');
+      }
+      
+      console.log('🔧 Executing pool token transfer...');
+      const transferPoolResponse = await signedTransferPoolTx.execute(hederaClient);
+      
+      if (!transferPoolResponse) {
+        throw new Error('Pool token transfer execution failed');
+      }
+      
+      console.log('✅ Pool token transfer successful');
+
+      // Step 3: Record investment on HCS
+      console.log('📋 Recording investment on HCS...');
+      
+      const investmentEvent = {
+        type: 'pool_investment',
+        poolId: asset.poolId,
+        investorAccount: accountId,
+        trustAmount: amount,
+        poolTokensReceived: poolTokenAmount,
+        transactionId: transactionId,
+        timestamp: new Date().toISOString()
+      };
+
+      await submitToHCS(investmentEvent);
+      
+      // Step 4: Update local state
+      setUserPoolBalance(prev => prev + poolTokenAmount);
+      
+      toast({
+        title: 'Investment Successful!',
+        description: `Invested ${amount} TRUST and received ${poolTokenAmount.toFixed(2)} pool tokens. Transaction: ${transactionId}`,
+        variant: 'default'
+      });
+      
+      setInvestmentAmount('');
+      setIsInvesting(false);
+      
+    } catch (error) {
+      console.error('❌ Investment failed:', error);
+      toast({
+        title: 'Investment Failed',
+        description: (error as Error).message || 'Please try again later',
+        variant: 'destructive'
+      });
+      setIsInvesting(false);
+    }
+  };
+
+  const handleRedeem = async () => {
+    if (!isRedeeming && userPoolBalance > 0) {
+      // First click - show redeem form
+      setIsRedeeming(true);
+      return;
+    }
+
+    try {
+      const amount = parseFloat(redeemAmount);
+      
+      if (!amount || amount > userPoolBalance) {
+        toast({
+          title: 'Invalid Redeem Amount',
+          description: 'Amount exceeds your holdings',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Check wallet connection
+      if (!isConnected || !accountId || !signer || !hederaClient) {
+        toast({
+          title: 'Wallet Not Connected',
+          description: 'Please connect your HashPack wallet to redeem.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Skip wallet responsiveness check to avoid protobuf errors
+      console.log('🔧 Skipping wallet balance check to avoid protobuf errors');
+
+      // Validate account ID format
+      if (!accountId || !accountId.match(/^\d+\.\d+\.\d+$/)) {
+        console.error('❌ Invalid account ID format:', accountId);
+        toast({
+          title: 'Invalid Account ID',
+          description: 'Account ID must be in format X.Y.Z (e.g., 0.0.123456)',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      console.log('🚀 Starting pool redemption process...');
+      console.log('Pool ID:', asset.poolId);
+      console.log('Redeem Amount:', amount, 'pool tokens');
+      console.log('User Account:', accountId);
+
+      // Step 1: Calculate TRUST tokens to return
+      const trustAmount = amount * (asset.price || 1);
+      console.log('🔧 TRUST tokens to return:', trustAmount);
+
+      // Step 2: Transfer TRUST tokens from treasury to user
+      console.log('🔧 Creating TRUST token transfer transaction...');
+      
+      // TRUST token has 0 decimals, so no conversion needed
+      const tokenAmount = Math.floor(trustAmount); // TRUST token has 0 decimals, use amount as-is
+      console.log('🔧 Token amount (no conversion needed):', tokenAmount);
+      
+      // Create token IDs and account IDs first
+      const trustTokenId = TokenId.fromString('0.0.6935064'); // Use the same TRUST token ID as backend
+      const userAccountId = AccountId.fromString(accountId);
+      const treasuryAccountId = AccountId.fromString('0.0.6916959'); // Use the same treasury account ID as backend
+      
+      console.log('🔧 Token ID:', trustTokenId.toString());
+      console.log('🔧 User Account ID:', userAccountId.toString());
+      console.log('🔧 Treasury Account ID:', treasuryAccountId.toString());
+      
+      // Create transaction step by step
+      let transferTx = new TransferTransaction();
+      transferTx = transferTx.addTokenTransfer(trustTokenId, treasuryAccountId, -tokenAmount);
+      transferTx = transferTx.addTokenTransfer(trustTokenId, userAccountId, tokenAmount);
+      transferTx = transferTx.setTransactionMemo(`Pool Redemption: ${asset.poolId}`);
+      transferTx = transferTx.setMaxTransactionFee(new Hbar(5));
+      transferTx = transferTx.setTransactionValidDuration(120);
+      
+      console.log('🔧 Transaction constructed successfully');
+
+      console.log('🔧 Freezing transaction with signer...');
+      transferTx.freezeWithSigner(signer);
+      
+      console.log('🔧 Requesting signature from HashPack...');
+      const signedTx = await signer.signTransaction(transferTx);
+      
+      if (!signedTx) {
+        throw new Error('Transaction signing failed - no signed transaction received');
+      }
+      
+      console.log('🔧 Executing TRUST transfer...');
+      const transferResponse = await signedTx.execute(hederaClient);
+      
+      if (!transferResponse) {
+        throw new Error('Transaction execution failed - no response received');
+      }
+      
+      console.log('✅ Transaction submitted, getting receipt...');
+      const transferReceipt = await transferResponse.getReceipt(hederaClient);
+      
+      if (!transferReceipt || !transferReceipt.transactionId) {
+        throw new Error('Transaction receipt failed - no transaction ID received');
+      }
+      
+      console.log('✅ TRUST transfer successful:', transferReceipt.transactionId.toString());
+
+      // Step 3: Burn pool tokens from user
+      console.log('🔧 Pool tokens to burn:', amount);
+      
+      const poolTokenId = asset.hederaTokenId || asset.poolTokenId || '0.0.123456'; // Pool token ID
+      const poolTokenIdObj = TokenId.fromString(poolTokenId);
+      const userAccountIdObj = AccountId.fromString(accountId);
+      
+      console.log('🔧 Pool token ID:', poolTokenId);
+      console.log('🔧 Pool tokens to burn:', amount);
+      
+      // Create burn transaction
+      let burnTx = new TokenBurnTransaction();
+      burnTx = burnTx.setTokenId(poolTokenIdObj);
+      burnTx = burnTx.setAmount(amount);
+      burnTx = burnTx.setTransactionMemo(`Pool Token Burn: ${asset.poolId}`);
+      burnTx = burnTx.setMaxTransactionFee(new Hbar(5));
+      burnTx = burnTx.setTransactionValidDuration(120);
+      
+      console.log('🔧 Pool token burn transaction constructed successfully');
+      
+      // Execute pool token burn
+      console.log('🔧 Freezing pool token burn transaction...');
+      burnTx.freezeWithSigner(signer);
+      
+      console.log('🔧 Requesting signature for pool token burn...');
+      const signedBurnTx = await signer.signTransaction(burnTx);
+      
+      if (!signedBurnTx) {
+        throw new Error('Pool token burn signing failed');
+      }
+      
+      console.log('🔧 Executing pool token burn...');
+      const burnResponse = await signedBurnTx.execute(hederaClient);
+      
+      if (!burnResponse) {
+        throw new Error('Pool token burn execution failed');
+      }
+      
+      console.log('✅ Pool token burn successful');
+      
+      // Step 4: Record redemption on HCS
+      console.log('📋 Recording redemption on HCS...');
+      
+      const redemptionEvent = {
+        type: 'pool_redemption',
+        poolId: asset.poolId,
+        investorAccount: accountId,
+        poolTokensRedeemed: amount,
+        trustAmountReceived: trustAmount,
+        transactionId: transferReceipt.transactionId.toString(),
+        timestamp: new Date().toISOString()
+      };
+
+      await submitToHCS(redemptionEvent);
+      
+      // Step 5: Update local state
+      setUserPoolBalance(prev => prev - amount);
+      
+      toast({
+        title: 'Redemption Successful!',
+        description: `Redeemed ${amount} pool tokens and received ${trustAmount.toFixed(2)} TRUST`,
+        variant: 'default'
+      });
+      
+      setRedeemAmount('');
+      setIsRedeeming(false);
+      
+    } catch (error) {
+      console.error('❌ Redemption failed:', error);
+      toast({
+        title: 'Redemption Failed',
+        description: (error as Error).message || 'Please try again later',
+        variant: 'destructive'
+      });
+      setIsRedeeming(false);
+    }
   };
 
   const handleBuyAsset = async () => {
@@ -192,7 +698,7 @@ const MarketplaceAssetModal: React.FC<MarketplaceAssetModalProps> = ({
       // Calculate fees and royalties
       const platformFeePercent = 2.5; // 2.5% platform fee
       const royaltyPercentage = parseFloat(asset.royaltyPercentage || asset.metadata?.royaltyPercentage || '0');
-      const totalPrice = parseFloat(assetPrice);
+      const totalPrice = typeof assetPrice === 'string' ? parseFloat(assetPrice) : assetPrice;
       
       const marketplaceAccount = '0.0.6916959';
       const trustTokenId = '0.0.6935064';
@@ -483,7 +989,319 @@ const MarketplaceAssetModal: React.FC<MarketplaceAssetModalProps> = ({
             </div>
 
             {/* Content */}
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {asset.assetType === 'Trading Pool' ? (
+              /* Pool Trading Interface */
+              <div className="p-6">
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold text-neon-green mb-2">Pool Trading</h3>
+                  <p className="text-text-secondary">Trade pool tokens on the secondary market</p>
+                </div>
+                
+                {/* Pool Information */}
+                <div className="bg-gray-800 rounded-lg p-6 mb-6">
+                  <div className="flex items-start gap-6">
+                    {/* Pool Image */}
+                    <div className="flex-shrink-0">
+                      <img
+                        src={asset.imageUrl || asset.imageURI || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Arial" font-size="12" fill="%2300ff88" text-anchor="middle" dy=".3em">POOL</text></svg>'}
+                        alt="Pool Image"
+                        className="w-24 h-24 object-cover rounded-lg border border-gray-600"
+                        onError={(e) => {
+                          e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect width="96" height="96" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Arial" font-size="12" fill="%2300ff88" text-anchor="middle" dy=".3em">POOL</text></svg>';
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Pool Details */}
+                    <div className="flex-1">
+                      <h4 className="text-lg font-bold text-neon-green mb-2">{asset.name}</h4>
+                      <p className="text-text-secondary mb-4">{asset.description}</p>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-text-secondary text-sm">Total Value</p>
+                          <p className="text-lg font-bold text-neon-green">
+                            ${asset.totalValue?.toLocaleString() || '0'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-text-secondary text-sm">Token Price</p>
+                          <p className="text-lg font-bold text-blue-400">
+                            ${asset.price || '0'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-text-secondary text-sm">Expected APY</p>
+                          <p className="text-lg font-bold text-green-400">
+                            {asset.expectedAPY || '0'}%
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-text-secondary text-sm">Status</p>
+                          <p className={`text-lg font-bold ${asset.status === 'ACTIVE' ? 'text-green-400' : 'text-yellow-400'}`}>
+                            {asset.status || 'UNKNOWN'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Pool Investment Interface - Centrifuge Style */}
+                <div className="space-y-6">
+                  {/* Main Action Buttons - Prominent */}
+                  <div className="bg-gray-800 rounded-lg p-6">
+                    <h3 className="text-xl font-bold text-neon-green mb-4">Pool Investment</h3>
+                    
+                    {/* Quick Stats Row */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div className="text-center">
+                        <p className="text-text-secondary text-sm">Token Price</p>
+                        <p className="text-xl font-bold text-neon-green">
+                          {asset.price || '1.00'} TRUST
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-text-secondary text-sm">Total Value</p>
+                        <p className="text-xl font-bold text-blue-400">
+                          ${(asset.totalValue || 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-text-secondary text-sm">Expected APY</p>
+                        <p className="text-xl font-bold text-green-400">
+                          {asset.expectedAPY || '0'}%
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-text-secondary text-sm">Status</p>
+                        <p className={`text-xl font-bold ${asset.status === 'ACTIVE' ? 'text-green-400' : 'text-yellow-400'}`}>
+                          {asset.status || 'UNKNOWN'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Main Action Buttons */}
+                    <div className="flex gap-3 justify-center">
+                      <button 
+                        onClick={handleInvest}
+                        className="bg-neon-green text-black px-4 py-2 rounded-lg font-medium hover:bg-green-400 transition-colors text-sm"
+                      >
+                        {isInvesting ? 'Complete Investment' : 'Invest'}
+                      </button>
+                      
+                      <button 
+                        onClick={handleRedeem}
+                        disabled={userPoolBalance === 0}
+                        className="bg-gray-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                      >
+                        {isRedeeming ? 'Complete Redemption' : userPoolBalance === 0 ? 'No Holdings' : 'Redeem'}
+                      </button>
+
+                      <button
+                        onClick={() => setShowAdvancedTrading(!showAdvancedTrading)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-500 transition-colors text-sm"
+                      >
+                        {showAdvancedTrading ? 'Hide Trading' : 'Advanced Trading'}
+                      </button>
+
+                      <button
+                        onClick={() => setShowYieldDashboard(!showYieldDashboard)}
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-500 transition-colors text-sm"
+                      >
+                        {showYieldDashboard ? 'Hide Yield' : 'Yield Dashboard'}
+                      </button>
+
+                      <button
+                        onClick={() => setShowRiskDashboard(!showRiskDashboard)}
+                        className="bg-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-500 transition-colors text-sm"
+                      >
+                        {showRiskDashboard ? 'Hide Risk' : 'Risk Assessment'}
+                      </button>
+                    </div>
+
+                    {/* Advanced Trading */}
+                    {showAdvancedTrading && (
+                      <div className="mt-6">
+                        <AdvancedOrderBook
+                          poolId={asset.poolId}
+                          poolName={asset.name}
+                          currentPrice={asset.tokenPrice || 1}
+                          onTradeExecuted={(trade) => {
+                            console.log('Trade executed:', trade);
+                            // Update user balance or trigger refresh
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Yield Dashboard */}
+                    {showYieldDashboard && (
+                      <div className="mt-6">
+                        <YieldDashboard
+                          poolId={asset.poolId}
+                          poolName={asset.name}
+                        />
+                      </div>
+                    )}
+
+                    {/* Risk Assessment */}
+                    {showRiskDashboard && (
+                      <div className="mt-6">
+                        <RiskDashboard
+                          poolId={asset.poolId}
+                          poolName={asset.name}
+                        />
+                      </div>
+                    )}
+
+                    {/* Details Toggle */}
+                    <div className="text-center">
+                      <button 
+                        onClick={() => setShowPoolDetails(!showPoolDetails)}
+                        className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2 mx-auto"
+                      >
+                        {showPoolDetails ? 'Hide Details' : 'Show Details'}
+                        <span className={`transform transition-transform ${showPoolDetails ? 'rotate-180' : ''}`}>
+                          ▼
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Collapsible Pool Details */}
+                  {showPoolDetails && (
+                    <div className="bg-gray-800 rounded-lg p-6">
+                      <h4 className="text-lg font-semibold text-white mb-4">Pool Details</h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <h5 className="text-md font-semibold text-white mb-3">Pool Information</h5>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Asset Type:</span>
+                              <span className="text-white">Real World Assets</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Min Investment:</span>
+                              <span className="text-white">{asset.minimumInvestment || '100'} TRUST</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Investors:</span>
+                              <span className="text-white">{asset.totalInvestors || '0'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Pool Type:</span>
+                              <span className="text-white">{asset.poolType || 'REAL_ESTATE'}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h5 className="text-md font-semibold text-white mb-3">Your Holdings</h5>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Pool Tokens:</span>
+                              <span className="text-white">{userPoolBalance.toFixed(2)} {asset.poolId?.substring(5, 10) || 'POOL'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Value (USD):</span>
+                              <span className="text-white">${(userPoolBalance * (asset.price || 1)).toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Unrealized P&L:</span>
+                              <span className="text-white">$0.00</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Investment Form - Only shown when investing */}
+                  {isInvesting && (
+                    <div className="bg-gray-800 rounded-lg p-6">
+                      <h4 className="text-lg font-semibold text-white mb-4">Investment Details</h4>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Investment Amount (TRUST)
+                          </label>
+                          <input
+                            type="number"
+                            placeholder="100"
+                            value={investmentAmount}
+                            onChange={(e) => setInvestmentAmount(e.target.value)}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-neon-green"
+                          />
+                        </div>
+                        
+                        <div className="bg-gray-700 rounded-lg p-3">
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-gray-400">You will receive:</span>
+                            <span className="text-white">
+                              {investmentAmount ? (parseFloat(investmentAmount) / (asset.price || 1)).toFixed(2) : '0.00'} Pool Tokens
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Estimated APY:</span>
+                            <span className="text-green-400">{asset.expectedAPY || '0'}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Redeem Form - Only shown when redeeming */}
+                  {isRedeeming && userPoolBalance > 0 && (
+                    <div className="bg-gray-800 rounded-lg p-6">
+                      <h4 className="text-lg font-semibold text-white mb-4">Redemption Details</h4>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Redeem Amount (Pool Tokens)
+                          </label>
+                          <input
+                            type="number"
+                            placeholder="0.00"
+                            value={redeemAmount}
+                            onChange={(e) => setRedeemAmount(e.target.value)}
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-neon-green"
+                          />
+                        </div>
+                        
+                        <div className="bg-gray-700 rounded-lg p-3">
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-gray-400">You will receive:</span>
+                            <span className="text-white">
+                              {redeemAmount ? (parseFloat(redeemAmount) * (asset.price || 1)).toFixed(2) : '0.00'} TRUST
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">Current Value:</span>
+                            <span className="text-white">
+                              ${redeemAmount ? (parseFloat(redeemAmount) * (asset.price || 1)).toFixed(2) : '0.00'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pool Performance Chart Placeholder */}
+                  <div className="bg-gray-800 rounded-lg p-6">
+                    <h4 className="text-lg font-semibold text-white mb-4">Pool Performance</h4>
+                    <div className="h-32 bg-gray-700 rounded-lg flex items-center justify-center">
+                      <p className="text-gray-400">Performance chart coming soon</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Regular Asset Content */
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left Column - Image */}
               <div className="space-y-4">
                 <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-800">
@@ -647,6 +1465,7 @@ const MarketplaceAssetModal: React.FC<MarketplaceAssetModalProps> = ({
                 </div>
               </div>
             </div>
+            )}
 
             {/* Offer Modal */}
             {showOfferModal && (

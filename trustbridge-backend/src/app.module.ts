@@ -16,7 +16,6 @@ import { AuthModule } from './auth/auth.module';
 import { AssetsModule } from './assets/assets.module';
 import { InvestmentsModule } from './investments/investments.module';
 import { VerificationModule } from './verification/verification.module';
-import { AttestorsModule } from './attestors/attestors.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 
@@ -42,6 +41,11 @@ import { ApiModule } from './api/api.module';
 import { CollectionsModule } from './collections/collections.module';
 import { RoyaltiesModule } from './royalties/royalties.module';
 import { ActivityModule } from './activity/activity.module';
+import { RWAModule } from './rwa/rwa.module';
+import { KycModule } from './kyc/kyc.module';
+import { AMCPoolsModule } from './amc-pools/amc-pools.module';
+import { PoolTokensModule } from './pool-tokens/pool-tokens.module';
+import { DividendsModule } from './dividends/dividends.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -58,7 +62,7 @@ import { AppController } from './app.controller';
       process.env.MONGODB_URI || 'mongodb://localhost:27017/trustbridge',
       {
         maxPoolSize: 10,
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 15000,
         socketTimeoutMS: 45000,
         bufferCommands: false,
       }
@@ -99,7 +103,6 @@ import { AppController } from './app.controller';
     AssetsModule,
     InvestmentsModule,
     VerificationModule,
-    AttestorsModule,
     PortfolioModule,
     AnalyticsModule,
 
@@ -125,6 +128,12 @@ import { AppController } from './app.controller';
     CollectionsModule,
     RoyaltiesModule,
     ActivityModule,
+    RWAModule,
+    KycModule,
+    AMCPoolsModule,
+    TradingModule,
+    PoolTokensModule,
+    DividendsModule,
   ],
 })
 export class AppModule {}

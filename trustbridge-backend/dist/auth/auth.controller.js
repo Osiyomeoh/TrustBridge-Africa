@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var AuthController_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = exports.UpdateKYCStatusDto = exports.DiditWebhookDto = exports.PersonaWebhookDto = exports.ConfirmResetDto = exports.ResetPasswordDto = exports.ChangePasswordDto = exports.ResendVerificationDto = exports.VerifyEmailDto = exports.CompleteProfileDto = exports.EmailAuthDto = exports.WalletAuthDto = void 0;
 const common_1 = require("@nestjs/common");
@@ -206,9 +207,10 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], UpdateKYCStatusDto.prototype, "status", void 0);
-let AuthController = class AuthController {
+let AuthController = AuthController_1 = class AuthController {
     constructor(authService) {
         this.authService = authService;
+        this.logger = new common_1.Logger(AuthController_1.name);
     }
     async checkWalletUser(address) {
         return this.authService.checkWalletUser(address);
@@ -369,20 +371,30 @@ let AuthController = class AuthController {
     }
     async diditWebhook(webhookData, req) {
         try {
+            this.logger.log('Received DidIt webhook:', {
+                session_id: webhookData.session_id,
+                status: webhookData.status,
+                webhook_type: webhookData.webhook_type,
+                vendor_data: webhookData.vendor_data
+            });
             const isValidSignature = await this.authService.verifyDiditWebhookSignature(req);
             if (!isValidSignature) {
+                this.logger.warn('Invalid DidIt webhook signature');
                 return {
                     success: false,
                     message: 'Invalid webhook signature',
                 };
             }
-            await this.authService.processDiditWebhook(webhookData);
+            const result = await this.authService.processDiditWebhook(webhookData);
+            this.logger.log('DidIt webhook processed successfully:', result);
             return {
                 success: true,
                 message: 'Webhook processed successfully',
+                data: result
             };
         }
         catch (error) {
+            this.logger.error('Error processing DidIt webhook:', error);
             return {
                 success: false,
                 message: 'Webhook processing failed',
@@ -416,6 +428,30 @@ let AuthController = class AuthController {
             },
             message: 'KYC status retrieved successfully',
         };
+    }
+    async diditCallback(query) {
+        try {
+            const { verificationSessionId, status } = query;
+            if (!verificationSessionId) {
+                return {
+                    success: false,
+                    message: 'Missing verification session ID',
+                };
+            }
+            const result = await this.authService.processDiditCallback(verificationSessionId, status);
+            return {
+                success: true,
+                data: result,
+                message: 'Callback processed successfully',
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                message: 'Failed to process callback',
+                error: error.message,
+            };
+        }
     }
     async createDiditSession(body) {
         try {
@@ -694,7 +730,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [DiditWebhookDto, Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "diditWebhook", null);
 __decorate([
@@ -720,6 +756,15 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "getKYCStatus", null);
+__decorate([
+    (0, common_1.Get)('didit/callback'),
+    (0, swagger_1.ApiOperation)({ summary: 'Didit KYC callback' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Callback processed successfully' }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "diditCallback", null);
 __decorate([
     (0, common_1.Post)('didit/session'),
     (0, swagger_1.ApiOperation)({ summary: 'Create Didit verification session' }),
@@ -771,7 +816,7 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "generateToken", null);
-exports.AuthController = AuthController = __decorate([
+exports.AuthController = AuthController = AuthController_1 = __decorate([
     (0, swagger_1.ApiTags)('Authentication'),
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

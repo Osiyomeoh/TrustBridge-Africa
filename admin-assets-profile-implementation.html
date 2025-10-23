@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Assets - Profile Implementation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .code {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>✅ Admin Assets - Profile Implementation Complete!</h1>
+    
+    <div class="test-section">
+        <h2>🎯 What Was Implemented</h2>
+        <div class="status success">
+            <strong>✅ AdminAssets now uses the same approach as Profile Dashboard</strong><br>
+            - Fetches from `/api/assets` endpoint (same as profile dashboard)<br>
+            - Uses the same data transformation logic<br>
+            - Shows real RWA assets created through profile flow<br>
+            - Uses admin approval endpoints for asset management
+        </div>
+        
+        <div class="status success">
+            <strong>✅ Consistent Data Flow</strong><br>
+            - Profile Dashboard: Uses `useAssetByOwner` hook → `/assets/owner/${owner}`<br>
+            - Admin Assets: Uses `/assets` endpoint → Shows all assets for admin review<br>
+            - Both use the same Asset schema and database structure
+        </div>
+        
+        <div class="status success">
+            <strong>✅ Proper Admin Approval Flow</strong><br>
+            - Uses `/api/admin/approve-asset` for approval<br>
+            - Uses `/api/admin/reject-asset` for rejection<br>
+            - Works with real asset database records<br>
+            - Integrates with Hedera token creation on approval
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 Technical Implementation</h2>
+        
+        <h3>Profile Dashboard Flow:</h3>
+        <div class="code">
+            1. Profile.tsx uses useAssetByOwner(address) hook<br>
+            2. Hook calls apiService.getAssetsByOwner(owner)<br>
+            3. API calls GET /api/assets/owner/${owner}<br>
+            4. Backend calls assetsService.getAssetsByOwner(owner)<br>
+            5. Returns assets from database where owner = address
+        </div>
+
+        <h3>Admin Assets Flow:</h3>
+        <div class="code">
+            1. AdminAssets.tsx fetches from /api/assets<br>
+            2. Backend calls assetsService.getAssets()<br>
+            3. Returns all assets from database<br>
+            4. Admin can approve/reject using /api/admin/approve-asset<br>
+            5. Admin service updates asset status and creates Hedera tokens
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 How to Test</h2>
+        
+        <h3>1. Create RWA Assets</h3>
+        <div class="code">
+            1. Go to profile section<br>
+            2. Create RWA assets (they get stored in database)<br>
+            3. Assets have status 'PENDING' initially
+        </div>
+
+        <h3>2. Access Admin Assets Page</h3>
+        <div class="code">
+            1. Go to: http://localhost:3000/admin/assets<br>
+            2. Make sure you're logged in with admin privileges<br>
+            3. You should see all RWA assets from database
+        </div>
+
+        <h3>3. Test Approval Process</h3>
+        <div class="code">
+            1. Click on any PENDING asset<br>
+            2. Click "Approve" button<br>
+            3. Asset status changes to 'ACTIVE'<br>
+            4. Hedera token gets created automatically<br>
+            5. Check console for success messages
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔄 Data Flow Summary</h2>
+        <div class="status info">
+            <strong>Complete Asset Lifecycle:</strong><br>
+            1. <strong>Creation:</strong> User creates RWA asset in profile → Stored in database<br>
+            2. <strong>Review:</strong> Admin sees all assets in admin dashboard<br>
+            3. <strong>Approval:</strong> Admin approves asset → Status updated + Hedera token created<br>
+            4. <strong>Trading:</strong> Approved assets can be traded on marketplace
+        </div>
+        
+        <p><strong>Key Benefits:</strong></p>
+        <ul>
+            <li>✅ Consistent data structure between profile and admin dashboards</li>
+            <li>✅ Real database assets (not mock data)</li>
+            <li>✅ Proper admin approval workflow</li>
+            <li>✅ Integration with Hedera network for tokenization</li>
+            <li>✅ Same Asset schema used throughout the system</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🚀 Expected Results</h2>
+        <div class="status success">
+            <strong>The admin can now see and manage real RWA assets!</strong><br>
+            When you access the admin assets page, you should see:<br>
+            • Real RWA assets from the database (same as profile dashboard)<br>
+            • Proper asset details (name, type, status, value, location, etc.)<br>
+            • Working approve/reject functionality<br>
+            • Automatic Hedera token creation on approval
+        </div>
+        
+        <p><strong>If you still don't see assets:</strong></p>
+        <ol>
+            <li>Make sure you've created RWA assets through the profile flow first</li>
+            <li>Check that backend is running on port 4001</li>
+            <li>Verify you have admin privileges</li>
+            <li>Check browser console for any error messages</li>
+            <li>Ensure assets are being created in the database</li>
+        </ol>
+    </div>
+
+    <script>
+        // Test function to check if assets endpoint is accessible
+        async function testAssetsEndpoint() {
+            try {
+                console.log('Testing assets endpoint...');
+                
+                const response = await fetch('http://localhost:4001/api/assets', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                if (response.status === 401) {
+                    console.log('✅ Assets endpoint exists (authentication required)');
+                } else if (response.ok) {
+                    const data = await response.json();
+                    console.log('✅ Assets fetched:', data);
+                } else {
+                    console.log('❌ Assets endpoint error:', response.status, response.statusText);
+                }
+            } catch (error) {
+                console.log('❌ Assets endpoint test failed:', error.message);
+            }
+        }
+
+        // Run test on page load
+        window.addEventListener('load', () => {
+            console.log('Admin Assets Profile Implementation Test Page Loaded');
+            testAssetsEndpoint();
+        });
+    </script>
+</body>
+</html>

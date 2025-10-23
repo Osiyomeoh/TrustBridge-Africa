@@ -17,12 +17,17 @@ var UserRole;
     UserRole["ASSET_OWNER"] = "ASSET_OWNER";
     UserRole["VERIFIER"] = "VERIFIER";
     UserRole["ADMIN"] = "ADMIN";
+    UserRole["SUPER_ADMIN"] = "SUPER_ADMIN";
+    UserRole["PLATFORM_ADMIN"] = "PLATFORM_ADMIN";
+    UserRole["AMC_ADMIN"] = "AMC_ADMIN";
 })(UserRole || (exports.UserRole = UserRole = {}));
 var KycStatus;
 (function (KycStatus) {
-    KycStatus["PENDING"] = "PENDING";
-    KycStatus["VERIFIED"] = "VERIFIED";
-    KycStatus["REJECTED"] = "REJECTED";
+    KycStatus["PENDING"] = "pending";
+    KycStatus["IN_PROGRESS"] = "in_progress";
+    KycStatus["VERIFIED"] = "approved";
+    KycStatus["REJECTED"] = "rejected";
+    KycStatus["NOT_STARTED"] = "not_started";
 })(KycStatus || (exports.KycStatus = KycStatus = {}));
 var EmailVerificationStatus;
 (function (EmailVerificationStatus) {
@@ -58,7 +63,7 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "role", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true, enum: KycStatus, default: KycStatus.PENDING }),
+    (0, mongoose_1.Prop)({ required: true, enum: KycStatus, default: KycStatus.NOT_STARTED }),
     __metadata("design:type", String)
 ], User.prototype, "kycStatus", void 0);
 __decorate([

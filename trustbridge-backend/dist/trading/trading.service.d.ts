@@ -1,76 +1,56 @@
+import { Model } from 'mongoose';
+import { TradingOrder, TradingOrderDocument, OrderType } from '../schemas/trading-order.schema';
+import { TradeExecution, TradeExecutionDocument } from '../schemas/trade-execution.schema';
+import { AMCPoolDocument } from '../schemas/amc-pool.schema';
 import { HederaService } from '../hedera/hedera.service';
-export interface ListDigitalAssetForSaleDto {
-    assetId: string;
-    price: string;
-    expiry: number;
-    seller: string;
+export interface CreateOrderDto {
+    poolId: string;
+    orderType: OrderType;
+    tokenAmount: number;
+    pricePerToken: number;
+    paymentToken: string;
+    expiresAt?: Date;
+    isMarketOrder?: boolean;
+    stopPrice?: number;
+    slippageTolerance?: number;
 }
-export interface MakeOfferDto {
-    assetId: string;
-    offerAmount: string;
-    expiry: number;
-    buyer: string;
-}
-export interface AcceptOfferDto {
-    offerId: string;
-    seller: string;
-}
-export interface DigitalAssetListing {
-    assetId: string;
-    seller: string;
-    price: string;
-    expiry: number;
-    isActive: boolean;
-    createdAt: Date;
-}
-export interface DigitalAssetOffer {
-    offerId: string;
-    assetId: string;
-    buyer: string;
-    offerAmount: string;
-    expiry: number;
-    isActive: boolean;
-    createdAt: Date;
+export interface OrderBookData {
+    poolId: string;
+    bids: {
+        price: number;
+        amount: number;
+        total: number;
+    }[];
+    asks: {
+        price: number;
+        amount: number;
+        total: number;
+    }[];
+    lastPrice: number;
+    priceChange24h: number;
+    volume24h: number;
+    high24h: number;
+    low24h: number;
 }
 export declare class TradingService {
-    private readonly hederaService;
+    private tradingOrderModel;
+    private tradeExecutionModel;
+    private amcPoolModel;
+    private hederaService;
     private readonly logger;
-    constructor(hederaService: HederaService);
-    listDigitalAssetForSale(listingDto: ListDigitalAssetForSaleDto): Promise<{
-        transactionId: string;
-    }>;
-    makeOfferOnDigitalAsset(offerDto: MakeOfferDto): Promise<{
-        transactionId: string;
-    }>;
-    getDigitalAssetOffers(assetId: string): Promise<DigitalAssetOffer[]>;
-    acceptOfferOnDigitalAsset(acceptDto: AcceptOfferDto): Promise<{
-        transactionId: string;
-    }>;
-    getTradingStats(): Promise<{
-        totalVolume: number;
-        totalTrades: number;
-        averagePrice: number;
-        activeListings: number;
-        activeOffers: number;
-    }>;
-    getAssetTradingHistory(assetId: string): Promise<{
-        listings: DigitalAssetListing[];
-        offers: DigitalAssetOffer[];
-        trades: any[];
-    }>;
-    getAllListings(): Promise<{
-        success: boolean;
-        data: {
-            listings: any[];
-            total: number;
-        };
-    }>;
-    createListing(listingData: any): Promise<{
-        success: boolean;
-        data: any;
-    }>;
-    purchaseListing(id: string, purchaseData: any): Promise<{
-        success: boolean;
-        data: any;
-    }>;
+    constructor(tradingOrderModel: Model<TradingOrderDocument>, tradeExecutionModel: Model<TradeExecutionDocument>, amcPoolModel: Model<AMCPoolDocument>, hederaService: HederaService);
+    createOrder(createOrderDto: CreateOrderDto, traderAddress: string): Promise<TradingOrder>;
+    cancelOrder(orderId: string, traderAddress: string): Promise<TradingOrder>;
+    getOrderBook(poolId: string, depth?: number): Promise<OrderBookData>;
+    getUserOrders(traderAddress: string, poolId?: string): Promise<TradingOrder[]>;
+    getUserTradeHistory(traderAddress: string, poolId?: string): Promise<TradeExecution[]>;
+    getRecentTrades(poolId: string, limit?: number): Promise<TradeExecution[]>;
+    matchOrders(poolId: string): Promise<void>;
+    private executeTrade;
+    private executeHederaTrade;
+    private logOrderToHCS;
+    private burnTrustTokensForTradingFee;
+    private logTradeToHCS;
+    private updatePoolPrice;
+    getPoolTradingStats(poolId: string): Promise<any>;
 }

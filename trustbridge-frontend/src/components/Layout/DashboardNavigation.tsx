@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, BarChart3, Settings, X, Zap, User, LogOut, ChevronLeft, ChevronRight, ChevronDown, Shield, CheckCircle, Coins, Vote, BarChart3 as BarChart, Activity, Building2, UserCheck, Crown, UserPlus, Coins as CoinsIcon } from 'lucide-react';
+import { TrendingUp, BarChart3, Settings, X, Zap, User, LogOut, ChevronLeft, ChevronRight, ChevronDown, Shield, Coins, Vote, BarChart3 as BarChart, Activity, Building2, Crown, Coins as CoinsIcon, TreePine, Package, PieChart } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ThemeToggle from '../UI/ThemeToggle';
 import { useSidebar } from '../../contexts/SidebarContext';
@@ -7,16 +7,18 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useWallet } from '../../contexts/WalletContext';
 import { useAdmin } from '../../contexts/AdminContext';
 import { useTrustTokenBalance } from '../../hooks/useTrustTokenBalance';
+import { useToast } from '../../hooks/useToast';
 
 const DashboardNavigation: React.FC = () => {
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(new Set());
   const { isCollapsed, toggleSidebar, isMobileSidebarOpen, toggleMobileSidebar } = useSidebar();
   
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const { disconnectWallet, address, balance } = useWallet();
   const { isAdmin, isVerifier } = useAdmin();
   const { balance: trustBalance, loading: trustLoading } = useTrustTokenBalance();
+  const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -42,12 +44,15 @@ const DashboardNavigation: React.FC = () => {
 
   // Toggle dropdown
   const toggleDropdown = (sectionId: string) => {
+    console.log('🎯 Dropdown toggle clicked:', sectionId);
     setOpenDropdowns(prev => {
       const newSet = new Set(prev);
       if (newSet.has(sectionId)) {
         newSet.delete(sectionId);
+        console.log('🎯 Closing dropdown:', sectionId);
       } else {
         newSet.add(sectionId);
+        console.log('🎯 Opening dropdown:', sectionId);
       }
       return newSet;
     });
@@ -55,7 +60,19 @@ const DashboardNavigation: React.FC = () => {
 
   // Handle navigation
   const handleNavigation = (href: string) => {
+    console.log('🎯 Navigation clicked:', href);
     navigate(href);
+  };
+
+  // Handle disabled navigation (KYC required)
+  const handleDisabledNavigation = (item: any) => {
+    if (item.disabled) {
+      toast({
+        title: 'KYC Verification Required',
+        description: 'Please complete your identity verification to access RWA features.',
+        variant: 'destructive'
+      });
+    }
   };
 
   // Handle disconnect
@@ -81,26 +98,44 @@ const DashboardNavigation: React.FC = () => {
 
   const tradingItems = [
     { id: 'trading', label: 'Trading Interface', icon: Activity, href: '/dashboard/trading' },
+    { id: 'pool-trading', label: 'Pool Trading', icon: TrendingUp, href: '/pool-trading' },
+    { id: 'pool-trading-dashboard', label: 'Trading Dashboard', icon: BarChart3, href: '/pool-trading-dashboard' },
     { id: 'create-digital-asset', label: 'Create Digital Asset', icon: Zap, href: '/dashboard/create-digital-asset' },
     { id: 'secondary-markets', label: 'Secondary Markets', icon: TrendingUp, href: '/dashboard/secondary-markets' },
   ];
 
   const investmentItems = [
-    { id: 'pools', label: 'Pool Management', icon: BarChart, href: '/dashboard/pools' },
+    { id: 'pools', label: 'Pool Marketplace', icon: BarChart, href: '/pools' },
+    { id: 'pool-dashboard', label: 'Pool Management', icon: Building2, href: '/pool-dashboard' },
+    { id: 'pool-token-portfolio', label: 'Token Portfolio', icon: PieChart, href: '/pool-token-portfolio' },
     { id: 'spv', label: 'SPV Management', icon: Building2, href: '/dashboard/spv' },
     { id: 'staking', label: 'TRUST Staking', icon: Coins, href: '/dashboard/staking' },
   ];
 
+  // Check KYC status for RWA features
+  const isKYCApproved = user && user.kycStatus === 'approved';
+  
+  const rwaItems = [
+    { 
+      id: 'create-rwa-asset', 
+      label: isKYCApproved ? 'Create RWA Asset' : 'Create RWA Asset (KYC Required)', 
+      icon: TreePine, 
+      href: '/dashboard/create-rwa-asset',
+      disabled: !isKYCApproved
+    },
+    { id: 'secondary-trading', label: 'Secondary Trading', icon: BarChart3, href: '/dashboard/secondary-trading' },
+    { id: 'rwa-trading', label: 'RWA Trading', icon: TrendingUp, href: '/dashboard/rwa-trading' },
+    { id: 'rwa-management', label: 'RWA Management', icon: Package, href: '/dashboard/rwa-management' },
+    { id: 'amc-dashboard', label: 'AMC Dashboard', icon: Building2, href: '/dashboard/amc-dashboard' },
+  ];
+
   const verificationItems = [
     { id: 'verify-asset', label: 'Verify Asset', icon: Shield, href: '/dashboard/verify-asset' },
-    { id: 'attestor', label: 'Attestor Portal', icon: CheckCircle, href: '/dashboard/attestor' },
-    { id: 'attestor-register', label: 'Become Attestor', icon: UserPlus, href: '/dashboard/attestor/register' },
     { id: 'verification', label: 'Verification Dashboard', icon: Shield, href: '/dashboard/verification' },
   ];
 
   const adminItems = [
     { id: 'admin-dashboard', label: 'Admin Dashboard', icon: Crown, href: '/dashboard/admin' },
-    { id: 'admin-attestors', label: 'Attestor Verification', icon: UserCheck, href: '/dashboard/admin/attestors' },
   ];
 
   const governanceItems = [
@@ -110,6 +145,7 @@ const DashboardNavigation: React.FC = () => {
   const dropdownSections = [
     { id: 'trading', label: 'Trading', icon: Activity, items: tradingItems },
     { id: 'investment', label: 'Investment', icon: BarChart, items: investmentItems },
+    { id: 'rwa', label: 'Real-World Assets', icon: TreePine, items: rwaItems },
     { id: 'verification', label: 'Verification', icon: Shield, items: verificationItems },
     ...(isAdmin || isVerifier ? [{ id: 'admin', label: 'Admin', icon: Crown, items: adminItems }] : []),
     { id: 'governance', label: 'Governance', icon: Vote, items: governanceItems },
@@ -195,18 +231,25 @@ const DashboardNavigation: React.FC = () => {
                         {section.items.map((item) => {
                           const ItemIcon = item.icon;
                           const isActive = location.pathname === item.href;
+                          const isDisabled = (item as any).disabled;
                           return (
                             <button
                               key={item.id}
-                              onClick={() => handleNavigation(item.href)}
+                              onClick={() => isDisabled ? handleDisabledNavigation(item) : handleNavigation(item.href)}
+                              disabled={isDisabled}
                               className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
-                                isActive
+                                isDisabled
+                                  ? 'text-gray-500 cursor-not-allowed opacity-50'
+                                  : isActive
                                   ? 'bg-neon-green/10 text-neon-green'
                                   : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
                               }`}
                             >
                               <ItemIcon className="w-4 h-4" />
                               <span>{item.label}</span>
+                              {isDisabled && (
+                                <Shield className="w-3 h-3 text-yellow-400 ml-auto" />
+                              )}
                             </button>
                           );
                         })}
@@ -346,22 +389,31 @@ const DashboardNavigation: React.FC = () => {
                           {section.items.map((item) => {
                             const ItemIcon = item.icon;
                             const isActive = location.pathname === item.href;
+                            const isDisabled = (item as any).disabled;
                             
                             return (
                               <button
                       key={item.id}
-                                onClick={() => handleNavigation(item.href)}
-                                className={`group relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-[1.02] w-full text-left ${
-                        isActive
-                          ? 'bg-gradient-to-r from-neon-green/20 to-electric-mint/10 border border-neon-green/40 text-neon-green shadow-lg shadow-neon-green/20' 
-                          : 'text-text-primary hover:bg-gradient-to-r hover:from-background-tertiary/30 hover:to-background-tertiary/10 hover:text-electric-mint'
+                                onClick={() => isDisabled ? handleDisabledNavigation(item) : handleNavigation(item.href)}
+                                disabled={isDisabled}
+                                className={`group relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 w-full text-left ${
+                                  isDisabled
+                                    ? 'text-gray-500 cursor-not-allowed opacity-50'
+                                    : isActive
+                                    ? 'bg-gradient-to-r from-neon-green/20 to-electric-mint/10 border border-neon-green/40 text-neon-green shadow-lg shadow-neon-green/20 hover:scale-[1.02]' 
+                                    : 'text-text-primary hover:bg-gradient-to-r hover:from-background-tertiary/30 hover:to-background-tertiary/10 hover:text-electric-mint hover:scale-[1.02]'
                       }`}
                     >
-                                <ItemIcon className={`w-4 h-4 transition-all duration-200 group-hover:scale-110 ${isActive ? 'text-neon-green' : 'text-text-secondary group-hover:text-electric-mint'}`} />
+                                <ItemIcon className={`w-4 h-4 transition-all duration-200 ${isDisabled ? 'text-gray-500' : isActive ? 'text-neon-green' : 'text-text-secondary group-hover:text-electric-mint group-hover:scale-110'}`} />
                       <span className="font-medium transition-all duration-200">{item.label}</span>
                       
+                      {/* KYC Required indicator */}
+                      {isDisabled && (
+                        <Shield className="w-3 h-3 text-yellow-400 ml-auto" />
+                      )}
+                      
                       {/* Active indicator */}
-                      {isActive && (
+                      {isActive && !isDisabled && (
                         <div className="absolute right-2 w-2 h-2 bg-neon-green rounded-full animate-pulse"></div>
                       )}
                               </button>

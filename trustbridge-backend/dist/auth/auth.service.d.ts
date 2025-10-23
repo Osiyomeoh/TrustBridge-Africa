@@ -1,7 +1,7 @@
 import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { User, UserDocument } from '../schemas/user.schema';
+import { User, UserDocument, KycStatus } from '../schemas/user.schema';
 import { GmailService } from '../services/gmail.service';
 export interface WalletSignature {
     address: string;
@@ -77,7 +77,7 @@ export declare class AuthService {
     processPersonaWebhook(webhookData: any): Promise<void>;
     updateKYCStatus(userId: string, inquiryId: string, status: string): Promise<void>;
     getUserById(userId: string): Promise<any>;
-    processDiditWebhook(webhookData: any): Promise<void>;
+    processDiditWebhook(webhookData: any): Promise<any>;
     verifyDiditWebhookSignature(req: any): Promise<boolean>;
     createDiditSession(vendorData?: string, workflowId?: string): Promise<any>;
     getDiditSessionStatus(sessionId: string): Promise<any>;
@@ -88,5 +88,16 @@ export declare class AuthService {
         accessToken: string;
         refreshToken: string;
         expiresIn: number;
+    }>;
+    processDiditCallback(verificationSessionId: string, status: string): Promise<{
+        success: boolean;
+        message: string;
+        userId?: undefined;
+        kycStatus?: undefined;
+    } | {
+        success: boolean;
+        userId: unknown;
+        kycStatus: KycStatus;
+        message: string;
     }>;
 }

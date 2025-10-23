@@ -12,6 +12,7 @@ const mongoose_1 = require("@nestjs/mongoose");
 const kyc_controller_1 = require("./kyc.controller");
 const kyc_service_1 = require("./kyc.service");
 const user_schema_1 = require("../schemas/user.schema");
+const auth_module_1 = require("../auth/auth.module");
 let KycModule = class KycModule {
 };
 exports.KycModule = KycModule;
@@ -19,6 +20,7 @@ exports.KycModule = KycModule = __decorate([
     (0, common_1.Module)({
         imports: [
             mongoose_1.MongooseModule.forFeature([{ name: user_schema_1.User.name, schema: user_schema_1.UserSchema }]),
+            auth_module_1.AuthModule,
         ],
         controllers: [kyc_controller_1.KycController],
         providers: [kyc_service_1.KycService],

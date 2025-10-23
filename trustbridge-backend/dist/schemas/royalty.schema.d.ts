@@ -1,5 +1,5 @@
 import { Document } from 'mongoose';
-export type RoyaltyDocument = Royalty & Document;
+export type RoyaltyDocument = RoyaltyPayment & Document;
 export declare class RoyaltyPayment {
     transactionId: string;
     nftContract: string;

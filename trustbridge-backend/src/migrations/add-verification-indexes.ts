@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import { AttestorModel, VerificationRequestModel } from '../models';
+// import { AttestorModel, VerificationRequestModel } from '../models'; // Removed - attestor functionality deprecated
+import { VerificationRequestModel } from '../models';
 
 /**
  * Add performance indexes for verification system
@@ -39,24 +40,24 @@ export const addVerificationIndexes = async () => {
     );
     console.log('✅ Created index: ownerAddress_createdAt_idx');
 
-    // Attestor indexes
-    await AttestorModel.collection.createIndex(
-      { type: 1, country: 1, status: 1 },
-      { name: 'type_country_status_idx' }
-    );
-    console.log('✅ Created index: type_country_status_idx');
+    // Attestor indexes - Removed - attestor functionality deprecated
+    // await AttestorModel.collection.createIndex(
+    //   { type: 1, country: 1, status: 1 },
+    //   { name: 'type_country_status_idx' }
+    // );
+    // console.log('✅ Created index: type_country_status_idx');
 
-    await AttestorModel.collection.createIndex(
-      { specialties: 1, status: 1, 'reputation.score': -1 },
-      { name: 'specialties_status_reputation_idx' }
-    );
-    console.log('✅ Created index: specialties_status_reputation_idx');
+    // await AttestorModel.collection.createIndex(
+    //   { specialties: 1, status: 1, 'reputation.score': -1 },
+    //   { name: 'specialties_status_reputation_idx' }
+    // );
+    // console.log('✅ Created index: specialties_status_reputation_idx');
 
-    await AttestorModel.collection.createIndex(
-      { 'reputation.score': -1, status: 1 },
-      { name: 'reputation_status_idx' }
-    );
-    console.log('✅ Created index: reputation_status_idx');
+    // await AttestorModel.collection.createIndex(
+    //   { 'reputation.score': -1, status: 1 },
+    //   { name: 'reputation_status_idx' }
+    // );
+    // console.log('✅ Created index: reputation_status_idx'); // Removed - attestor functionality deprecated
 
     console.log('🎉 All verification indexes created successfully!');
 

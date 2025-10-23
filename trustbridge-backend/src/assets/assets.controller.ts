@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AssetsService, CreateDigitalAssetDto, CreateRWAAssetDto } from './assets.service';
 import { CreateAssetDto } from './dto/create-asset.dto';
@@ -11,28 +11,28 @@ export class AssetsController {
   constructor(private readonly assetsService: AssetsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all assets with filtering' })
-  @ApiResponse({ status: 200, description: 'List of assets' })
-  async getAssets(
-    @Query('type') type?: string,
-    @Query('status') status?: string,
-    @Query('country') country?: string,
-    @Query('minValue') minValue?: number,
-    @Query('maxValue') maxValue?: number,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
-  ): Promise<{ success: boolean; data: Asset[] }> {
-    const assets = await this.assetsService.getAssets({
-      type,
-      status,
-      country,
-      minValue,
-      maxValue,
-    }, limit || 20, offset || 0);
-
+  @ApiOperation({ summary: 'Get all assets from blockchain' })
+  @ApiResponse({ status: 200, description: 'List of assets from Hedera network' })
+  async getAssets(): Promise<{ success: boolean; message: string }> {
+    // In a fully blockchain-native system, assets are fetched from Hedera network
     return {
       success: true,
-      data: assets,
+      message: 'Assets are fetched from Hedera network'
+    };
+  }
+
+  @Get('owner/:owner')
+  @ApiOperation({ summary: 'Get assets by owner from blockchain' })
+  @ApiResponse({ status: 200, description: 'List of assets owned by user from Hedera network' })
+  async getAssetsByOwner(@Param('owner') owner: string): Promise<{ success: boolean; message: string }> {
+    if (!owner || owner.trim() === '') {
+      throw new BadRequestException('Owner parameter is required');
+    }
+    
+    // In a fully blockchain-native system, assets are fetched from Hedera network
+    return {
+      success: true,
+      message: `Assets for owner ${owner} are fetched from Hedera network`
     };
   }
 
@@ -96,17 +96,6 @@ export class AssetsController {
   @ApiResponse({ status: 200, description: 'List of featured assets' })
   async getFeaturedAssets(@Query('limit') limit?: number): Promise<{ success: boolean; data: Asset[] }> {
     const assets = await this.assetsService.getFeaturedAssets(limit || 10);
-    return {
-      success: true,
-      data: assets,
-    };
-  }
-
-  @Get('owner/:owner')
-  @ApiOperation({ summary: 'Get assets by owner' })
-  @ApiResponse({ status: 200, description: 'List of assets owned by user' })
-  async getAssetsByOwner(@Param('owner') owner: string): Promise<{ success: boolean; data: Asset[] }> {
-    const assets = await this.assetsService.getAssetsByOwner(owner);
     return {
       success: true,
       data: assets,

@@ -19,12 +19,6 @@ const addVerificationIndexes = async () => {
         console.log('✅ Created index: expiresAt_idx');
         await models_1.VerificationRequestModel.collection.createIndex({ ownerAddress: 1, createdAt: -1 }, { name: 'ownerAddress_createdAt_idx' });
         console.log('✅ Created index: ownerAddress_createdAt_idx');
-        await models_1.AttestorModel.collection.createIndex({ type: 1, country: 1, status: 1 }, { name: 'type_country_status_idx' });
-        console.log('✅ Created index: type_country_status_idx');
-        await models_1.AttestorModel.collection.createIndex({ specialties: 1, status: 1, 'reputation.score': -1 }, { name: 'specialties_status_reputation_idx' });
-        console.log('✅ Created index: specialties_status_reputation_idx');
-        await models_1.AttestorModel.collection.createIndex({ 'reputation.score': -1, status: 1 }, { name: 'reputation_status_idx' });
-        console.log('✅ Created index: reputation_status_idx');
         console.log('🎉 All verification indexes created successfully!');
     }
     catch (error) {

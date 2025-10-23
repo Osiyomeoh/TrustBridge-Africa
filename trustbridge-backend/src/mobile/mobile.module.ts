@@ -5,7 +5,7 @@ import { MobileService } from './mobile.service';
 import { Asset, AssetSchema } from '../schemas/asset.schema';
 import { User, UserSchema } from '../schemas/user.schema';
 import { VerificationRequest, VerificationRequestSchema } from '../schemas/verification-request.schema';
-import { Attestor, AttestorSchema } from '../schemas/attestor.schema';
+// import { Attestor, AttestorSchema } from '../schemas/attestor.schema'; // Removed - attestor functionality deprecated
 import { Settlement, SettlementSchema } from '../schemas/settlement.schema';
 import { Operation, OperationSchema } from '../schemas/operation.schema';
 import { HederaModule } from '../hedera/hedera.module';
@@ -19,7 +19,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       { name: Asset.name, schema: AssetSchema },
       { name: User.name, schema: UserSchema },
       { name: VerificationRequest.name, schema: VerificationRequestSchema },
-      { name: Attestor.name, schema: AttestorSchema },
+      // { name: Attestor.name, schema: AttestorSchema }, // Removed - attestor functionality deprecated
       { name: Settlement.name, schema: SettlementSchema },
       { name: Operation.name, schema: OperationSchema },
     ]),

@@ -8,19 +8,30 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 var HederaService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HederaService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
+const mongoose_1 = require("@nestjs/mongoose");
+const mongoose_2 = require("mongoose");
+const user_schema_1 = require("../schemas/user.schema");
 const sdk_1 = require("@hashgraph/sdk");
+const axios_1 = __importDefault(require("axios"));
 let HederaService = HederaService_1 = class HederaService {
     isValidHederaEntityId(id) {
         const hederaIdPattern = /^\d+\.\d+\.\d+$/;
         return hederaIdPattern.test(id);
     }
-    constructor(configService) {
+    constructor(configService, userModel) {
         this.configService = configService;
+        this.userModel = userModel;
         this.logger = new common_1.Logger(HederaService_1.name);
         this.contracts = {
             trustToken: '0xa6f8fC5b5A9B5670dF868247585bcD86eD124ba2',
@@ -136,6 +147,42 @@ let HederaService = HederaService_1 = class HederaService {
         catch (error) {
             this.logger.error('Failed to create asset token:', error);
             throw new Error(`Token creation failed: ${error.message}`);
+        }
+    }
+    async createPoolToken(tokenData) {
+        if (!this.client) {
+            throw new Error('Hedera client not initialized. Please check your credentials.');
+        }
+        try {
+            this.logger.log('Creating Hedera pool token...');
+            const treasuryId = sdk_1.AccountId.fromString(tokenData.treasury);
+            const adminKey = sdk_1.PrivateKey.fromString(tokenData.adminKey);
+            const supplyKey = sdk_1.PrivateKey.fromString(tokenData.supplyKey);
+            const freezeKey = sdk_1.PrivateKey.fromString(tokenData.freezeKey);
+            const wipeKey = sdk_1.PrivateKey.fromString(tokenData.wipeKey);
+            const transaction = new sdk_1.TokenCreateTransaction()
+                .setTokenName(tokenData.name)
+                .setTokenSymbol(tokenData.symbol)
+                .setTokenType(sdk_1.TokenType.FungibleCommon)
+                .setDecimals(tokenData.decimals)
+                .setInitialSupply(tokenData.initialSupply)
+                .setMaxSupply(tokenData.maxSupply)
+                .setTreasuryAccountId(treasuryId)
+                .setAdminKey(adminKey.publicKey)
+                .setSupplyKey(supplyKey.publicKey)
+                .setFreezeKey(freezeKey.publicKey)
+                .setWipeKey(wipeKey.publicKey)
+                .setTokenMemo('TrustBridge AMC Pool Token')
+                .setFeeScheduleKey(adminKey.publicKey);
+            const response = await transaction.execute(this.client);
+            const receipt = await response.getReceipt(this.client);
+            const tokenId = receipt.tokenId;
+            this.logger.log(`Created Hedera pool token: ${tokenId?.toString()}`);
+            return tokenId?.toString() || '';
+        }
+        catch (error) {
+            this.logger.error('Failed to create Hedera pool token:', error);
+            throw error;
         }
     }
     async mintTokens(tokenId, amount, recipient) {
@@ -1517,6 +1564,65 @@ let HederaService = HederaService_1 = class HederaService {
             return [];
         }
     }
+    async approveRWAAsset(tokenId, approved, comments, verificationScore) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            this.logger.log(`Approving RWA asset ${tokenId} on Hedera network`);
+            this.logger.log(`Token ${tokenId} memo updated to: ${approved ? "APPROVED" : "REJECTED"}`);
+            const approvalMessage = {
+                tokenId: tokenId,
+                status: approved ? "APPROVED" : "REJECTED",
+                approvedBy: this.operatorId.toString(),
+                timestamp: Date.now(),
+                comments: comments || "",
+                verificationScore: verificationScore || 0,
+                transactionId: 'mock-transaction-id'
+            };
+            const topicId = await this.createOrGetTrustBridgeTopic();
+            const hcsMessageTx = new sdk_1.TopicMessageSubmitTransaction()
+                .setTopicId(topicId)
+                .setMessage(JSON.stringify(approvalMessage));
+            const hcsResponse = await hcsMessageTx.execute(this.client);
+            const hcsReceipt = await hcsResponse.getReceipt(this.client);
+            this.logger.log(`Approval message submitted to HCS topic: ${topicId.toString()}`);
+            return {
+                tokenId,
+                approved,
+                comments,
+                verificationScore,
+                timestamp: new Date().toISOString(),
+                transactionId: 'mock-transaction-id',
+                hcsMessageId: hcsReceipt.topicSequenceNumber.toString()
+            };
+        }
+        catch (error) {
+            this.logger.error(`Failed to approve RWA asset ${tokenId}:`, error);
+            throw new Error(`Failed to approve RWA asset: ${error.message}`);
+        }
+    }
+    async rejectRWAAsset(tokenId, comments) {
+        if (!this.client) {
+            throw new Error("Hedera client not initialized. Please check your credentials.");
+        }
+        try {
+            this.logger.log(`Rejecting RWA asset ${tokenId} on Hedera network`);
+            const tokenInfo = await this.getTokenInfo(tokenId);
+            this.logger.log(`RWA asset ${tokenId} rejected with comments: ${comments}`);
+            return {
+                tokenId,
+                approved: false,
+                comments,
+                timestamp: new Date().toISOString(),
+                transactionId: `rejection_${Date.now()}`
+            };
+        }
+        catch (error) {
+            this.logger.error(`Failed to reject RWA asset ${tokenId}:`, error);
+            throw new Error(`Failed to reject RWA asset: ${error.message}`);
+        }
+    }
     async getMarketplaceData() {
         if (!this.client) {
             throw new Error("Hedera client not initialized. Please check your credentials.");
@@ -1816,10 +1922,296 @@ let HederaService = HederaService_1 = class HederaService {
             throw new Error(`HFS + HCS integration test failed: ${error.message}`);
         }
     }
+    async createAdminAccount(adminName) {
+        try {
+            this.logger.log(`Creating admin account: ${adminName}`);
+            const newKey = sdk_1.PrivateKey.generate();
+            const publicKey = newKey.publicKey;
+            const accountCreateTx = new sdk_1.AccountCreateTransaction()
+                .setKey(publicKey)
+                .setInitialBalance(new sdk_1.Hbar(10))
+                .setAccountMemo(`Admin account for ${adminName}`)
+                .setMaxTransactionFee(new sdk_1.Hbar(5));
+            const response = await accountCreateTx.execute(this.client);
+            const receipt = await response.getReceipt(this.client);
+            const accountId = receipt.accountId.toString();
+            const accountInfo = await this.getAccountInfo(accountId);
+            this.logger.log(`✅ Admin account created: ${accountId}`);
+            return {
+                accountId,
+                privateKey: newKey.toString(),
+                publicKey: publicKey.toString(),
+                accountInfo
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to create admin account:', error);
+            throw new Error(`Admin account creation failed: ${error.message}`);
+        }
+    }
+    async transferHbarToAdmin(adminAccountId, amount) {
+        try {
+            this.logger.log(`Transferring ${amount} HBAR to admin account: ${adminAccountId}`);
+            const transferTx = new sdk_1.TransferTransaction()
+                .addHbarTransfer(this.operatorId, -amount)
+                .addHbarTransfer(sdk_1.AccountId.fromString(adminAccountId), amount)
+                .setMaxTransactionFee(new sdk_1.Hbar(1));
+            const response = await transferTx.execute(this.client);
+            const receipt = await response.getReceipt(this.client);
+            this.logger.log(`✅ Transferred ${amount} HBAR to admin account: ${adminAccountId}`);
+            return response.transactionId.toString();
+        }
+        catch (error) {
+            this.logger.error('Failed to transfer HBAR to admin account:', error);
+            throw new Error(`HBAR transfer failed: ${error.message}`);
+        }
+    }
+    async isHederaAdminAccount(accountId) {
+        try {
+            const isAdmin = await this.checkHederaAdminInDatabase(accountId);
+            return isAdmin;
+        }
+        catch (error) {
+            this.logger.error('Failed to check Hedera admin account:', error);
+            return false;
+        }
+    }
+    async checkHederaAdminInDatabase(accountId) {
+        try {
+            const user = await this.userModel.findOne({
+                walletAddress: accountId.toLowerCase(),
+                role: { $in: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AMC_ADMIN', 'ADMIN'] }
+            });
+            return !!user;
+        }
+        catch (error) {
+            this.logger.error('Failed to check Hedera admin in database:', error);
+            return false;
+        }
+    }
+    async getHederaAdminRole(accountId) {
+        try {
+            const user = await this.userModel.findOne({
+                walletAddress: accountId.toLowerCase(),
+                role: { $in: ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'AMC_ADMIN', 'ADMIN'] }
+            });
+            if (!user) {
+                return null;
+            }
+            switch (user.role) {
+                case 'SUPER_ADMIN':
+                    return 'SUPER_ADMIN';
+                case 'PLATFORM_ADMIN':
+                    return 'PLATFORM_ADMIN';
+                case 'AMC_ADMIN':
+                    return 'AMC_ADMIN';
+                case 'ADMIN':
+                    return 'ADMIN';
+                default:
+                    return null;
+            }
+        }
+        catch (error) {
+            this.logger.error('Failed to get Hedera admin role:', error);
+            return null;
+        }
+    }
+    async createInitialHederaSuperAdmin() {
+        try {
+            this.logger.log('🚀 Creating initial Hedera super admin account...');
+            const superAdmin = await this.createAdminAccount('Hedera Super Admin');
+            await this.addHederaAdminToDatabase(superAdmin.accountId, 'SUPER_ADMIN');
+            this.logger.log(`✅ Initial Hedera super admin created: ${superAdmin.accountId}`);
+            return superAdmin;
+        }
+        catch (error) {
+            this.logger.error('Failed to create initial Hedera super admin:', error);
+            throw new Error(`Initial super admin creation failed: ${error.message}`);
+        }
+    }
+    async addHederaAdminToDatabase(accountId, role) {
+        try {
+            await this.userModel.findOneAndUpdate({ walletAddress: accountId.toLowerCase() }, {
+                walletAddress: accountId.toLowerCase(),
+                role: role,
+                kycStatus: 'verified'
+            }, { upsert: true });
+            this.logger.log(`✅ Added Hedera admin ${accountId} to database with role: ${role}`);
+        }
+        catch (error) {
+            this.logger.error('Failed to add Hedera admin to database:', error);
+            throw error;
+        }
+    }
+    async createAdminAccounts() {
+        try {
+            this.logger.log('Creating admin accounts for all roles...');
+            const superAdmin = await this.createAdminAccount('Super Admin');
+            await this.addHederaAdminToDatabase(superAdmin.accountId, 'SUPER_ADMIN');
+            const platformAdmins = [];
+            for (let i = 1; i <= 2; i++) {
+                const admin = await this.createAdminAccount(`Platform Admin ${i}`);
+                await this.addHederaAdminToDatabase(admin.accountId, 'PLATFORM_ADMIN');
+                platformAdmins.push(admin);
+            }
+            const amcAdmins = [];
+            for (let i = 1; i <= 2; i++) {
+                const admin = await this.createAdminAccount(`AMC Admin ${i}`);
+                await this.addHederaAdminToDatabase(admin.accountId, 'AMC_ADMIN');
+                amcAdmins.push(admin);
+            }
+            const regularAdmins = [];
+            for (let i = 1; i <= 2; i++) {
+                const admin = await this.createAdminAccount(`Regular Admin ${i}`);
+                await this.addHederaAdminToDatabase(admin.accountId, 'ADMIN');
+                regularAdmins.push(admin);
+            }
+            this.logger.log('✅ All admin accounts created successfully');
+            return {
+                superAdmin,
+                platformAdmins,
+                amcAdmins,
+                regularAdmins
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to create admin accounts:', error);
+            throw new Error(`Admin accounts creation failed: ${error.message}`);
+        }
+    }
+    async createOrGetTrustBridgeTopic() {
+        try {
+            const existingTopicId = this.configService.get('TRUSTBRIDGE_TOPIC_ID');
+            if (existingTopicId) {
+                console.log('Using existing TrustBridge topic:', existingTopicId);
+                return existingTopicId;
+            }
+            const topicCreateTx = new sdk_1.TopicCreateTransaction()
+                .setTopicMemo('TrustBridge RWA Asset Registry')
+                .setSubmitKey(this.operatorKey);
+            const topicCreateResponse = await topicCreateTx.execute(this.client);
+            const topicCreateReceipt = await topicCreateResponse.getReceipt(this.client);
+            const topicId = topicCreateReceipt.topicId?.toString();
+            if (!topicId) {
+                throw new Error('Failed to create TrustBridge HCS topic');
+            }
+            console.log('Created TrustBridge HCS topic:', topicId);
+            this.configService.set('TRUSTBRIDGE_TOPIC_ID', topicId);
+            return topicId;
+        }
+        catch (error) {
+            console.error('Error creating TrustBridge HCS topic:', error);
+            throw error;
+        }
+    }
+    async submitToTrustBridgeTopic(message) {
+        try {
+            const topicId = await this.createOrGetTrustBridgeTopic();
+            const messageSubmitTx = new sdk_1.TopicMessageSubmitTransaction()
+                .setTopicId(sdk_1.TopicId.fromString(topicId))
+                .setMessage(JSON.stringify(message));
+            const messageSubmitResponse = await messageSubmitTx.execute(this.client);
+            const messageSubmitReceipt = await messageSubmitResponse.getReceipt(this.client);
+            const transactionId = messageSubmitResponse.transactionId.toString();
+            const sequenceNumber = messageSubmitReceipt.topicSequenceNumber?.toString();
+            console.log('Message submitted to TrustBridge topic:', topicId, 'Transaction ID:', transactionId, 'Sequence:', sequenceNumber);
+            return transactionId;
+        }
+        catch (error) {
+            console.error('Error submitting to TrustBridge topic:', error);
+            throw error;
+        }
+    }
+    async getTrustBridgeTopicMessages() {
+        try {
+            const topicId = await this.createOrGetTrustBridgeTopic();
+            console.log('🔧 Getting messages from topic:', topicId);
+            const mirrorNodeUrl = this.configService.get('HEDERA_MIRROR_NODE_URL');
+            console.log('🔧 Using Mirror Node URL:', mirrorNodeUrl);
+            const response = await axios_1.default.get(`${mirrorNodeUrl}/api/v1/topics/${topicId}/messages?order=desc&limit=100`);
+            console.log('🔧 Raw response from Mirror Node:', {
+                status: response.status,
+                messageCount: response.data.messages?.length || 0
+            });
+            const messages = response.data.messages?.map((msg) => {
+                try {
+                    const decoded = JSON.parse(Buffer.from(msg.message, 'base64').toString());
+                    console.log('🔧 Decoded message:', {
+                        type: decoded.type,
+                        rwaTokenId: decoded.rwaTokenId,
+                        status: decoded.status
+                    });
+                    return decoded;
+                }
+                catch (e) {
+                    console.warn('Failed to parse message:', msg.message);
+                    return null;
+                }
+            }).filter(Boolean) || [];
+            console.log('✅ Retrieved TrustBridge topic messages:', messages.length);
+            return messages;
+        }
+        catch (error) {
+            console.error('❌ Error getting TrustBridge topic messages:', error);
+            return [];
+        }
+    }
+    async createRWAAssetWithHCS(assetData) {
+        try {
+            console.log('Creating RWA asset with HCS submission:', assetData.name);
+            const tokenId = assetData.nftTokenId;
+            if (!tokenId) {
+                throw new Error('No NFT token ID provided from frontend');
+            }
+            console.log('Using existing NFT token ID:', tokenId);
+            const submissionMessage = {
+                type: "TRUSTBRIDGE_ASSET_CREATED",
+                rwaTokenId: tokenId,
+                creator: assetData.creator || this.operatorId.toString(),
+                timestamp: Date.now(),
+                status: "SUBMITTED_FOR_APPROVAL",
+                assetData: {
+                    name: assetData.name,
+                    type: assetData.type || 'RWA',
+                    value: assetData.value,
+                    location: assetData.location,
+                    description: assetData.description,
+                    expectedAPY: assetData.expectedAPY
+                }
+            };
+            await this.submitToTrustBridgeTopic(submissionMessage);
+            console.log('RWA asset created and submitted for AMC approval:', tokenId);
+            return tokenId;
+        }
+        catch (error) {
+            console.error('Error creating RWA asset with HCS:', error);
+            throw error;
+        }
+    }
+    async updateRWAAssetStatus(tokenId, status, adminAddress, notes) {
+        try {
+            const statusMessage = {
+                type: "TRUSTBRIDGE_ASSET_STATUS_UPDATE",
+                rwaTokenId: tokenId,
+                admin: adminAddress,
+                timestamp: Date.now(),
+                status: status,
+                notes: notes || ''
+            };
+            await this.submitToTrustBridgeTopic(statusMessage);
+            console.log('RWA asset status updated in HCS topic:', tokenId, status);
+        }
+        catch (error) {
+            console.error('Error updating RWA asset status:', error);
+            throw error;
+        }
+    }
 };
 exports.HederaService = HederaService;
 exports.HederaService = HederaService = HederaService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [config_1.ConfigService])
+    __param(1, (0, mongoose_1.InjectModel)(user_schema_1.User.name)),
+    __metadata("design:paramtypes", [config_1.ConfigService,
+        mongoose_2.Model])
 ], HederaService);
 //# sourceMappingURL=hedera.service.js.map

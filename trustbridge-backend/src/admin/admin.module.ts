@@ -1,21 +1,18 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { AdminController } from './admin.controller';
+import { JwtModule } from '@nestjs/jwt';
 import { AdminService } from './admin.service';
-import { User, UserSchema } from '../schemas/user.schema';
-import { Attestor, AttestorSchema } from '../schemas/attestor.schema';
-import { VerificationRequest, VerificationRequestSchema } from '../schemas/verification-request.schema';
+import { AdminController } from './admin.controller';
+import { HederaModule } from '../hedera/hedera.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: User.name, schema: UserSchema },
-      { name: Attestor.name, schema: AttestorSchema },
-      { name: VerificationRequest.name, schema: VerificationRequestSchema }
-    ])
+    HederaModule,
+    AuthModule,
+    JwtModule.register({}), // Add JWT module for JwtService
   ],
-  controllers: [AdminController],
   providers: [AdminService],
-  exports: [AdminService]
+  controllers: [AdminController],
+  exports: [AdminService],
 })
 export class AdminModule {}

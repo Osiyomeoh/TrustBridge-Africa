@@ -18,21 +18,17 @@ const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const verification_request_schema_1 = require("../schemas/verification-request.schema");
 const asset_schema_1 = require("../schemas/asset.schema");
-const attestor_schema_1 = require("../schemas/attestor.schema");
 const hedera_service_1 = require("../hedera/hedera.service");
 const chainlink_service_1 = require("../chainlink/chainlink.service");
-const attestors_service_1 = require("../attestors/attestors.service");
 const external_apis_service_1 = require("../external-apis/external-apis.service");
 const event_emitter_1 = require("@nestjs/event-emitter");
 const ipfs_service_1 = require("../services/ipfs.service");
 let VerificationService = class VerificationService {
-    constructor(verificationModel, assetModel, attestorModel, hederaService, chainlinkService, attestorsService, externalApisService, eventEmitter, ipfsService) {
+    constructor(verificationModel, assetModel, hederaService, chainlinkService, externalApisService, eventEmitter, ipfsService) {
         this.verificationModel = verificationModel;
         this.assetModel = assetModel;
-        this.attestorModel = attestorModel;
         this.hederaService = hederaService;
         this.chainlinkService = chainlinkService;
-        this.attestorsService = attestorsService;
         this.externalApisService = externalApisService;
         this.eventEmitter = eventEmitter;
         this.ipfsService = ipfsService;
@@ -75,7 +71,7 @@ let VerificationService = class VerificationService {
                 minReputation: 70,
                 maxDistance: 100,
             };
-            const assignedAttestors = await this.attestorsService.assignAttestors(assetId, requirements);
+            const assignedAttestors = [];
             if (assignedAttestors.length > 0) {
                 const attestorMatches = assignedAttestors.map(attestor => ({
                     attestor,
@@ -291,11 +287,7 @@ let VerificationService = class VerificationService {
         return 0;
     }
     async findMatchingAttestors(asset, evidence) {
-        const attestors = await this.attestorModel.find({
-            isActive: true,
-            specialties: { $in: [asset.type] },
-            reputation: { $gte: 70 },
-        });
+        const attestors = [];
         const matches = [];
         for (const attestor of attestors) {
             let score = 0;
@@ -600,13 +592,10 @@ exports.VerificationService = VerificationService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(verification_request_schema_1.VerificationRequest.name)),
     __param(1, (0, mongoose_1.InjectModel)(asset_schema_1.Asset.name)),
-    __param(2, (0, mongoose_1.InjectModel)(attestor_schema_1.Attestor.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
-        mongoose_2.Model,
         mongoose_2.Model,
         hedera_service_1.HederaService,
         chainlink_service_1.ChainlinkService,
-        attestors_service_1.AttestorsService,
         external_apis_service_1.ExternalApisService,
         event_emitter_1.EventEmitter2,
         ipfs_service_1.IPFSService])

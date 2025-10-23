@@ -8,12 +8,17 @@ export enum UserRole {
   ASSET_OWNER = 'ASSET_OWNER',
   VERIFIER = 'VERIFIER',
   ADMIN = 'ADMIN',
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  PLATFORM_ADMIN = 'PLATFORM_ADMIN',
+  AMC_ADMIN = 'AMC_ADMIN',
 }
 
 export enum KycStatus {
-  PENDING = 'PENDING',
-  VERIFIED = 'VERIFIED',
-  REJECTED = 'REJECTED',
+  PENDING = 'pending',
+  IN_PROGRESS = 'in_progress',
+  VERIFIED = 'approved',
+  REJECTED = 'rejected',
+  NOT_STARTED = 'not_started',
 }
 
 export enum EmailVerificationStatus {
@@ -42,7 +47,7 @@ export class User {
   @Prop({ required: true, enum: UserRole, default: UserRole.INVESTOR })
   role: UserRole;
 
-  @Prop({ required: true, enum: KycStatus, default: KycStatus.PENDING })
+  @Prop({ required: true, enum: KycStatus, default: KycStatus.NOT_STARTED })
   kycStatus: KycStatus;
 
   @Prop({ required: true, enum: EmailVerificationStatus, default: EmailVerificationStatus.NOT_VERIFIED })

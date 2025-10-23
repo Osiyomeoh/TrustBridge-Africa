@@ -8,14 +8,16 @@ export declare class KycController {
             inquiryId: any;
             inquiryUrl: any;
             status: string;
+            provider: string;
+            sessionToken: any;
         };
         message: string;
     }>;
     checkKYCStatus(inquiryId: string): Promise<{
         success: boolean;
         data: {
-            status: "approved" | "rejected" | "pending" | "in_progress";
-            personaStatus: any;
+            status: "pending" | "in_progress" | "approved" | "rejected" | "not_started";
+            diditStatus: any;
             inquiryId: any;
             completedAt: any;
         };

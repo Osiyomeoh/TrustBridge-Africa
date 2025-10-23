@@ -102,7 +102,16 @@ export class Pool {
   @Prop({ required: true })
   poolContract: string; // Pool management contract address
 
-  @Prop({ type: Object })
+  @Prop({ 
+    type: {
+      totalReturn: { type: Number, default: 0 },
+      monthlyReturn: { type: Number, default: 0 },
+      volatility: { type: Number, default: 0 },
+      sharpeRatio: { type: Number, default: 0 },
+      maxDrawdown: { type: Number, default: 0 }
+    },
+    default: {}
+  })
   performanceMetrics: {
     totalReturn: number;
     monthlyReturn: number;
@@ -111,7 +120,15 @@ export class Pool {
     maxDrawdown: number;
   };
 
-  @Prop({ type: Object })
+  @Prop({ 
+    type: {
+      managementFee: { type: Number, default: 0 },
+      performanceFee: { type: Number, default: 0 },
+      entryFee: { type: Number, default: 0 },
+      exitFee: { type: Number, default: 0 }
+    },
+    default: {}
+  })
   feeStructure: {
     managementFee: number; // Annual management fee percentage
     performanceFee: number; // Performance fee percentage
@@ -138,7 +155,16 @@ export class Pool {
     type: 'dividend' | 'capital_gain' | 'interest';
   }>;
 
-  @Prop({ type: Object })
+  @Prop({ 
+    type: {
+      jurisdiction: { type: String, default: '' },
+      regulatoryStatus: { type: String, default: '' },
+      kycRequired: { type: Boolean, default: false },
+      accreditationRequired: { type: Boolean, default: false },
+      minimumInvestment: { type: Number, default: 0 }
+    },
+    default: {}
+  })
   compliance: {
     jurisdiction: string;
     regulatoryStatus: string;
@@ -150,7 +176,22 @@ export class Pool {
   @Prop({ type: [String] })
   tags: string[]; // Tags for categorization
 
-  @Prop({ type: Object })
+  @Prop({ 
+    type: {
+      website: { type: String, default: '' },
+      whitepaper: { type: String, default: '' },
+      socialMedia: {
+        type: {
+          twitter: { type: String, default: '' },
+          linkedin: { type: String, default: '' },
+          telegram: { type: String, default: '' }
+        },
+        default: {}
+      },
+      documents: { type: [Object], default: [] }
+    },
+    default: {}
+  })
   metadata: {
     website: string;
     whitepaper: string;

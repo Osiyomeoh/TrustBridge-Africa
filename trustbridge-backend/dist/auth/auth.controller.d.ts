@@ -64,6 +64,7 @@ export declare class UpdateKYCStatusDto {
 }
 export declare class AuthController {
     private readonly authService;
+    private readonly logger;
     constructor(authService: AuthService);
     checkWalletUser(address: string): Promise<{
         success: boolean;
@@ -172,14 +173,21 @@ export declare class AuthController {
         message: string;
         error: any;
     }>;
-    diditWebhook(webhookData: DiditWebhookDto, req: any): Promise<{
+    diditWebhook(webhookData: any, req: any): Promise<{
         success: boolean;
         message: string;
+        data?: undefined;
+        error?: undefined;
+    } | {
+        success: boolean;
+        message: string;
+        data: any;
         error?: undefined;
     } | {
         success: boolean;
         message: string;
         error: any;
+        data?: undefined;
     }>;
     updateKYCStatus(updateData: UpdateKYCStatusDto, req: any): Promise<{
         success: boolean;
@@ -197,6 +205,32 @@ export declare class AuthController {
             kycInquiryId: any;
         };
         message: string;
+    }>;
+    diditCallback(query: any): Promise<{
+        success: boolean;
+        message: string;
+        data?: undefined;
+        error?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            success: boolean;
+            message: string;
+            userId?: undefined;
+            kycStatus?: undefined;
+        } | {
+            success: boolean;
+            userId: unknown;
+            kycStatus: import("../schemas/user.schema").KycStatus;
+            message: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        message: string;
+        error: any;
+        data?: undefined;
     }>;
     createDiditSession(body: {
         vendorData?: string;

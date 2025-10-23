@@ -287,6 +287,46 @@ export class HederaController {
     };
   }
 
+  @Post('approve-asset')
+  @ApiOperation({ summary: 'Approve RWA asset on Hedera network' })
+  @ApiResponse({ status: 200, description: 'Asset approved successfully' })
+  async approveAsset(@Body() body: { tokenId: string; approved: boolean; comments?: string; verificationScore?: number }) {
+    try {
+      const result = await this.hederaService.approveRWAAsset(body.tokenId, body.approved, body.comments, body.verificationScore);
+      return {
+        success: true,
+        data: result,
+        message: 'Asset approved successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to approve asset'
+      };
+    }
+  }
+
+  @Post('reject-asset')
+  @ApiOperation({ summary: 'Reject RWA asset on Hedera network' })
+  @ApiResponse({ status: 200, description: 'Asset rejected successfully' })
+  async rejectAsset(@Body() body: { tokenId: string; approved: boolean; comments?: string }) {
+    try {
+      const result = await this.hederaService.rejectRWAAsset(body.tokenId, body.comments);
+      return {
+        success: true,
+        data: result,
+        message: 'Asset rejected successfully'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to reject asset'
+      };
+    }
+  }
+
   @Post('update-dual-tokenization')
   @ApiOperation({ summary: 'Update dual tokenization with ERC-721 data' })
   @ApiResponse({ status: 200, description: 'Dual tokenization updated successfully' })
@@ -1211,6 +1251,180 @@ export class HederaController {
         success: false,
         error: error.message,
         message: 'Failed to get topic information'
+      };
+    }
+  }
+
+  // ============ TrustBridge HCS RWA Asset Endpoints ============
+
+  @Post('rwa/create-with-hcs')
+  @ApiOperation({ summary: 'Create RWA asset with HCS submission for AMC approval' })
+  @ApiResponse({ status: 201, description: 'RWA asset created and submitted for approval' })
+  async createRWAAssetWithHCS(@Body() assetData: {
+    nftTokenId: string;
+    creator: string;
+    name: string;
+    type: string;
+    assetType: string;
+    category: string;
+    totalValue: number;
+    expectedAPY: number;
+    maturityDate: string;
+    location: string;
+    description: string;
+    metadataCid: string;
+    displayImage: string;
+    documentUrls: string[];
+    compressedHash: string;
+  }) {
+    try {
+      // Create HCS message for TrustBridge topic
+      const hcsMessage = {
+        type: 'TRUSTBRIDGE_ASSET_CREATED',
+        rwaTokenId: assetData.nftTokenId,
+        creator: assetData.creator,
+        timestamp: new Date().toISOString(),
+        status: 'SUBMITTED_FOR_APPROVAL',
+        assetData: {
+          name: assetData.name,
+          type: assetData.type,
+          assetType: assetData.assetType,
+          category: assetData.category,
+          totalValue: assetData.totalValue,
+          expectedAPY: assetData.expectedAPY,
+          maturityDate: assetData.maturityDate,
+          location: assetData.location,
+          description: assetData.description,
+          metadataCid: assetData.metadataCid,
+          displayImage: assetData.displayImage,
+          documentUrls: assetData.documentUrls,
+          compressedHash: assetData.compressedHash
+        }
+      };
+      
+      // Submit to TrustBridge HCS topic
+      const transactionId = await this.hederaService.submitToTrustBridgeTopic(hcsMessage);
+      
+      return {
+        success: true,
+        data: { 
+          nftTokenId: assetData.nftTokenId,
+          hcsTransactionId: transactionId,
+          topicId: '0.0.7102808'
+        },
+        message: 'RWA asset registered in HCS for AMC approval'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to register RWA asset in HCS'
+      };
+    }
+  }
+
+  @Get('rwa/trustbridge-assets')
+  @ApiOperation({ summary: 'Get all TrustBridge RWA assets from HCS topic' })
+  @ApiResponse({ status: 200, description: 'TrustBridge RWA assets retrieved' })
+  async getTrustBridgeRWAAssets() {
+    try {
+      console.log('🔧 Getting TrustBridge RWA assets...');
+      const messages = await this.hederaService.getTrustBridgeTopicMessages();
+      console.log('🔧 Total messages retrieved:', messages.length);
+      
+      // Filter for asset creation messages
+      const assetMessages = messages.filter(msg => msg.type === 'TRUSTBRIDGE_ASSET_CREATED');
+      console.log('🔧 Asset creation messages found:', assetMessages.length);
+      
+      // Get status update messages
+      const statusMessages = messages.filter(msg => msg.type === 'TRUSTBRIDGE_ASSET_STATUS_UPDATE');
+      console.log('🔧 Status update messages found:', statusMessages.length);
+      
+      // Create a map of current statuses
+      const currentStatuses = new Map();
+      statusMessages.forEach(statusMsg => {
+        currentStatuses.set(statusMsg.rwaTokenId, statusMsg.status);
+      });
+      
+      // Update asset statuses with current status from HCS
+      const assetsWithStatus = assetMessages.map(asset => ({
+        ...asset,
+        status: currentStatuses.get(asset.rwaTokenId) || asset.status
+      }));
+      
+      console.log('🔧 Assets with updated statuses:', assetsWithStatus.length);
+      
+      return {
+        success: true,
+        data: {
+          assets: assetsWithStatus,
+          count: assetsWithStatus.length,
+          totalMessages: messages.length
+        },
+        message: 'TrustBridge RWA assets retrieved from HCS topic'
+      };
+    } catch (error) {
+      console.error('❌ Error in getTrustBridgeRWAAssets:', error);
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to get TrustBridge RWA assets'
+      };
+    }
+  }
+
+  @Post('rwa/update-status')
+  @ApiOperation({ summary: 'Update RWA asset status in HCS topic' })
+  @ApiResponse({ status: 200, description: 'Asset status updated successfully' })
+  async updateRWAAssetStatus(@Body() statusData: {
+    tokenId: string;
+    status: string;
+    adminAddress: string;
+    notes?: string;
+  }) {
+    try {
+      await this.hederaService.updateRWAAssetStatus(
+        statusData.tokenId,
+        statusData.status,
+        statusData.adminAddress,
+        statusData.notes
+      );
+      
+      return {
+        success: true,
+        data: {
+          tokenId: statusData.tokenId,
+          status: statusData.status,
+          adminAddress: statusData.adminAddress,
+          timestamp: Date.now()
+        },
+        message: 'RWA asset status updated in HCS topic'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to update RWA asset status'
+      };
+    }
+  }
+
+  @Get('rwa/topic-info')
+  @ApiOperation({ summary: 'Get TrustBridge HCS topic information' })
+  @ApiResponse({ status: 200, description: 'Topic information retrieved' })
+  async getTrustBridgeTopicInfo() {
+    try {
+      const topicId = await this.hederaService.createOrGetTrustBridgeTopic();
+      return {
+        success: true,
+        data: { topicId },
+        message: 'TrustBridge HCS topic information retrieved'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        message: 'Failed to get TrustBridge topic information'
       };
     }
   }

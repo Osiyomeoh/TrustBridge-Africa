@@ -21,17 +21,19 @@ let AssetsController = class AssetsController {
     constructor(assetsService) {
         this.assetsService = assetsService;
     }
-    async getAssets(type, status, country, minValue, maxValue, limit, offset) {
-        const assets = await this.assetsService.getAssets({
-            type,
-            status,
-            country,
-            minValue,
-            maxValue,
-        }, limit || 20, offset || 0);
+    async getAssets() {
         return {
             success: true,
-            data: assets,
+            message: 'Assets are fetched from Hedera network'
+        };
+    }
+    async getAssetsByOwner(owner) {
+        if (!owner || owner.trim() === '') {
+            throw new common_1.BadRequestException('Owner parameter is required');
+        }
+        return {
+            success: true,
+            message: `Assets for owner ${owner} are fetched from Hedera network`
         };
     }
     async getAssetById(id) {
@@ -69,13 +71,6 @@ let AssetsController = class AssetsController {
     }
     async getFeaturedAssets(limit) {
         const assets = await this.assetsService.getFeaturedAssets(limit || 10);
-        return {
-            success: true,
-            data: assets,
-        };
-    }
-    async getAssetsByOwner(owner) {
-        const assets = await this.assetsService.getAssetsByOwner(owner);
         return {
             success: true,
             data: assets,
@@ -164,19 +159,21 @@ let AssetsController = class AssetsController {
 exports.AssetsController = AssetsController;
 __decorate([
     (0, common_1.Get)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Get all assets with filtering' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of assets' }),
-    __param(0, (0, common_1.Query)('type')),
-    __param(1, (0, common_1.Query)('status')),
-    __param(2, (0, common_1.Query)('country')),
-    __param(3, (0, common_1.Query)('minValue')),
-    __param(4, (0, common_1.Query)('maxValue')),
-    __param(5, (0, common_1.Query)('limit')),
-    __param(6, (0, common_1.Query)('offset')),
+    (0, swagger_1.ApiOperation)({ summary: 'Get all assets from blockchain' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of assets from Hedera network' }),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, Number, Number, Number, Number]),
+    __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], AssetsController.prototype, "getAssets", null);
+__decorate([
+    (0, common_1.Get)('owner/:owner'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get assets by owner from blockchain' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of assets owned by user from Hedera network' }),
+    __param(0, (0, common_1.Param)('owner')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AssetsController.prototype, "getAssetsByOwner", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Get asset by ID' }),
@@ -217,15 +214,6 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
 ], AssetsController.prototype, "getFeaturedAssets", null);
-__decorate([
-    (0, common_1.Get)('owner/:owner'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get assets by owner' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of assets owned by user' }),
-    __param(0, (0, common_1.Param)('owner')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", Promise)
-], AssetsController.prototype, "getAssetsByOwner", null);
 __decorate([
     (0, common_1.Post)('digital'),
     (0, swagger_1.ApiOperation)({ summary: 'Create digital asset' }),

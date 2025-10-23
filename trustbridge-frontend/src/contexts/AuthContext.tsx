@@ -38,6 +38,7 @@ export interface AuthContextType extends AuthState {
   startKYC: () => Promise<void>;
   checkKYCStatus: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  setAuthState: React.Dispatch<React.SetStateAction<AuthState>>;
   logout: () => void;
   isLoading: boolean;
   error: string | null;
@@ -260,10 +261,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               ...userData,
               emailVerificationStatus: userData.emailVerificationStatus === 'VERIFIED' ? 'verified' : 
                                      userData.emailVerificationStatus === 'PENDING' ? 'pending' : 'not_verified',
-              kycStatus: userData.kycStatus === 'PENDING' ? 'pending' :
-                        userData.kycStatus === 'IN_PROGRESS' ? 'in_progress' :
-                        userData.kycStatus === 'APPROVED' ? 'approved' :
-                        userData.kycStatus === 'REJECTED' ? 'rejected' : 'not_started'
+              kycStatus: userData.kycStatus === 'pending' ? 'pending' :
+                        userData.kycStatus === 'in_progress' ? 'in_progress' :
+                        userData.kycStatus === 'approved' ? 'approved' :
+                        userData.kycStatus === 'rejected' ? 'rejected' : 'not_started'
             };
             
             // Determine auth step based on wallet connection and user status
@@ -337,6 +338,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               console.log('AuthContext - checkWalletUser response received:', response);
             } catch (error) {
               console.error('AuthContext - checkWalletUser failed:', error);
+              console.error('AuthContext - checkWalletUser error details:', error.response?.data);
               // If the API call fails, assume no user exists and continue with new user flow
               response = { success: false, message: 'Error checking wallet user' };
             }
@@ -349,10 +351,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 ...userData,
                 emailVerificationStatus: userData.emailVerificationStatus === 'VERIFIED' ? 'verified' : 
                                        userData.emailVerificationStatus === 'PENDING' ? 'pending' : 'not_verified',
-                kycStatus: userData.kycStatus === 'PENDING' ? 'pending' :
-                          userData.kycStatus === 'IN_PROGRESS' ? 'in_progress' :
-                          userData.kycStatus === 'APPROVED' ? 'approved' :
-                          userData.kycStatus === 'REJECTED' ? 'rejected' : 'not_started'
+                kycStatus: userData.kycStatus === 'pending' ? 'pending' :
+                          userData.kycStatus === 'in_progress' ? 'in_progress' :
+                          userData.kycStatus === 'approved' ? 'approved' :
+                          userData.kycStatus === 'rejected' ? 'rejected' : 'not_started'
               };
               
               console.log('AuthContext - Normalized user data:', {
@@ -424,10 +426,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                       ...updatedUserData,
                       emailVerificationStatus: updatedUserData.emailVerificationStatus === 'VERIFIED' ? 'verified' : 
                                              updatedUserData.emailVerificationStatus === 'PENDING' ? 'pending' : 'not_verified',
-                      kycStatus: updatedUserData.kycStatus === 'PENDING' ? 'pending' :
-                                updatedUserData.kycStatus === 'IN_PROGRESS' ? 'in_progress' :
-                                updatedUserData.kycStatus === 'APPROVED' ? 'approved' :
-                                updatedUserData.kycStatus === 'REJECTED' ? 'rejected' : 'not_started'
+                      kycStatus: updatedUserData.kycStatus === 'pending' ? 'pending' :
+                                updatedUserData.kycStatus === 'in_progress' ? 'in_progress' :
+                                updatedUserData.kycStatus === 'approved' ? 'approved' :
+                                updatedUserData.kycStatus === 'rejected' ? 'rejected' : 'not_started'
                     };
                     
                     // Store the tokens
@@ -460,6 +462,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               }
             } else {
               console.log('AuthContext - No existing user found, creating new user object');
+              console.log('AuthContext - Response was:', response);
+              console.log('AuthContext - Response success:', response?.success);
+              console.log('AuthContext - Response data:', response?.data);
               // Create a basic user object for new users
               const newUser: User = {
                 _id: '', // Will be set when profile is completed
@@ -684,7 +689,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const startKYC = async () => {
+  const startKYC = async (): Promise<void> => {
     setIsLoading(true);
     setError(null);
 
@@ -701,6 +706,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             kycInquiryId: response.data.inquiryId,
           } : null,
         }));
+
+        // Open KYC verification in new tab
+        if (response.data.inquiryUrl) {
+          window.open(response.data.inquiryUrl, '_blank');
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start KYC verification');
@@ -745,10 +755,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           ...user,
           emailVerificationStatus: user.emailVerificationStatus === 'VERIFIED' ? 'verified' : 
                                  user.emailVerificationStatus === 'PENDING' ? 'pending' : 'not_verified',
-          kycStatus: user.kycStatus === 'PENDING' ? 'pending' :
-                    user.kycStatus === 'IN_PROGRESS' ? 'in_progress' :
-                    user.kycStatus === 'APPROVED' ? 'approved' :
-                    user.kycStatus === 'REJECTED' ? 'rejected' : 'not_started'
+          kycStatus: user.kycStatus === 'pending' ? 'pending' :
+                    user.kycStatus === 'in_progress' ? 'in_progress' :
+                    user.kycStatus === 'approved' ? 'approved' :
+                    user.kycStatus === 'rejected' ? 'rejected' : 'not_started'
         };
         
         setAuthState(prev => ({
@@ -816,6 +826,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     startKYC,
     checkKYCStatus,
     refreshUser,
+    setAuthState,
     logout,
     isLoading: isLoading || walletLoading,
     error: error || walletError,

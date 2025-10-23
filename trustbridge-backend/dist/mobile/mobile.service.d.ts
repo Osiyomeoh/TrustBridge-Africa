@@ -2,7 +2,6 @@ import { Model } from 'mongoose';
 import { AssetDocument } from '../schemas/asset.schema';
 import { UserDocument } from '../schemas/user.schema';
 import { VerificationRequestDocument } from '../schemas/verification-request.schema';
-import { AttestorDocument } from '../schemas/attestor.schema';
 import { SettlementDocument } from '../schemas/settlement.schema';
 import { OperationDocument } from '../schemas/operation.schema';
 import { HederaService } from '../hedera/hedera.service';
@@ -52,7 +51,6 @@ export declare class MobileService {
     private assetModel;
     private userModel;
     private verificationModel;
-    private attestorModel;
     private settlementModel;
     private operationModel;
     private hederaService;
@@ -60,7 +58,7 @@ export declare class MobileService {
     private webSocketService;
     private notificationsService;
     private readonly logger;
-    constructor(assetModel: Model<AssetDocument>, userModel: Model<UserDocument>, verificationModel: Model<VerificationRequestDocument>, attestorModel: Model<AttestorDocument>, settlementModel: Model<SettlementDocument>, operationModel: Model<OperationDocument>, hederaService: HederaService, chainlinkService: ChainlinkService, webSocketService: WebSocketService, notificationsService: NotificationsService);
+    constructor(assetModel: Model<AssetDocument>, userModel: Model<UserDocument>, verificationModel: Model<VerificationRequestDocument>, settlementModel: Model<SettlementDocument>, operationModel: Model<OperationDocument>, hederaService: HederaService, chainlinkService: ChainlinkService, webSocketService: WebSocketService, notificationsService: NotificationsService);
     getMobileDashboard(userId: string): Promise<MobileDashboard>;
     trackOperation(operationId: string): Promise<OperationTracking>;
     getUserOperations(userId: string): Promise<OperationTracking[]>;

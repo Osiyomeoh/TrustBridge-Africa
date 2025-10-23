@@ -4,7 +4,7 @@ import { Model } from 'mongoose';
 import { Asset, AssetDocument } from '../schemas/asset.schema';
 import { User, UserDocument } from '../schemas/user.schema';
 import { VerificationRequest, VerificationRequestDocument } from '../schemas/verification-request.schema';
-import { Attestor, AttestorDocument } from '../schemas/attestor.schema';
+// import { Attestor, AttestorDocument } from '../schemas/attestor.schema'; // Removed - attestor functionality deprecated
 import { Settlement, SettlementDocument } from '../schemas/settlement.schema';
 import { Operation, OperationDocument } from '../schemas/operation.schema';
 import { HederaService } from '../hedera/hedera.service';
@@ -62,7 +62,7 @@ export class MobileService {
     @InjectModel(Asset.name) private assetModel: Model<AssetDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(VerificationRequest.name) private verificationModel: Model<VerificationRequestDocument>,
-    @InjectModel(Attestor.name) private attestorModel: Model<AttestorDocument>,
+    // @InjectModel(Attestor.name) private attestorModel: Model<AttestorDocument>, // Removed - attestor functionality deprecated
     @InjectModel(Settlement.name) private settlementModel: Model<SettlementDocument>,
     @InjectModel(Operation.name) private operationModel: Model<OperationDocument>,
     private hederaService: HederaService,

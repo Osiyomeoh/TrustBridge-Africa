@@ -1,10 +1,8 @@
 import { Model } from 'mongoose';
 import { VerificationRequest, VerificationRequestDocument, VerificationStatus, IPFSFile } from '../schemas/verification-request.schema';
 import { AssetDocument } from '../schemas/asset.schema';
-import { Attestor, AttestorDocument } from '../schemas/attestor.schema';
 import { HederaService } from '../hedera/hedera.service';
 import { ChainlinkService } from '../chainlink/chainlink.service';
-import { AttestorsService } from '../attestors/attestors.service';
 import { ExternalApisService } from '../external-apis/external-apis.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { IPFSService } from '../services/ipfs.service';
@@ -19,21 +17,19 @@ export interface VerificationResult {
     timestamp: Date;
 }
 export interface AttestorMatch {
-    attestor: Attestor;
+    attestor: any;
     score: number;
     reason: string;
 }
 export declare class VerificationService {
     private verificationModel;
     private assetModel;
-    private attestorModel;
     private hederaService;
     private chainlinkService;
-    private attestorsService;
     private externalApisService;
     private eventEmitter;
     private ipfsService;
-    constructor(verificationModel: Model<VerificationRequestDocument>, assetModel: Model<AssetDocument>, attestorModel: Model<AttestorDocument>, hederaService: HederaService, chainlinkService: ChainlinkService, attestorsService: AttestorsService, externalApisService: ExternalApisService, eventEmitter: EventEmitter2, ipfsService: IPFSService);
+    constructor(verificationModel: Model<VerificationRequestDocument>, assetModel: Model<AssetDocument>, hederaService: HederaService, chainlinkService: ChainlinkService, externalApisService: ExternalApisService, eventEmitter: EventEmitter2, ipfsService: IPFSService);
     submitVerificationRequest(assetId: string, evidence: any): Promise<VerificationRequest>;
     submitVerificationWithFiles(assetId: string, description: string, documents: IPFSFile[], photos: IPFSFile[], evidence: any): Promise<VerificationRequest>;
     private runAutomatedVerification;

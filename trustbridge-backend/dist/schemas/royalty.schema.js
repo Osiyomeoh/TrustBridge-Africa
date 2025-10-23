@@ -85,7 +85,11 @@ __decorate([
     __metadata("design:type", Number)
 ], CreatorRoyaltyStats.prototype, "averageRoyalty", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Object, default: {} }),
+    (0, mongoose_1.Prop)({
+        type: Map,
+        of: Number,
+        default: {}
+    }),
     __metadata("design:type", Object)
 ], CreatorRoyaltyStats.prototype, "monthlyEarnings", void 0);
 __decorate([

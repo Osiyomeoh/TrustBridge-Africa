@@ -18,7 +18,6 @@ const auth_module_1 = require("./auth/auth.module");
 const assets_module_1 = require("./assets/assets.module");
 const investments_module_1 = require("./investments/investments.module");
 const verification_module_1 = require("./verification/verification.module");
-const attestors_module_1 = require("./attestors/attestors.module");
 const portfolio_module_1 = require("./portfolio/portfolio.module");
 const analytics_module_1 = require("./analytics/analytics.module");
 const hedera_module_1 = require("./hedera/hedera.module");
@@ -42,6 +41,11 @@ const api_module_1 = require("./api/api.module");
 const collections_module_1 = require("./collections/collections.module");
 const royalties_module_1 = require("./royalties/royalties.module");
 const activity_module_1 = require("./activity/activity.module");
+const rwa_module_1 = require("./rwa/rwa.module");
+const kyc_module_1 = require("./kyc/kyc.module");
+const amc_pools_module_1 = require("./amc-pools/amc-pools.module");
+const pool_tokens_module_1 = require("./pool-tokens/pool-tokens.module");
+const dividends_module_1 = require("./dividends/dividends.module");
 const app_controller_1 = require("./app.controller");
 let AppModule = class AppModule {
 };
@@ -56,7 +60,7 @@ exports.AppModule = AppModule = __decorate([
             }),
             mongoose_1.MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/trustbridge', {
                 maxPoolSize: 10,
-                serverSelectionTimeoutMS: 5000,
+                serverSelectionTimeoutMS: 15000,
                 socketTimeoutMS: 45000,
                 bufferCommands: false,
             }),
@@ -73,7 +77,6 @@ exports.AppModule = AppModule = __decorate([
             assets_module_1.AssetsModule,
             investments_module_1.InvestmentsModule,
             verification_module_1.VerificationModule,
-            attestors_module_1.AttestorsModule,
             portfolio_module_1.PortfolioModule,
             analytics_module_1.AnalyticsModule,
             hedera_module_1.HederaModule,
@@ -97,6 +100,12 @@ exports.AppModule = AppModule = __decorate([
             collections_module_1.CollectionsModule,
             royalties_module_1.RoyaltiesModule,
             activity_module_1.ActivityModule,
+            rwa_module_1.RWAModule,
+            kyc_module_1.KycModule,
+            amc_pools_module_1.AMCPoolsModule,
+            trading_module_1.TradingModule,
+            pool_tokens_module_1.PoolTokensModule,
+            dividends_module_1.DividendsModule,
         ],
     })
 ], AppModule);

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Asset, AssetDocument, AssetStatus } from '../schemas/asset.schema';
@@ -343,6 +343,11 @@ export class AssetsService {
   }
 
   async getAssetById(id: string): Promise<Asset> {
+    // Validate that id is a valid ObjectId
+    if (!id || typeof id !== 'string' || !/^[0-9a-fA-F]{24}$/.test(id)) {
+      throw new BadRequestException('Invalid asset ID format');
+    }
+    
     const asset = await this.assetModel.findById(id).exec();
     if (!asset) {
       throw new NotFoundException('Asset not found');

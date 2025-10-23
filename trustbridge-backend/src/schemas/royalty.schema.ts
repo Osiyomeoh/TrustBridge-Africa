@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-export type RoyaltyDocument = Royalty & Document;
+export type RoyaltyDocument = RoyaltyPayment & Document;
 
 @Schema({ timestamps: true })
 export class RoyaltyPayment {
@@ -63,7 +63,11 @@ export class CreatorRoyaltyStats {
   @Prop({ default: 0 })
   averageRoyalty: number; // Average royalty per sale
 
-  @Prop({ type: Object, default: {} })
+  @Prop({ 
+    type: Map,
+    of: Number,
+    default: {}
+  })
   monthlyEarnings: {
     [key: string]: number; // Format: "YYYY-MM" => amount
   };

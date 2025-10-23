@@ -637,30 +637,50 @@ let AuthService = AuthService_1 = class AuthService {
     }
     async processDiditWebhook(webhookData) {
         try {
-            this.logger.log('Processing Didit webhook:', webhookData);
-            const { session_id, status, vendor_data } = webhookData;
+            this.logger.log('Processing DidIt webhook:', {
+                session_id: webhookData.session_id,
+                status: webhookData.status,
+                webhook_type: webhookData.webhook_type,
+                vendor_data: webhookData.vendor_data
+            });
+            const { session_id, status, vendor_data, webhook_type } = webhookData;
             if (!session_id || !status) {
-                throw new Error('Missing required webhook fields');
+                throw new Error('Missing required webhook fields: session_id and status');
             }
-            let walletAddress = null;
-            if (vendor_data) {
-                try {
-                    const parsedVendorData = JSON.parse(vendor_data);
-                    walletAddress = parsedVendorData.walletAddress;
-                }
-                catch (err) {
-                    this.logger.warn('Failed to parse vendor data:', err);
-                }
+            if (webhook_type && webhook_type !== 'status.updated') {
+                this.logger.log(`Skipping webhook type: ${webhook_type}`);
+                return { message: `Skipped webhook type: ${webhook_type}` };
             }
             let user;
-            if (walletAddress) {
-                user = await this.userModel.findOne({
-                    walletAddress: { $regex: new RegExp(`^${walletAddress}$`, 'i') }
-                });
+            user = await this.userModel.findOne({ kycInquiryId: session_id });
+            if (!user && vendor_data) {
+                try {
+                    let walletAddress = null;
+                    if (typeof vendor_data === 'string') {
+                        try {
+                            const parsed = JSON.parse(vendor_data);
+                            walletAddress = parsed.walletAddress || parsed;
+                        }
+                        catch {
+                            walletAddress = vendor_data;
+                        }
+                    }
+                    else if (vendor_data.walletAddress) {
+                        walletAddress = vendor_data.walletAddress;
+                    }
+                    if (walletAddress) {
+                        user = await this.userModel.findOne({
+                            walletAddress: { $regex: new RegExp(`^${walletAddress}$`, 'i') }
+                        });
+                    }
+                }
+                catch (err) {
+                    this.logger.warn('Failed to parse vendor_data:', err);
+                }
             }
             if (!user) {
-                this.logger.warn(`User not found for Didit webhook: sessionId=${session_id}, walletAddress=${walletAddress}`);
-                return;
+                this.logger.warn(`User not found for DidIt webhook: sessionId=${session_id}, vendor_data=${vendor_data}`);
+                return { message: 'User not found for this webhook' };
             }
             let kycStatus;
             switch (status.toLowerCase()) {
@@ -677,27 +697,51 @@ let AuthService = AuthService_1 = class AuthService {
                 case 'pending':
                 case 'in_progress':
                 case 'processing':
-                    kycStatus = 'pending';
+                case 'in review':
+                    kycStatus = 'in_progress';
+                    break;
+                case 'not started':
+                case 'abandoned':
+                    kycStatus = 'not_started';
                     break;
                 default:
-                    kycStatus = 'pending';
+                    this.logger.warn(`Unknown DidIt status: ${status}, defaulting to in_progress`);
+                    kycStatus = 'in_progress';
             }
             user.kycStatus = kycStatus;
             user.kycInquiryId = session_id;
             user.updatedAt = new Date();
-            await user.save();
-            this.logger.log(`KYC status updated for user ${user._id}: ${kycStatus}`);
-            if (user.profile?.email) {
-                await this.gmailService.sendEmail(user.profile.email, 'KYC Verification Update', `
-            <h2>KYC Verification Update</h2>
-            <p>Your identity verification status has been updated to: <strong>${kycStatus}</strong></p>
-            <p>Session ID: ${session_id}</p>
-            <p>Thank you for using TrustBridge!</p>
-          `, `Your KYC verification status has been updated to: ${kycStatus}`);
+            if (webhookData.decision) {
+                user.kycDecision = webhookData.decision;
             }
+            await user.save();
+            this.logger.log(`KYC status updated for user ${user.email}: ${kycStatus} (session: ${session_id})`);
+            if (kycStatus === 'approved' || kycStatus === 'rejected') {
+                try {
+                    if (user.email) {
+                        await this.gmailService.sendEmail(user.email, 'KYC Verification Update', `
+                <h2>KYC Verification Update</h2>
+                <p>Your identity verification status has been updated to: <strong>${kycStatus}</strong></p>
+                <p>Session ID: ${session_id}</p>
+                <p>Thank you for using TrustBridge!</p>
+              `, `Your KYC verification status has been updated to: ${kycStatus}`);
+                    }
+                }
+                catch (emailError) {
+                    this.logger.warn('Failed to send KYC notification email:', emailError);
+                }
+            }
+            return {
+                success: true,
+                userId: user._id,
+                email: user.email,
+                kycStatus,
+                sessionId: session_id,
+                message: `KYC status updated to ${kycStatus}`
+            };
         }
         catch (error) {
-            this.logger.error('Didit webhook processing failed:', error);
+            this.logger.error('Failed to process DidIt webhook:', error);
             throw error;
         }
     }
@@ -708,18 +752,25 @@ let AuthService = AuthService_1 = class AuthService {
                 this.logger.warn('DIDIT_WEBHOOK_SECRET not configured, skipping signature verification');
                 return true;
             }
-            const signature = req.headers['x-didit-signature'];
-            if (!signature) {
-                this.logger.warn('Missing Didit webhook signature');
+            const signature = req.headers['x-signature'];
+            const timestamp = req.headers['x-timestamp'];
+            if (!signature || !timestamp) {
+                this.logger.warn('Missing DidIt webhook signature or timestamp');
                 return false;
             }
-            const rawBody = JSON.stringify(req.body);
+            const currentTime = Math.floor(Date.now() / 1000);
+            const incomingTime = parseInt(timestamp, 10);
+            if (Math.abs(currentTime - incomingTime) > 300) {
+                this.logger.warn('DidIt webhook timestamp is stale');
+                return false;
+            }
+            const rawBody = req.rawBody || JSON.stringify(req.body);
             const crypto = require('crypto');
             const expectedSignature = crypto
                 .createHmac('sha256', webhookSecret)
                 .update(rawBody)
                 .digest('hex');
-            const isValid = crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
+            const isValid = crypto.timingSafeEqual(Buffer.from(expectedSignature, 'utf8'), Buffer.from(signature, 'utf8'));
             if (!isValid) {
                 this.logger.warn('Invalid Didit webhook signature');
             }
@@ -765,7 +816,7 @@ let AuthService = AuthService_1 = class AuthService {
                 body: JSON.stringify({
                     workflow_id: finalWorkflowId,
                     vendor_data: vendorData || '',
-                    callback: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/api/auth/didit/callback`,
+                    callback: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/kyc-callback`,
                 }),
             });
             if (!response.ok) {
@@ -904,6 +955,55 @@ let AuthService = AuthService_1 = class AuthService {
         }
         catch (error) {
             this.logger.error('Failed to generate token for verified user:', error);
+            throw error;
+        }
+    }
+    async processDiditCallback(verificationSessionId, status) {
+        try {
+            this.logger.log(`Processing DidIt callback for session ${verificationSessionId} with status ${status}`);
+            const user = await this.userModel.findOne({
+                kycInquiryId: verificationSessionId
+            });
+            if (!user) {
+                this.logger.warn(`No user found for verification session ${verificationSessionId}`);
+                return {
+                    success: false,
+                    message: 'User not found for this verification session',
+                };
+            }
+            let internalStatus;
+            switch (status) {
+                case 'Not Started':
+                    internalStatus = user_schema_1.KycStatus.NOT_STARTED;
+                    break;
+                case 'In Progress':
+                case 'Pending':
+                    internalStatus = user_schema_1.KycStatus.IN_PROGRESS;
+                    break;
+                case 'Completed':
+                case 'Approved':
+                    internalStatus = user_schema_1.KycStatus.VERIFIED;
+                    break;
+                case 'Failed':
+                case 'Rejected':
+                case 'Declined':
+                    internalStatus = user_schema_1.KycStatus.REJECTED;
+                    break;
+                default:
+                    internalStatus = user_schema_1.KycStatus.PENDING;
+            }
+            user.kycStatus = internalStatus;
+            await user.save();
+            this.logger.log(`Updated KYC status for user ${user.email} to ${internalStatus}`);
+            return {
+                success: true,
+                userId: user._id,
+                kycStatus: internalStatus,
+                message: `KYC status updated to ${internalStatus}`,
+            };
+        }
+        catch (error) {
+            this.logger.error('Failed to process DidIt callback:', error);
             throw error;
         }
     }

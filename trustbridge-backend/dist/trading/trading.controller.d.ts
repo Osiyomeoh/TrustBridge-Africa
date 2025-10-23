@@ -1,42 +1,34 @@
-import { TradingService, ListDigitalAssetForSaleDto, MakeOfferDto, AcceptOfferDto } from './trading.service';
+import { TradingService, CreateOrderDto } from './trading.service';
 export declare class TradingController {
     private readonly tradingService;
     constructor(tradingService: TradingService);
-    listDigitalAssetForSale(listingDto: ListDigitalAssetForSaleDto): Promise<{
-        transactionId: string;
+    createOrder(createOrderDto: CreateOrderDto, req: any): Promise<import("../schemas/trading-order.schema").TradingOrder>;
+    cancelOrder(orderId: string, req: any): Promise<import("../schemas/trading-order.schema").TradingOrder>;
+    getOrderBook(poolId: string, depth?: number): Promise<import("./trading.service").OrderBookData>;
+    getUserOrders(req: any, poolId?: string): Promise<import("../schemas/trading-order.schema").TradingOrder[]>;
+    getUserTradeHistory(req: any, poolId?: string): Promise<import("../schemas/trade-execution.schema").TradeExecution[]>;
+    getRecentTrades(poolId: string, limit?: number): Promise<import("../schemas/trade-execution.schema").TradeExecution[]>;
+    getPoolTradingStats(poolId: string): Promise<any>;
+    getMarketData(): Promise<{
+        message: string;
     }>;
-    makeOfferOnDigitalAsset(offerDto: MakeOfferDto): Promise<{
-        transactionId: string;
+    getTradingPairs(): Promise<{
+        message: string;
     }>;
-    getDigitalAssetOffers(assetId: string): Promise<import("./trading.service").DigitalAssetOffer[]>;
-    acceptOfferOnDigitalAsset(acceptDto: AcceptOfferDto): Promise<{
-        transactionId: string;
+    getPriceHistory(poolId: string, timeframe?: string, limit?: number): Promise<{
+        message: string;
     }>;
-    getTradingStats(): Promise<{
-        totalVolume: number;
-        totalTrades: number;
-        averagePrice: number;
-        activeListings: number;
-        activeOffers: number;
+    getTradingFees(): Promise<{
+        makerFee: number;
+        takerFee: number;
+        withdrawalFee: number;
+        depositFee: number;
     }>;
-    getAssetTradingHistory(assetId: string): Promise<{
-        listings: import("./trading.service").DigitalAssetListing[];
-        offers: import("./trading.service").DigitalAssetOffer[];
-        trades: any[];
-    }>;
-    getAllListings(): Promise<{
-        success: boolean;
-        data: {
-            listings: any[];
-            total: number;
-        };
-    }>;
-    createListing(listingData: any): Promise<{
-        success: boolean;
-        data: any;
-    }>;
-    purchaseListing(id: string, purchaseData: any): Promise<{
-        success: boolean;
-        data: any;
+    getTradingLimits(): Promise<{
+        minOrderSize: number;
+        maxOrderSize: number;
+        minPrice: number;
+        maxPrice: number;
+        dailyVolumeLimit: number;
     }>;
 }

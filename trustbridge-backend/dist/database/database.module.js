@@ -12,7 +12,6 @@ const mongoose_1 = require("@nestjs/mongoose");
 const asset_schema_1 = require("../schemas/asset.schema");
 const user_schema_1 = require("../schemas/user.schema");
 const verification_request_schema_1 = require("../schemas/verification-request.schema");
-const attestor_schema_1 = require("../schemas/attestor.schema");
 const settlement_schema_1 = require("../schemas/settlement.schema");
 const operation_schema_1 = require("../schemas/operation.schema");
 const analytics_schema_1 = require("../schemas/analytics.schema");
@@ -27,7 +26,6 @@ exports.DatabaseModule = DatabaseModule = __decorate([
                 { name: asset_schema_1.Asset.name, schema: asset_schema_1.AssetSchema },
                 { name: user_schema_1.User.name, schema: user_schema_1.UserSchema },
                 { name: verification_request_schema_1.VerificationRequest.name, schema: verification_request_schema_1.VerificationRequestSchema },
-                { name: attestor_schema_1.Attestor.name, schema: attestor_schema_1.AttestorSchema },
                 { name: settlement_schema_1.Settlement.name, schema: settlement_schema_1.SettlementSchema },
                 { name: operation_schema_1.Operation.name, schema: operation_schema_1.OperationSchema },
                 { name: analytics_schema_1.Analytics.name, schema: analytics_schema_1.AnalyticsSchema },

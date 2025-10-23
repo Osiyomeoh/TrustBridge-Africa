@@ -20,7 +20,6 @@ const mongoose_2 = require("mongoose");
 const asset_schema_1 = require("../schemas/asset.schema");
 const user_schema_1 = require("../schemas/user.schema");
 const verification_request_schema_1 = require("../schemas/verification-request.schema");
-const attestor_schema_1 = require("../schemas/attestor.schema");
 const settlement_schema_1 = require("../schemas/settlement.schema");
 const operation_schema_1 = require("../schemas/operation.schema");
 const hedera_service_1 = require("../hedera/hedera.service");
@@ -28,11 +27,10 @@ const chainlink_service_1 = require("../chainlink/chainlink.service");
 const websocket_service_1 = require("../websocket/websocket.service");
 const notifications_service_1 = require("../notifications/notifications.service");
 let MobileService = MobileService_1 = class MobileService {
-    constructor(assetModel, userModel, verificationModel, attestorModel, settlementModel, operationModel, hederaService, chainlinkService, webSocketService, notificationsService) {
+    constructor(assetModel, userModel, verificationModel, settlementModel, operationModel, hederaService, chainlinkService, webSocketService, notificationsService) {
         this.assetModel = assetModel;
         this.userModel = userModel;
         this.verificationModel = verificationModel;
-        this.attestorModel = attestorModel;
         this.settlementModel = settlementModel;
         this.operationModel = operationModel;
         this.hederaService = hederaService;
@@ -410,11 +408,9 @@ exports.MobileService = MobileService = MobileService_1 = __decorate([
     __param(0, (0, mongoose_1.InjectModel)(asset_schema_1.Asset.name)),
     __param(1, (0, mongoose_1.InjectModel)(user_schema_1.User.name)),
     __param(2, (0, mongoose_1.InjectModel)(verification_request_schema_1.VerificationRequest.name)),
-    __param(3, (0, mongoose_1.InjectModel)(attestor_schema_1.Attestor.name)),
-    __param(4, (0, mongoose_1.InjectModel)(settlement_schema_1.Settlement.name)),
-    __param(5, (0, mongoose_1.InjectModel)(operation_schema_1.Operation.name)),
+    __param(3, (0, mongoose_1.InjectModel)(settlement_schema_1.Settlement.name)),
+    __param(4, (0, mongoose_1.InjectModel)(operation_schema_1.Operation.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
-        mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,
         mongoose_2.Model,

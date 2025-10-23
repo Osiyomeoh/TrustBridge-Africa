@@ -4,12 +4,17 @@ export declare enum UserRole {
     INVESTOR = "INVESTOR",
     ASSET_OWNER = "ASSET_OWNER",
     VERIFIER = "VERIFIER",
-    ADMIN = "ADMIN"
+    ADMIN = "ADMIN",
+    SUPER_ADMIN = "SUPER_ADMIN",
+    PLATFORM_ADMIN = "PLATFORM_ADMIN",
+    AMC_ADMIN = "AMC_ADMIN"
 }
 export declare enum KycStatus {
-    PENDING = "PENDING",
-    VERIFIED = "VERIFIED",
-    REJECTED = "REJECTED"
+    PENDING = "pending",
+    IN_PROGRESS = "in_progress",
+    VERIFIED = "approved",
+    REJECTED = "rejected",
+    NOT_STARTED = "not_started"
 }
 export declare enum EmailVerificationStatus {
     PENDING = "PENDING",

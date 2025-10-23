@@ -1,10 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.VerificationRequestModel = exports.UserModel = exports.SettlementModel = exports.OperationModel = exports.AttestorModel = exports.AssetModel = void 0;
+exports.VerificationRequestModel = exports.UserModel = exports.SettlementModel = exports.OperationModel = exports.AssetModel = void 0;
 var asset_model_1 = require("./asset.model");
 Object.defineProperty(exports, "AssetModel", { enumerable: true, get: function () { return asset_model_1.AssetModel; } });
-var attestor_model_1 = require("./attestor.model");
-Object.defineProperty(exports, "AttestorModel", { enumerable: true, get: function () { return attestor_model_1.AttestorModel; } });
 var operation_model_1 = require("./operation.model");
 Object.defineProperty(exports, "OperationModel", { enumerable: true, get: function () { return operation_model_1.OperationModel; } });
 var settlement_model_1 = require("./settlement.model");

@@ -55,6 +55,7 @@ const SORT_OPTIONS = [
 ];
 
 const AssetMarketplace: React.FC = () => {
+  
   // State
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedTimeFilter, setSelectedTimeFilter] = useState('1d');
@@ -63,6 +64,7 @@ const AssetMarketplace: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [assets, setAssets] = useState<any[]>([]);
+  const [amcPools, setAmcPools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -72,6 +74,48 @@ const AssetMarketplace: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'listed' | 'unlisted'>('all');
   const [viewType, setViewType] = useState<'assets' | 'collections'>('assets');
   const [collections, setCollections] = useState<CollectionStats[]>([]);
+
+  // Fetch AMC pools
+  const fetchAmcPools = async () => {
+    try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      console.log('🔑 Token for AMC pools:', token ? 'Found' : 'Not found');
+      
+      if (!token) {
+        console.warn('⚠️ No authentication token found for AMC pools');
+        return;
+      }
+
+      console.log('🔍 Fetching AMC pools from API...');
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4001'}/api/amc-pools`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('📡 AMC pools response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        const pools = Array.isArray(data) ? data : data.data?.pools || [];
+        console.log('📊 Fetched AMC pools:', pools.length);
+        console.log('📊 AMC pools data:', pools);
+        
+        // Log pool details
+        pools.forEach((pool: any) => {
+          console.log(`🏊 Pool: ${pool.name} (${pool.poolId}) - Status: ${pool.status}`);
+        });
+        
+        setAmcPools(pools);
+      } else {
+        const errorText = await response.text();
+        console.error('❌ AMC pools API error:', response.status, errorText);
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch AMC pools:', error);
+    }
+  };
 
   // Fetch ALL assets from Hedera network - NO localStorage!
   const fetchMarketplaceData = async () => {
@@ -285,11 +329,52 @@ const AssetMarketplace: React.FC = () => {
   useEffect(() => {
     console.log('🔄 AssetMarketplace mounted - fetching data...');
     fetchMarketplaceData();
+    fetchAmcPools();
   }, []);
 
   // Filter and sort assets
   const filteredAssets = React.useMemo(() => {
     let filtered = [...assets];
+    
+    console.log('🔍 Filtering assets - Selected category:', selectedCategory);
+    console.log('🔍 Available AMC pools:', amcPools.length);
+    
+    // If trading pools category is selected, show AMC pools instead of assets
+    if (selectedCategory === 'trading') {
+      console.log('🏊 Trading category selected - mapping AMC pools...');
+      console.log('🏊 AMC pools to map:', amcPools);
+      
+      filtered = amcPools.map(pool => ({
+        id: pool.poolId,
+        listingId: pool.poolId,
+        name: pool.name,
+        description: pool.description,
+        imageUrl: pool.imageURI || pool.assets?.[0]?.imageUrl || pool.assets?.[0]?.imageURI || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Arial" font-size="24" fill="%2300ff88" text-anchor="middle" dy=".3em">POOL</text></svg>',
+        price: pool.tokenPrice?.toString() || '0',
+        currency: 'TRUST',
+        assetType: 'Trading Pool',
+        category: 'Trading Pool',
+        verified: true,
+        isTradeable: pool.isTradeable,
+        isActive: pool.status === 'ACTIVE',
+        currentAMC: pool.poolId,
+        totalValue: pool.totalValue,
+        tokenSupply: pool.tokenSupply,
+        expectedAPY: pool.expectedAPY,
+        totalInvested: pool.totalInvested,
+        totalInvestors: pool.totalInvestors,
+        hederaTokenId: pool.hederaTokenId,
+        status: pool.status,
+        listedAt: pool.createdAt,
+        // Add pool-specific fields
+        poolId: pool.poolId,
+        poolType: pool.type,
+        maturityDate: pool.maturityDate,
+        minimumInvestment: pool.minimumInvestment
+      }));
+      
+      console.log('🏊 Mapped trading pools:', filtered.length);
+    }
     
     // Filter by search query
     if (searchQuery.trim()) {
@@ -354,7 +439,7 @@ const AssetMarketplace: React.FC = () => {
     });
 
     return filtered;
-  }, [assets, selectedCategory, searchQuery, sortBy, sortOrder, statusFilter, priceFilter]);
+  }, [assets, amcPools, selectedCategory, searchQuery, sortBy, sortOrder, statusFilter, priceFilter]);
 
 
 
@@ -798,7 +883,7 @@ const AssetMarketplace: React.FC = () => {
                         <div className="flex items-center justify-between text-xs">
                           <div>
                             <span className="text-gray-400 text-xs">
-                              {asset.isActive ? 'Listed' : 'Floor'}
+                              {asset.assetType === 'Trading Pool' ? 'Token Price' : (asset.isActive ? 'Listed' : 'Floor')}
                             </span>
                             <p className="text-sm font-medium text-off-white">
                               {formatPrice(
@@ -808,14 +893,37 @@ const AssetMarketplace: React.FC = () => {
                             </p>
                           </div>
                           <div className="text-right">
-                            <span className="text-gray-400 text-xs">Listing</span>
-                            <p className={`text-sm font-medium ${asset.isListed ? 'text-neon-green' : 'text-gray-400'}`}>
-                              {asset.isListed ? 'For Sale' : 'Not Listed'}
+                            <span className="text-gray-400 text-xs">
+                              {asset.assetType === 'Trading Pool' ? 'Status' : 'Listing'}
+                            </span>
+                            <p className={`text-sm font-medium ${asset.assetType === 'Trading Pool' ? (asset.status === 'ACTIVE' ? 'text-neon-green' : 'text-yellow-400') : (asset.isListed ? 'text-neon-green' : 'text-gray-400')}`}>
+                              {asset.assetType === 'Trading Pool' ? asset.status : (asset.isListed ? 'For Sale' : 'Not Listed')}
                             </p>
                           </div>
                         </div>
-                        {/* Additional info for contract assets */}
-                        {asset.totalValue && (
+                        {/* Additional info for trading pools */}
+                        {asset.assetType === 'Trading Pool' && (
+                          <div className="mt-2 pt-2 border-t border-gray-700 space-y-1">
+                            <div className="flex justify-between text-xs text-gray-400">
+                              <span>Total Value:</span>
+                              <span>{formatPrice(asset.totalValue?.toString() || '0', 'TRUST')}</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-gray-400">
+                              <span>Expected APY:</span>
+                              <span className="text-green-400">{asset.expectedAPY}%</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-gray-400">
+                              <span>Investors:</span>
+                              <span>{asset.totalInvestors}</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-gray-400">
+                              <span>Min Investment:</span>
+                              <span>{formatPrice(asset.minimumInvestment?.toString() || '0', 'TRUST')}</span>
+                            </div>
+                          </div>
+                        )}
+                        {/* Additional info for regular assets */}
+                        {asset.assetType !== 'Trading Pool' && asset.totalValue && (
                           <div className="mt-2 pt-2 border-t border-gray-700">
                             <div className="flex justify-between text-xs text-gray-400">
                               <span>Total Value:</span>
@@ -850,11 +958,20 @@ const AssetMarketplace: React.FC = () => {
                             className="w-full text-xs"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedAsset(asset);
-                              setShowAssetDetail(true);
+                              if (asset.assetType === 'Trading Pool') {
+                                // Show pool trading modal
+                                setSelectedAsset(asset);
+                                setShowAssetDetail(true);
+                              } else {
+                                setSelectedAsset(asset);
+                                setShowAssetDetail(true);
+                              }
                             }}
                           >
-                            {asset.isActive ? 'View & Trade' : 'View Details'}
+                            {asset.assetType === 'Trading Pool' 
+                              ? (asset.status === 'ACTIVE' ? 'Trade Pool' : 'View Pool') 
+                              : (asset.isActive ? 'View & Trade' : 'View Details')
+                            }
                           </Button>
                         </div>
                       </CardContent>

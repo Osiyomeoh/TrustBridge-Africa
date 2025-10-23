@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { WalletProvider } from './contexts/WalletContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { AdminProvider } from './contexts/AdminContext';
+import { AdminStatusPersistent } from './components/Admin/AdminStatusPersistent';
 import { SidebarProvider, useSidebar } from './contexts/SidebarContext';
 import { ProfileCompletionProvider } from './contexts/ProfileCompletionContext';
 import Navigation from './components/Layout/Navigation';
@@ -18,19 +19,19 @@ import Portfolio from './pages/Portfolio';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 import AssetVerification from './pages/AssetVerification';
-import AttestorPortal from './pages/AttestorPortal';
-import AttestorDashboard from './pages/AttestorDashboard';
 import PublicAssetViewer from './pages/PublicAssetViewer';
 import AssetTradingInterface from './pages/AssetTradingInterface';
 import VerificationDashboard from './pages/VerificationDashboard';
-import AttestorVerification from './components/Admin/AttestorVerification';
-import AttestorRegistration from './components/Attestors/AttestorRegistration';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminAssets from './pages/AdminAssets';
+import HederaAdminManagement from './components/Admin/HederaAdminManagement';
 import AssetMarketplace from './pages/AssetMarketplace';
 import Profile from './pages/Profile';
 import ProfileSimple from './pages/ProfileSimple';
 import ProfileCompletionModal from './components/Auth/ProfileCompletionModal';
 import CreateDigitalAsset from './pages/CreateDigitalAsset';
+import RWAAssetSubmission from './components/RWA/CreateRWAAsset';
+import RWATradingInterface from './components/Trading/RWATradingInterface';
 import SecondaryMarkets from './pages/SecondaryMarkets';
 import SPVManagement from './pages/SPVManagement';
 import DAOGovernance from './pages/DAOGovernance';
@@ -43,6 +44,17 @@ import HederaBasicTest from './pages/HederaBasicTest';
 import DiditCallback from './pages/DiditCallback';
 import Collections from './pages/Collections';
 import Activity from './pages/Activity';
+import CreateRWAAsset from './components/RWA/CreateRWAAsset';
+import SecondaryTradingInterface from './components/Trading/SecondaryTradingInterface';
+import KYCCallback from './pages/KYCCallback';
+import AMCDashboard from './components/RWA/AMCDashboard';
+import RWAAssetManagement from './components/RWA/RWAAssetManagement';
+import AMCPoolManagement from './components/AMC/AMCPoolManagement';
+import PoolMarketplace from './components/AMC/PoolMarketplace';
+import PoolTradingInterface from './components/Trading/PoolTradingInterface';
+import PoolTradingDashboard from './components/Trading/PoolTradingDashboard';
+import PoolTokenPortfolio from './components/Trading/PoolTokenPortfolio';
+import DividendManagement from './components/AMC/DividendManagement';
 import GovernmentIdRequirements from './pages/help/GovernmentIdRequirements';
 import ProofOfAddressRequirements from './pages/help/ProofOfAddressRequirements';
 import ProfessionalLicenseRequirements from './pages/help/ProfessionalLicenseRequirements';
@@ -93,6 +105,7 @@ const App: React.FC = () => {
         <WalletProvider>
           <AuthProvider>
             <AdminProvider>
+              <AdminStatusPersistent />
               <ProfileCompletionProvider>
                 <SidebarProvider>
               <BrowserRouter
@@ -204,6 +217,14 @@ const App: React.FC = () => {
                     </div>
                   } />
                   
+                  {/* KYC Callback - Public Access (No Auth Required) */}
+                  <Route path="/kyc-callback" element={
+                    <div className="min-h-screen bg-black text-off-white">
+                      <UniversalHeader />
+                      <KYCCallback />
+                    </div>
+                  } />
+                  
                   {/* Dashboard Pages - Public Access */}
                   <Route path="/dashboard/*" element={
                     <DashboardLayout>
@@ -215,14 +236,17 @@ const App: React.FC = () => {
                         <Route path="/analytics" element={<Analytics />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/verify-asset" element={<AssetVerification />} />
-                        <Route path="/attestor" element={<AttestorPortal />} />
-                        <Route path="/attestors" element={<AttestorPortal />} />
-                        <Route path="/attestor-dashboard" element={<AttestorDashboard />} />
                         <Route path="/verification" element={<VerificationDashboard />} />
                         <Route path="/admin" element={<AdminDashboard />} />
-                        <Route path="/admin/attestors" element={<AttestorVerification />} />
-                        <Route path="/attestor/register" element={<AttestorRegistration />} />
-                        <Route path="/pools" element={<PoolDashboard />} />
+                        <Route path="/admin/assets" element={<AdminAssets />} />
+                        <Route path="/admin/hedera-admins" element={<HederaAdminManagement />} />
+                        <Route path="/admin/amc-pools" element={<AMCPoolManagement />} />
+                        <Route path="/admin/dividend-management" element={<DividendManagement />} />
+                        <Route path="/pools" element={<PoolMarketplace />} />
+                        <Route path="/pool-dashboard" element={<PoolDashboard />} />
+                        <Route path="/pool-trading" element={<PoolTradingInterface />} />
+                        <Route path="/pool-trading-dashboard" element={<PoolTradingDashboard />} />
+                        <Route path="/pool-token-portfolio" element={<PoolTokenPortfolio />} />
                         <Route path="/trading" element={<TradingInterface />} />
                         <Route path="/staking" element={<TrustTokenStaking />} />
                         <Route path="/get-test-tokens" element={<GetTestTokens />} />
@@ -230,6 +254,12 @@ const App: React.FC = () => {
                         <Route path="/governance" element={<DAOGovernance />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/create-digital-asset" element={<CreateDigitalAsset />} />
+                        <Route path="/create-rwa-asset" element={<CreateRWAAsset />} />
+                        <Route path="/submit-rwa-asset" element={<RWAAssetSubmission />} />
+                        <Route path="/rwa-trading" element={<RWATradingInterface />} />
+                        <Route path="/secondary-trading" element={<SecondaryTradingInterface />} />
+                        <Route path="/rwa-management" element={<RWAAssetManagement />} />
+                        <Route path="/amc-dashboard" element={<AMCDashboard />} />
                         <Route path="/asset/:assetId/trade" element={<AssetTradingInterface />} />
                         <Route path="/secondary-markets" element={<SecondaryMarkets />} />
                         </Routes>

@@ -1178,139 +1178,19 @@ class ContractService {
   }
 
   // Admin Dashboard Methods
-  async getAllAttestors(): Promise<any[]> {
+  async getAllAssets(): Promise<any[]> {
     try {
-      const contract = new ethers.Contract(
-        CONTRACT_ADDRESSES.attestorVerificationSystem,
-        ATTESTOR_VERIFICATION_SYSTEM_ABI,
-        this.provider
-      );
-
-      const attestorAddresses = await contract.getAllAttestors();
-      
-      // Get detailed profile for each attestor
-      const attestors = await Promise.all(
-        attestorAddresses.map(async (address: string) => {
-          try {
-            const profile = await contract.getAttestorProfile(address);
-            return {
-              address,
-              name: profile.name,
-              organization: profile.organization,
-              attestorType: profile.attestorType,
-              tier: profile.tier,
-              specializations: profile.specializations,
-              countries: profile.countries,
-              experienceYears: profile.experienceYears,
-              totalVerifications: profile.totalVerifications.toString(),
-              successfulVerifications: profile.successfulVerifications.toString(),
-              failedVerifications: profile.failedVerifications.toString(),
-              reputationScore: profile.reputationScore.toString(),
-              stakedAmount: profile.stakedAmount.toString(),
-              registrationFee: profile.registrationFee.toString(),
-              requiredDocuments: profile.requiredDocuments,
-              uploadedDocuments: profile.uploadedDocuments,
-              status: profile.status,
-              isActive: profile.isActive,
-              createdAt: profile.createdAt.toString(),
-              lastActivity: profile.lastActivity.toString(),
-              contactInfo: profile.contactInfo,
-              credentials: profile.credentials,
-              reviewerNotes: profile.reviewerNotes
-            };
-          } catch (error) {
-            console.warn(`Error getting profile for attestor ${address}:`, error);
-            return {
-              address,
-              name: 'Unknown',
-              organization: '',
-              attestorType: 0,
-              tier: 0,
-              specializations: [],
-              countries: [],
-              experienceYears: 0,
-              totalVerifications: '0',
-              successfulVerifications: '0',
-              failedVerifications: '0',
-              reputationScore: '0',
-              stakedAmount: '0',
-              registrationFee: '0',
-              requiredDocuments: [],
-              uploadedDocuments: [],
-              status: 0,
-              isActive: false,
-              createdAt: '0',
-              lastActivity: '0',
-              contactInfo: '',
-              credentials: '',
-              reviewerNotes: ''
-            };
-          }
-        })
-      );
-
-      return attestors;
+      // For now, return empty array since getAllAssets method doesn't exist on the contract
+      // This will be implemented when the contract supports this functionality
+      console.log('getAllAssets: Method not available on contract, returning empty array');
+      return [];
     } catch (error) {
-      console.error('Error getting all attestors:', error);
-      throw error;
+      console.error('Error getting all assets:', error);
+      return [];
     }
   }
 
-  async approveAttestor(attestorAddress: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      const signer = await this.getSigner();
-      const contract = new ethers.Contract(
-        CONTRACT_ADDRESSES.attestorVerificationSystem,
-        ATTESTOR_VERIFICATION_SYSTEM_ABI,
-        signer
-      );
 
-      // Update attestor status to APPROVED (status = 1)
-      const tx = await contract.updateAttestorStatus(
-        attestorAddress,
-        1, // APPROVED status
-        "Application approved by admin"
-      );
-
-      await tx.wait();
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Error approving attestor:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to approve attestor' 
-      };
-    }
-  }
-
-  async rejectAttestor(attestorAddress: string, reason: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      const signer = await this.getSigner();
-      const contract = new ethers.Contract(
-        CONTRACT_ADDRESSES.attestorVerificationSystem,
-        ATTESTOR_VERIFICATION_SYSTEM_ABI,
-        signer
-      );
-
-      // Update attestor status to REJECTED (status = 2)
-      const tx = await contract.updateAttestorStatus(
-        attestorAddress,
-        2, // REJECTED status
-        reason || "Application rejected by admin"
-      );
-
-      await tx.wait();
-      
-      return { success: true };
-    } catch (error) {
-      console.error('Error rejecting attestor:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to reject attestor' 
-      };
-    }
-  }
 
   // Asset Verification Methods
   async getAllVerificationRequests(): Promise<any[]> {

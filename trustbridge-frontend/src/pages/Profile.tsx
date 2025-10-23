@@ -12,14 +12,14 @@ import {
   Shield,
   Activity,
   TrendingUp,
-  DollarSign,
-  Eye,
   CheckCircle,
   AlertCircle,
+  XCircle,
   Zap,
   Loader2,
   RefreshCw,
   Wallet,
+  FileText,
   Grid3X3,
   Heart,
   List
@@ -30,27 +30,30 @@ import AssetDetailModal from '../components/Assets/AssetDetailModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useWallet } from '../contexts/WalletContext';
 import { useToast } from '../hooks/useToast';
-import { usePortfolio, useInvestments, useAssetByOwner } from '../hooks/useApi';
+import { usePortfolio, useAssetByOwner } from '../hooks/useApi';
 import { contractService } from '../services/contractService';
-import hederaAssetService, { HederaAsset } from '../services/hederaAssetService';
+import { trustToUSD, formatUSD as formatUSDPrice } from '../utils/priceUtils';
 
 const Profile: React.FC = () => {
-  const { user, authStep, isAuthenticated } = useAuth();
-  const { address, isConnected, hederaClient } = useWallet();
+  const { user, authStep, isAuthenticated, startKYC } = useAuth();
+  const { address, isConnected } = useWallet();
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   
   const [activeTab, setActiveTab] = useState('portfolio');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [chainFilter, setChainFilter] = useState('all');
-  const [collectionFilter, setCollectionFilter] = useState('all');
+  const [collectionFilter] = useState('all');
+  const [assetTypeFilter, setAssetTypeFilter] = useState('all');
+  const [rwaAssets, setRwaAssets] = useState<any[]>([]);
+  const [isLoadingRWA, setIsLoadingRWA] = useState(false);
+  const [usdValue, setUsdValue] = useState<string>('Loading...');
   
   // Fetch real data from API
-  const { data: portfolioData, loading: portfolioLoading, error: portfolioError } = usePortfolio();
-  const { loading: investmentsLoading } = useInvestments();
+  const { data: portfolioData, loading: portfolioLoading } = usePortfolio();
   const { data: userAssetsData, loading: assetsLoading, error: assetsError } = useAssetByOwner(address || '');
   
   // State for user's NFTs from smart contracts
@@ -59,21 +62,23 @@ const Profile: React.FC = () => {
   const [forceRefresh, setForceRefresh] = useState(false);
   
   // State for Hedera digital assets
-  const [hederaAssets, setHederaAssets] = useState<HederaAsset[]>([]);
-  const [hederaAssetsLoading, setHederaAssetsLoading] = useState(false);
+  const [hederaAssets, setHederaAssets] = useState<any[]>([]);
+  const [hederaAssetsLoading] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
   const [showAssetDetail, setShowAssetDetail] = useState(false);
   
   // Check authentication status and redirect if needed
   useEffect(() => {
-    console.log('Profile - Auth check effect triggered:', { 
+    console.log('🔍 Profile - Auth check effect triggered:', { 
       isConnected, 
       address: address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null,
       isAuthenticated, 
       authStep, 
       user: !!user,
       userEmail: user?.email,
-      userName: user?.name
+      userName: user?.name,
+      kycStatus: user?.kycStatus,
+      fullUserObject: user
     });
     
     if (isConnected && address) {
@@ -106,6 +111,25 @@ const Profile: React.FC = () => {
     }
   }, [isConnected, address, isAuthenticated, authStep, user, navigate]);
   
+  // Refresh user data when component mounts to ensure latest KYC status
+  useEffect(() => {
+    if (user && address) {
+      console.log('Profile - Skipping refreshUser on mount to preserve KYC status');
+      // refreshUser().catch(error => {
+      //   console.error('Error refreshing user data on mount:', error);
+      // });
+    }
+  }, [address]); // Only run when address changes (user connects)
+  
+  // Watch for KYC status changes
+  useEffect(() => {
+    console.log('🔍 Profile - KYC status changed:', {
+      kycStatus: user?.kycStatus,
+      isApproved: user?.kycStatus?.toLowerCase() === 'approved',
+      user: user
+    });
+  }, [user?.kycStatus]);
+  
   // Clear cache when wallet address changes
   useEffect(() => {
     if (address) {
@@ -133,6 +157,23 @@ const Profile: React.FC = () => {
       console.log('🧹 Cleared cache keys:', keysToRemove.length, 'localStorage,', sessionKeysToRemove.length, 'sessionStorage');
     }
   }, [address]);
+
+  // Calculate USD value when portfolio data changes
+  useEffect(() => {
+    const calculateUSDValue = async () => {
+      if (portfolioData && typeof portfolioData === 'object' && 'totalValue' in portfolioData && portfolioData.totalValue) {
+        try {
+          const usd = await trustToUSD(portfolioData.totalValue as number);
+          setUsdValue(formatUSDPrice(usd));
+        } catch (error) {
+          console.error('Failed to calculate USD value:', error);
+          setUsdValue('Error');
+        }
+      }
+    };
+    
+    calculateUSDValue();
+  }, [portfolioData]);
 
   // Listen for navigation state to trigger refresh after asset creation
   useEffect(() => {
@@ -229,9 +270,49 @@ const Profile: React.FC = () => {
           // Combine owned and listed NFTs
           const allNFTs = [...userNFTs, ...listedNFTs];
           
-          if (allNFTs.length > 0) {
+          // Filter out RWA NFTs from digital assets - hybrid approach
+          const digitalNFTs = [];
+          
+          // Check each NFT to see if it's NOT an RWA
+          for (const nft of allNFTs) {
+            let isRWA = false;
+            
+            // Method 1: Check token symbol for RWA pattern (FAST - new method)
+            try {
+              const tokenResponse = await fetch(`https://testnet.mirrornode.hedera.com/api/v1/tokens/${nft.token_id}`);
+              if (tokenResponse.ok) {
+                const tokenData = await tokenResponse.json();
+                const tokenSymbol = tokenData.symbol;
+                const tokenMemo = tokenData.memo;
+                
+                // Check if this is an RWA token by symbol (FAST - new method)
+                if (tokenSymbol === 'RWA-ASSET') {
+                  isRWA = true;
+                  console.log('🎯 RWA NFT found by symbol:', nft.token_id, nft.serial_number, 'Symbol:', tokenSymbol);
+                }
+                // Method 2: Check token memo patterns (backward compatibility)
+                else if (tokenMemo && tokenMemo.includes('IPFS:') && tokenMemo.includes('DOCS:')) {
+                  isRWA = true;
+                  console.log('🎯 RWA NFT found by memo pattern:', nft.token_id, nft.serial_number);
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching token details for digital filtering:', nft.token_id, error);
+            }
+            
+            // If it's not an RWA, add it to digital assets
+            if (!isRWA) {
+              digitalNFTs.push(nft);
+            } else {
+              console.log('🚫 Excluding RWA NFT from digital assets:', nft.token_id, nft.serial_number);
+            }
+          }
+          
+          console.log(`📊 Digital NFTs (excluding RWA): ${digitalNFTs.length} out of ${allNFTs.length} total NFTs`);
+          
+          if (digitalNFTs.length > 0) {
             // Process NFTs into asset format - with IPFS metadata fetching
-            const processedAssetsPromises = allNFTs.map(async (nft: any) => {
+            const processedAssetsPromises = digitalNFTs.map(async (nft: any) => {
               let metadata: any = {};
               let name = `NFT #${nft.serial_number}`;
               let totalValue = 100; // Default fallback
@@ -286,7 +367,7 @@ const Profile: React.FC = () => {
                 price: totalValue,
                 imageURI,
                 category: metadata.category || metadata.assetType || 'Digital Art',
-                type: 'digital'
+                type: 'digital' // Explicitly mark as digital
               };
             });
             
@@ -302,13 +383,13 @@ const Profile: React.FC = () => {
             console.log(`💰 Total Portfolio Value: ${totalPortfolioValue} TRUST`);
             
             setHederaAssets(processedAssets);
-            
-            // Cache the result
-            const cacheKey = `user_nfts_${address.toLowerCase()}`;
+          
+          // Cache the result
+          const cacheKey = `user_nfts_${address.toLowerCase()}`;
             localStorage.setItem(cacheKey, JSON.stringify(processedAssets));
-            localStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
-            
-            setNftsLoading(false);
+          localStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
+          
+          setNftsLoading(false);
             return; // Successfully loaded from Mirror Node
           } else {
             console.log('⚠️ No NFTs found from Mirror Node, checking cache and fallback...');
@@ -416,8 +497,250 @@ const Profile: React.FC = () => {
     fetchUserAssetsProgressive();
   }, [address, forceRefresh]);
 
+  // Fetch RWA assets
+  useEffect(() => {
+    console.log('🔄 RWA useEffect triggered, address:', address);
+    console.log('🔄 RWA useEffect dependencies:', { address, isConnected });
+    
+    const fetchRWAAssets = async () => {
+      if (!address) {
+        console.log('❌ No address available for RWA assets');
+        return;
+      }
+      
+      console.log('🚀 Starting RWA asset fetch for address:', address);
+      
+      setIsLoadingRWA(true);
+      try {
+        console.log('🔍 Fetching RWA assets for account:', address);
+        
+        // First, get RWA assets from HCS topic to get approval status
+        let hcsAssets = [];
+        try {
+          const hcsResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4001'}/api/hedera/rwa/trustbridge-assets`);
+          if (hcsResponse.ok) {
+            const hcsData = await hcsResponse.json();
+            hcsAssets = hcsData.data?.assets || [];
+            console.log('📊 HCS RWA assets found:', hcsAssets.length);
+          }
+        } catch (hcsError) {
+          console.warn('⚠️ Failed to fetch HCS assets:', hcsError);
+        }
+        
+        // Create a map of HCS asset statuses by token ID
+        const hcsStatusMap = new Map();
+        hcsAssets.forEach((asset: any) => {
+          hcsStatusMap.set(asset.rwaTokenId, asset.status);
+        });
+        
+        // Fetch all NFTs from Hedera Mirror Node
+        const response = await fetch(
+          `https://testnet.mirrornode.hedera.com/api/v1/accounts/${address}/nfts?limit=100`
+        );
+        
+        if (!response.ok) {
+          console.error('❌ Failed to fetch NFTs:', response.status, response.statusText);
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('📊 All NFTs on account:', data);
+        
+        if (data.nfts && data.nfts.length > 0) {
+          console.log('📊 Total NFTs found:', data.nfts.length);
+          
+          // Filter for RWA NFTs - hybrid approach
+          const rwaNFTs = [];
+          
+          // Check each NFT to see if it's an RWA
+          for (const nft of data.nfts) {
+            const hasTokenId = nft.token_id && nft.serial_number;
+            
+            if (hasTokenId) {
+              let isRWA = false;
+              
+              // Method 1: Check token symbol for RWA pattern (FAST - new method)
+              try {
+                const tokenResponse = await fetch(`https://testnet.mirrornode.hedera.com/api/v1/tokens/${nft.token_id}`);
+                if (tokenResponse.ok) {
+                  const tokenData = await tokenResponse.json();
+                  const tokenSymbol = tokenData.symbol;
+                  const tokenMemo = tokenData.memo;
+                  
+                  // Check if this is an RWA token by symbol (FAST - new method)
+                  if (tokenSymbol === 'RWA-ASSET') {
+                    isRWA = true;
+                    console.log('🎯 RWA NFT found by symbol:', nft.token_id, nft.serial_number, 'Symbol:', tokenSymbol);
+                  }
+                  // Method 2: Check token memo patterns (backward compatibility)
+                  else if (tokenMemo && tokenMemo.includes('IPFS:') && tokenMemo.includes('DOCS:')) {
+                    isRWA = true;
+                    console.log('🎯 RWA NFT found by memo pattern:', nft.token_id, nft.serial_number, 'Memo:', tokenMemo);
+                  }
+                }
+              } catch (error) {
+                console.error('Error fetching token details for', nft.token_id, error);
+              }
+              
+              // If it's an RWA, add it to the list
+              if (isRWA) {
+                rwaNFTs.push(nft);
+              }
+            }
+          }
+          
+          console.log('📊 RWA NFTs filtered:', rwaNFTs.length);
+          
+          // Process RWA NFTs into asset format - fetch real data from IPFS
+          const processedAssets = await Promise.all(rwaNFTs.map(async (nft: any) => {
+            let rwaData = null;
+            let detailedMetadata = null;
+            let metadataCid = null;
+            
+            // First, fetch token details to get the token memo and extract metadata CID
+            try {
+              const tokenResponse = await fetch(`https://testnet.mirrornode.hedera.com/api/v1/tokens/${nft.token_id}`);
+              if (tokenResponse.ok) {
+                const tokenData = await tokenResponse.json();
+                const tokenMemo = tokenData.memo;
+                
+                if (tokenMemo) {
+                  const memoParts = tokenMemo.split('|');
+                  for (const part of memoParts) {
+                    if (part.startsWith('IPFS:')) {
+                      metadataCid = part.replace('IPFS:', '');
+                      break;
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error fetching token details for RWA processing:', error);
+            }
+            
+            // Try to fetch real RWA data from IPFS using the metadata CID
+            if (metadataCid) {
+              try {
+                console.log('🔍 Fetching RWA data from IPFS:', metadataCid);
+                const ipfsResponse = await fetch(`https://ipfs.io/ipfs/${metadataCid}`);
+                if (ipfsResponse.ok) {
+                  rwaData = await ipfsResponse.json();
+                  console.log('📊 RWA IPFS data:', rwaData);
+                  
+                  // If there's a metadataCid, fetch the detailed metadata
+                  if (rwaData.metadataCid) {
+                    console.log('🔍 Fetching detailed RWA metadata:', rwaData.metadataCid);
+                    const detailedResponse = await fetch(`https://ipfs.io/ipfs/${rwaData.metadataCid}`);
+                    if (detailedResponse.ok) {
+                      detailedMetadata = await detailedResponse.json();
+                      console.log('📊 Detailed RWA metadata:', detailedMetadata);
+                      
+                      // The detailed metadata already contains the file information
+                      // The cidsHash is just for verification, the actual file URLs are already in the metadata
+                      console.log('📊 RWA metadata already contains file information:');
+                      console.log('  - Display Image:', detailedMetadata.displayImage);
+                      console.log('  - Evidence Files:', detailedMetadata.evidenceFiles);
+                      console.log('  - Legal Documents:', detailedMetadata.legalDocuments);
+                      console.log('  - Verification:', detailedMetadata.verification);
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error('❌ Error fetching RWA IPFS data:', error);
+              }
+            }
+            
+            // Use detailed metadata if available, otherwise fallback to basic data
+            const assetData = detailedMetadata || rwaData || {
+              name: `RWA Asset ${nft.serial_number}`,
+              description: '',
+              propertyId: `PROP_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              assetType: 'Real Estate',
+              totalValue: 100000,
+              status: 'ACTIVE'
+            };
+            
+            console.log('🔍 RWA Asset Data Processing:', {
+              tokenId: nft.token_id,
+              serialNumber: nft.serial_number,
+              metadataCid: metadataCid,
+              rwaData: rwaData?.totalValue,
+              finalAssetData: assetData.totalValue,
+              expectedAPY: assetData.expectedAPY
+            });
+            
+            // Get approval status from HCS topic
+            const approvalStatus = hcsStatusMap.get(nft.token_id) || 'SUBMITTED_FOR_APPROVAL';
+            console.log('📊 RWA Asset Status:', nft.token_id, 'Status:', approvalStatus);
+            
+            return {
+              id: `${nft.token_id}-${nft.serial_number}`,
+              name: assetData.name || `RWA Asset ${nft.serial_number}`,
+              description: assetData.description || 'Real World Asset',
+              type: 'RWA', // Explicitly mark as RWA
+              category: 'RWA',
+              totalValue: assetData.totalValue || 100000,
+              tokenPrice: 100,
+              tokensOwned: 1000,
+              // Add approval status from HCS
+              status: approvalStatus === 'APPROVED' ? 'verified' : 
+                     approvalStatus === 'REJECTED' ? 'rejected' : 
+                     approvalStatus === 'SUBMITTED_FOR_APPROVAL' ? 'pending' : 'pending',
+              approvalStatus: approvalStatus,
+              valueOwned: assetData.totalValue || 100000,
+              expectedAPY: parseFloat(assetData.expectedAPY) || 12.0,
+              maturityDate: assetData.maturityDate || '2025-12-31',
+              amcName: 'TrustBridge AMC',
+              amcRating: 4.8,
+              performance: {
+                currentValue: (assetData.totalValue || 100000) * 1.1,
+                valueChange: (assetData.totalValue || 100000) * 0.1,
+                valueChangePercent: 10.0,
+                totalReturn: (assetData.totalValue || 100000) * 0.2,
+                totalReturnPercent: 20.0,
+                monthlyReturn: (assetData.totalValue || 100000) * 0.01,
+                yearlyReturn: (assetData.totalValue || 100000) * 0.12
+              },
+              riskLevel: 'MEDIUM',
+              liquidity: 'MEDIUM',
+              lastUpdated: new Date().toISOString(),
+              nftTokenId: nft.token_id,
+              nftSerialNumber: nft.serial_number,
+              memo: nft.token_memo,
+              propertyId: assetData.propertyId,
+              assetType: assetData.assetType,
+              location: assetData.location,
+              legalDescription: assetData.legalDescription,
+              propertyAddress: assetData.propertyAddress,
+              displayImage: assetData.displayImage,
+              evidenceFiles: assetData.evidenceFiles || [],
+              legalDocuments: assetData.legalDocuments || [],
+              verification: assetData.verification,
+              imageURI: assetData.displayImage || '' // Removed Unsplash fallback
+            };
+          }));
+          
+          console.log('✅ RWA assets processed:', processedAssets.length);
+          console.log('📊 RWA processed assets:', processedAssets);
+          setRwaAssets(processedAssets);
+        } else {
+          console.log('📊 No NFTs found on account');
+          setRwaAssets([]);
+        }
+      } catch (error) {
+        console.error('Error fetching RWA assets:', error);
+        setRwaAssets([]);
+      } finally {
+        setIsLoadingRWA(false);
+      }
+    };
+
+    fetchRWAAssets();
+  }, [address, isConnected]);
+
   // OLD FUNCTION - NO LONGER USED (replaced by fetchUserAssetsProgressive above)
   // Fetch Hedera digital assets - DIRECTLY from Mirror Node (no localStorage)
+  /*
   const fetchHederaAssets_OLD = async () => {
     if (!address) {
       console.log('⚠️ Cannot fetch assets - no address provided');
@@ -512,8 +835,10 @@ const Profile: React.FC = () => {
       setHederaAssetsLoading(false);
     }
   };
+  */
 
   // Force refresh assets directly from HFS (bypass Mirror Node)
+  /*
   const forceRefreshHederaAssets = async () => {
     if (!address) return;
     
@@ -544,7 +869,7 @@ const Profile: React.FC = () => {
       
       console.log(`📊 Found ${userReferences.length} asset references for force refresh`);
       
-      const refreshedAssets: HederaAsset[] = [];
+      const refreshedAssets: any[] = [];
       
       for (const ref of userReferences) {
         try {
@@ -581,6 +906,7 @@ const Profile: React.FC = () => {
       setHederaAssetsLoading(false);
     }
   };
+  */
 
   // NOTE: Assets are now loaded by fetchUserAssetsProgressive above
   // which handles both owned and listed assets from Hedera Mirror Node
@@ -653,8 +979,31 @@ const Profile: React.FC = () => {
       });
     console.log('🔍 localStorage assets after filtering:', localStorageAssets);
 
-    // Combine sessionStorage assets with localStorage assets and Hedera NFTs
+    // Combine sessionStorage assets with localStorage assets, Hedera NFTs, and RWA assets
     const allAssets = [...realAssets, ...localStorageAssets];
+    
+    // Add RWA assets
+    rwaAssets.forEach(rwaAsset => {
+      allAssets.push({
+        id: rwaAsset.id || `rwa_${rwaAsset._id}`,
+        name: rwaAsset.name || `RWA Asset #${rwaAsset.assetId}`,
+        description: rwaAsset.description || 'Real World Asset',
+        imageURI: rwaAsset.imageURI || '',
+        totalValue: rwaAsset.totalValue || rwaAsset.estimatedValue || '1000',
+        value: parseFloat(rwaAsset.totalValue || rwaAsset.estimatedValue || '1000'),
+        price: rwaAsset.totalValue || rwaAsset.estimatedValue || '1000',
+        owner: rwaAsset.owner || address,
+        createdAt: rwaAsset.createdAt || new Date().toISOString(),
+        isTradeable: rwaAsset.status === 'VERIFIED',
+        status: rwaAsset.status === 'VERIFIED' ? 'verified' : 'pending',
+        tokenId: rwaAsset.assetId,
+        source: 'rwa',
+        type: 'rwa',
+        category: 'Real Estate',
+        location: rwaAsset.location,
+        assetType: 'RWA'
+      });
+    });
     
     // Add NFTs from Hedera Mirror Node (the primary source)
     hederaAssets.forEach(nft => {
@@ -717,19 +1066,10 @@ const Profile: React.FC = () => {
         }
       };
 
-      const formatUSD = (value: number) => {
-        if (value >= 1000000) {
-          return `$${(value / 1000000).toFixed(1)}M`;
-        } else if (value >= 1000) {
-          return `$${(value / 1000).toFixed(0)}K`;
-        } else {
-          return `$${value.toLocaleString()}`;
-        }
-      };
 
       return {
         portfolioValue: formatValue(totalValue),
-        usdValue: formatUSD(totalValue),
+        usdValue: usdValue, // Use calculated USD value
         assetsCount: allAssets.length,
         createdCount: allAssets.length,
         collectionsCount: 0
@@ -745,7 +1085,7 @@ const Profile: React.FC = () => {
     if (nftsLoading) {
       return {
         portfolioValue: 'Loading...',
-        usdValue: 'Loading...',
+        usdValue: usdValue,
     assetsCount: 0,
     createdCount: 0,
     collectionsCount: 0
@@ -754,10 +1094,9 @@ const Profile: React.FC = () => {
     
     // If we have NFTs but no sessionStorage data, use NFT data
     if (userNFTs.length > 0) {
-      const totalValue = userNFTs.length * 1000; // 1000 TRUST per NFT
       return {
         portfolioValue: `${userNFTs.length * 1000} TRUST`,
-        usdValue: `$${userNFTs.length * 1000}`,
+        usdValue: usdValue,
         assetsCount: userNFTs.length,
         createdCount: userNFTs.length,
         collectionsCount: 0
@@ -767,18 +1106,82 @@ const Profile: React.FC = () => {
     // No assets found - return zeros instead of mock data
     return {
       portfolioValue: '0 TRUST',
-      usdValue: '$0',
+      usdValue: usdValue,
       assetsCount: 0,
       createdCount: 0,
       collectionsCount: 0
     };
-  }, [portfolioData, portfolioLoading, userAssetsData, userNFTs, nftsLoading, address, hederaAssets]);
+  }, [portfolioData, portfolioLoading, userAssetsData, userNFTs, nftsLoading, address, hederaAssets, rwaAssets, usdValue]);
+
+  // Asset filtering function
+  const getFilteredAssets = (assets: any[]) => {
+    const filtered = assets.filter(asset => {
+      // Search filter
+      if (searchQuery && !asset.name?.toLowerCase().includes(searchQuery.toLowerCase()) && 
+          !asset.description?.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      
+      // Status filter
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'listed' && asset.status !== 'listed') return false;
+        if (statusFilter === 'not_listed' && asset.status === 'listed') return false;
+        if (statusFilter === 'hidden' && asset.status !== 'hidden') return false;
+      }
+      
+      // Asset type filter
+      if (assetTypeFilter !== 'all') {
+        if (assetTypeFilter === 'digital' && asset.type !== 'digital' && asset.type !== 'Digital') return false;
+        if (assetTypeFilter === 'rwa' && asset.type !== 'rwa' && asset.type !== 'RWA') return false;
+      }
+      
+      // Collection filter
+      if (collectionFilter !== 'all') {
+        if (asset.category !== collectionFilter) return false;
+      }
+      
+      return true;
+    });
+    
+    console.log('🔍 getFilteredAssets Debug:', {
+      inputAssets: assets.length,
+      filteredAssets: filtered.length,
+      assetTypeFilter,
+      statusFilter,
+      collectionFilter,
+      searchQuery,
+      assetTypes: assets.map(a => ({ name: a.name, type: a.type, category: a.category }))
+    });
+    
+    return filtered;
+  };
+
+  // Set asset type filter based on active tab
+  useEffect(() => {
+    if (activeTab === 'digital-assets') {
+      setAssetTypeFilter('digital');
+    } else if (activeTab === 'rwa-assets') {
+      setAssetTypeFilter('rwa');
+    } else {
+      setAssetTypeFilter('all');
+    }
+  }, [activeTab]);
 
   // Get user assets from real data - show immediately as they load
   const userAssets = useMemo(() => {
-    // NO MORE localStorage or sessionStorage - query Hedera directly for user's NFTs
-    // This will be populated by the fetchUserAssets function below
+    // Combine digital assets from Hedera and smart contracts
     const allAssets: any[] = [];
+    
+    // Add digital assets from Hedera (these are already filtered to exclude RWA)
+    if (hederaAssets && hederaAssets.length > 0) {
+      hederaAssets.forEach(asset => {
+        allAssets.push({
+          ...asset,
+          source: 'hedera',
+          type: 'digital' // Ensure it's marked as digital
+        });
+      });
+    }
     
     // Add NFTs from smart contracts as they load
     userNFTs.forEach(nft => {
@@ -786,7 +1189,7 @@ const Profile: React.FC = () => {
         id: nft.tokenId,
         name: nft.metadata?.name || `Asset #${nft.tokenId}`,
         description: nft.metadata?.description || 'Digital asset',
-        imageURI: nft.metadata?.image || 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=400&h=400&fit=crop&crop=center',
+        imageURI: nft.metadata?.image || '',
         totalValue: '1000', // For portfolio calculation
         value: 1000, // For UI display
         price: '1000', // For trading display
@@ -796,13 +1199,16 @@ const Profile: React.FC = () => {
         status: 'owned',
         tokenId: nft.tokenId,
         source: 'contract',
-        type: 'Digital', // For UI display
+        type: 'digital', // For UI display
         category: 'Digital Asset' // For UI display
       });
     });
 
+    console.log('🔍 Combined userAssets (digital only):', allAssets.length, 'total assets');
+    console.log('📊 Asset types:', allAssets.map(a => ({ name: a.name, type: a.type })));
+    
     return allAssets;
-  }, [userNFTs, address]);
+  }, [hederaAssets, userNFTs, address]);
 
   // Helper function to calculate time ago - MUST be defined before recentActivity
   const getTimeAgo = (date: Date): string => {
@@ -840,7 +1246,7 @@ const Profile: React.FC = () => {
           const timeAgo = getTimeAgo(createdDate);
           
           activities.push({
-            action: 'Asset Created',
+          action: 'Asset Created',
             asset: nft.name || nft.metadata?.name || `NFT #${nft.serialNumber || nft.id}`,
             time: timeAgo,
             type: 'success',
@@ -890,6 +1296,12 @@ const Profile: React.FC = () => {
     { id: 'ethereum', label: 'Ethereum' }
   ];
 
+  const assetTypeFilters = [
+    { id: 'all', label: 'All Assets' },
+    { id: 'digital', label: 'Digital' },
+    { id: 'rwa', label: 'RWA' }
+  ];
+
   const handleCopyAddress = () => {
     if (address) {
       navigator.clipboard.writeText(address);
@@ -911,21 +1323,32 @@ const Profile: React.FC = () => {
       return;
     }
     
-    navigate(`/dashboard/assets/create?type=${type}`);
+    if (type === 'digital') {
+      navigate('/dashboard/create-digital-asset');
+    } else if (type === 'rwa') {
+      navigate('/dashboard/create-rwa-asset');
+    }
   };
 
-  const handleCreateAMC = () => {
-    if (user?.kycStatus?.toLowerCase() !== 'approved') {
+  const handleStartKYC = async () => {
+    try {
+      await startKYC();
       toast({
-        title: 'KYC Required',
-        description: 'You need to complete KYC verification to create AMC',
+        title: 'KYC Verification Started',
+        description: 'A new tab has opened for KYC verification. Please complete the verification to create RWA assets.',
+        variant: 'default'
+      });
+    } catch (error) {
+      console.error('Error starting KYC:', error);
+      toast({
+        title: 'KYC Error',
+        description: error instanceof Error ? error.message : 'Failed to start KYC verification. Please try again.',
         variant: 'destructive'
       });
-      return;
     }
-    
-    navigate('/dashboard/amc/create');
   };
+
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -1010,48 +1433,48 @@ const Profile: React.FC = () => {
                       <div className="space-y-2 min-w-0">
                         <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide truncate">Portfolio</p>
                         <p className="text-base sm:text-lg lg:text-xl font-bold text-neon-green truncate" title={userStats.portfolioValue}>
-                          {portfolioLoading ? (
+                        {portfolioLoading ? (
                             <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                          ) : (
-                            userStats.portfolioValue
-                          )}
-                        </p>
-                      </div>
+                        ) : (
+                          userStats.portfolioValue
+                        )}
+                      </p>
+                    </div>
 
                       {/* USD Value */}
                       <div className="space-y-2 min-w-0">
                         <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide truncate">USD Value</p>
                         <p className="text-base sm:text-lg lg:text-xl font-bold text-electric-mint truncate" title={userStats.usdValue}>
-                          {portfolioLoading ? (
+                        {portfolioLoading ? (
                             <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                          ) : (
-                            userStats.usdValue
-                          )}
-                        </p>
-                      </div>
+                        ) : (
+                          userStats.usdValue
+                        )}
+                      </p>
+                    </div>
 
                       {/* Assets */}
                       <div className="space-y-2 min-w-0">
                         <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide truncate">Assets</p>
                         <p className="text-base sm:text-lg lg:text-xl font-bold text-off-white truncate">
-                          {assetsLoading ? (
+                        {assetsLoading ? (
                             <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                          ) : (
-                            userStats.assetsCount
-                          )}
-                        </p>
-                      </div>
+                        ) : (
+                          userStats.assetsCount
+                        )}
+                      </p>
+                    </div>
 
                       {/* Created */}
                       <div className="space-y-2 min-w-0">
                         <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide truncate">Created</p>
                         <p className="text-base sm:text-lg lg:text-xl font-bold text-purple-400 truncate">
-                          {assetsLoading ? (
+                        {assetsLoading ? (
                             <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                          ) : (
-                            userStats.createdCount
-                          )}
-                        </p>
+                        ) : (
+                          userStats.createdCount
+                        )}
+                      </p>
                       </div>
 
                       {/* Royalties */}
@@ -1080,21 +1503,26 @@ const Profile: React.FC = () => {
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => handleCreateAsset('rwa')}
-                    className="px-3 py-1.5 text-xs font-medium border-neon-green/30 text-neon-green hover:bg-neon-green/10"
-                    disabled={user?.kycStatus?.toLowerCase() !== 'approved'}
+                    onClick={() => {
+                      console.log('🔍 Create RWA button clicked - User KYC status:', user?.kycStatus);
+                      console.log('🔍 User object:', user);
+                      if (user?.kycStatus?.toLowerCase() === 'approved') {
+                        handleCreateAsset('rwa');
+                      } else {
+                        handleStartKYC();
+                      }
+                    }}
+                    className={`px-3 py-1.5 text-xs font-medium ${
+                      user?.kycStatus?.toLowerCase() === 'approved'
+                        ? 'border-purple-400/30 text-purple-400 hover:bg-purple-400/10'
+                        : 'border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10'
+                    }`}
                   >
                     <Building2 className="w-3.5 h-3.5 mr-1" />
-                    RWA {user?.kycStatus?.toLowerCase() !== 'approved' && '(KYC)'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleCreateAMC}
-                    className="px-3 py-1.5 text-xs font-medium border-purple-400/30 text-purple-400 hover:bg-purple-400/10"
-                    disabled={user?.kycStatus?.toLowerCase() !== 'approved'}
-                  >
-                    <Shield className="w-3.5 h-3.5 mr-1" />
-                    AMC {user?.kycStatus?.toLowerCase() !== 'approved' && '(KYC)'}
+                    Create RWA
+                    {user?.kycStatus?.toLowerCase() !== 'approved' && (
+                      <span className="ml-1 text-xs opacity-75">(KYC Required)</span>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -1157,6 +1585,23 @@ const Profile: React.FC = () => {
                 ))}
               </div>
 
+              {/* Asset Type Filter */}
+              <div className="flex gap-0.5">
+                {assetTypeFilters.map((filter) => (
+                  <button
+                    key={filter.id}
+                    onClick={() => setAssetTypeFilter(filter.id)}
+                    className={`px-2 py-1 text-xs rounded transition-colors ${
+                      assetTypeFilter === filter.id
+                        ? 'bg-purple-400 text-black'
+                        : 'bg-gray-800 text-gray-400 hover:text-off-white'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+
               {/* Chain Filter */}
               <select
                 value={chainFilter}
@@ -1175,7 +1620,7 @@ const Profile: React.FC = () => {
               <div className="flex items-center gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">
-                  {userAssets.length} ITEMS
+                  {getFilteredAssets(userAssets).length} ITEMS
                 </span>
               </div>
               
@@ -1265,7 +1710,7 @@ const Profile: React.FC = () => {
                           userStats.assetsCount
                         )}
                       </p>
-                      <p className="text-xs text-gray-400">Digital & RWA Assets</p>
+                      <p className="text-xs text-gray-400">Digital Assets</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -1289,7 +1734,92 @@ const Profile: React.FC = () => {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* RWA Assets Card */}
+                <Card variant="floating">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium text-off-white">RWA Assets</h3>
+                      <Building2 className="w-4 h-4 text-orange-400" />
               </div>
+                    <div className="space-y-1">
+                      <p className="text-xl font-bold text-orange-400">
+                        {isLoadingRWA ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          rwaAssets.length
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-400">Real World Assets</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* KYC Status Card */}
+                <Card variant="floating">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium text-off-white">KYC Status</h3>
+                      {user?.kycStatus === 'approved' ? (
+                        <CheckCircle className="w-4 h-4 text-green-400" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-yellow-400" />
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-bold capitalize">
+                        {user?.kycStatus === 'approved' ? (
+                          <span className="text-green-400">Verified</span>
+                        ) : (
+                          <span className="text-yellow-400">Pending</span>
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-400">Identity Status</p>
+                      {user?.kycStatus !== 'approved' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleStartKYC}
+                          className="w-full text-xs border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10"
+                        >
+                          <Shield className="w-3 h-3 mr-1" />
+                          Complete KYC
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* KYC Required Banner */}
+              {user?.kycStatus !== 'approved' && (
+                <Card variant="floating" className="border-yellow-400/30 bg-yellow-400/5">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-yellow-400/20 rounded-full flex items-center justify-center">
+                        <Shield className="w-5 h-5 text-yellow-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-semibold text-yellow-400 mb-1">
+                          Complete KYC Verification
+                        </h3>
+                        <p className="text-xs text-gray-300 mb-3">
+                          Complete your identity verification to access RWA creation and full platform functionality.
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleStartKYC}
+                          className="border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10"
+                        >
+                          <Shield className="w-3 h-3 mr-2" />
+                          Start KYC Verification
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Quick Actions */}
               <Card variant="floating">
@@ -1336,21 +1866,26 @@ const Profile: React.FC = () => {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => handleCreateAsset('rwa')}
-                      className="h-16 flex-col gap-1.5 border-purple-400/30 text-purple-400 hover:bg-purple-400/10"
-                      disabled={user?.kycStatus?.toLowerCase() !== 'approved'}
+                      onClick={() => {
+                        if (user?.kycStatus?.toLowerCase() === 'approved') {
+                          handleCreateAsset('rwa');
+                        } else {
+                          handleStartKYC();
+                        }
+                      }}
+                      className={`h-16 flex-col gap-1.5 ${
+                        user?.kycStatus?.toLowerCase() === 'approved'
+                          ? 'border-purple-400/30 text-purple-400 hover:bg-purple-400/10'
+                          : 'border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10'
+                      }`}
                     >
                       <Building2 className="w-4 h-4" />
-                      <span className="text-xs font-medium">Create RWA</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={handleCreateAMC}
-                      className="h-16 flex-col gap-1.5 border-blue-400/30 text-blue-400 hover:bg-blue-400/10"
-                      disabled={user?.kycStatus?.toLowerCase() !== 'approved'}
-                    >
-                      <Shield className="w-4 h-4" />
-                      <span className="text-xs font-medium">Create AMC</span>
+                      <span className="text-xs font-medium">
+                        Create RWA
+                        {user?.kycStatus?.toLowerCase() !== 'approved' && (
+                          <span className="text-xs opacity-75">(KYC Required)</span>
+                        )}
+                      </span>
                     </Button>
                     <Button
                       variant="outline"
@@ -1441,7 +1976,7 @@ const Profile: React.FC = () => {
                     </p>
                     <Button
                       variant="neon"
-                      onClick={() => navigate('/create-asset')}
+                      onClick={() => navigate('/create-rwa-asset')}
                       className="px-6 py-3"
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -1456,7 +1991,7 @@ const Profile: React.FC = () => {
                       ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
                       : 'grid-cols-1'
                   }`}>
-                    {hederaAssets.map((asset: HederaAsset, index: number) => (
+                    {hederaAssets.map((asset: any, index: number) => (
                     <motion.div
                       key={asset.id || asset.tokenId || index}
                       initial={{ opacity: 0, y: 20 }}
@@ -1499,15 +2034,15 @@ const Profile: React.FC = () => {
                           </div>
                           {/* Only show verification badge for RWA assets */}
                           {(asset as any).type === 'rwa' && (asset as any).verification && (
-                            <div className="mt-2">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          <div className="mt-2">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                 (asset as any).verification === 'VERIFIED' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}>
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
                                 {(asset as any).verification}
-                              </span>
-                            </div>
+                            </span>
+                          </div>
                           )}
                         </CardContent>
                       </Card>
@@ -1533,7 +2068,12 @@ const Profile: React.FC = () => {
                     </p>
                   </CardContent>
                 </Card>
-              ) : userAssets.filter(asset => asset.type === 'rwa').length === 0 ? (
+              ) : (() => {
+                console.log('🔍 RWA Tab Debug:');
+                console.log('  - RWA assets from fetchRWAAssets:', rwaAssets.length);
+                console.log('  - All RWA assets:', rwaAssets.map(a => ({ name: a.name, type: a.type })));
+                return rwaAssets.length === 0;
+              })() ? (
                 <Card variant="floating" className="text-center py-16">
                   <CardContent>
                     <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-purple-400/20 to-purple-600/20 rounded-full flex items-center justify-center">
@@ -1560,37 +2100,128 @@ const Profile: React.FC = () => {
                     ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
                     : 'grid-cols-1'
                 }`}>
-                  {userAssets.filter(asset => asset.type === 'rwa').map((asset: any, index: number) => (
+                  {getFilteredAssets(rwaAssets).map((asset: any, index: number) => (
                     <motion.div
                       key={asset._id || index}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
                     >
-                      <Card variant="floating" className="overflow-hidden hover:scale-105 transition-transform">
+                      <Card 
+                        variant="floating" 
+                        className="overflow-hidden hover:scale-105 transition-transform cursor-pointer"
+                        onClick={() => {
+                          setSelectedAsset(asset);
+                          setShowAssetDetail(true);
+                        }}
+                      >
                         <CardContent className="p-3">
-                          <div className="aspect-square bg-gradient-to-br from-purple-400/20 to-purple-600/20 rounded mb-3 flex items-center justify-center">
-                            {asset.imageUrl ? (
+                          <div className="aspect-square bg-gradient-to-br from-purple-400/20 to-purple-600/20 rounded mb-3 flex items-center justify-center relative group">
+                            {asset.imageURI ? (
                               <img 
-                                src={asset.imageUrl} 
-                                alt={asset.name || 'Asset'} 
+                                src={asset.imageURI} 
+                                alt={asset.name || 'RWA Asset'} 
                                 className="w-full h-full object-cover rounded"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                }}
                               />
-                            ) : (
-                              <Building2 className="w-8 h-8 text-purple-400" />
+                            ) : null}
+                            
+                            {/* File access overlay */}
+                            {(asset.evidenceFiles?.length > 0 || asset.legalDocuments?.length > 0) && (
+                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <div className="flex gap-2">
+                                  {asset.evidenceFiles?.length > 0 && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-xs"
+                                      onClick={() => window.open(asset.evidenceFiles[0].url, '_blank')}
+                                    >
+                                      <FileText className="w-3 h-3 mr-1" />
+                                      Evidence
+                                    </Button>
+                                  )}
+                                  {asset.legalDocuments?.length > 0 && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-xs"
+                                      onClick={() => window.open(asset.legalDocuments[0].url, '_blank')}
+                                    >
+                                      <FileText className="w-3 h-3 mr-1" />
+                                      Legal
+                                    </Button>
                             )}
                           </div>
+                              </div>
+                            )}
+                          </div>
+                          
                           <h3 className="text-sm font-medium text-off-white mb-1 truncate">
-                            {asset.name || `RWA Asset #${asset.tokenId || index + 1}`}
+                            {asset.name || `RWA Asset #${asset.nftSerialNumber || index + 1}`}
                           </h3>
+                          
                           <p className="text-xs text-gray-400 mb-2 line-clamp-2">
-                            {asset.description || 'No description available'}
+                            {asset.description || asset.legalDescription || 'Real World Asset'}
                           </p>
+                          
+                          {/* Property details */}
+                          {asset.propertyAddress && (
+                            <p className="text-xs text-gray-500 mb-2 truncate">
+                              📍 {asset.propertyAddress}
+                            </p>
+                          )}
+                          
+                          <div className="space-y-1 mb-2">
                           <div className="flex items-center justify-between">
+                              <span className="text-xs text-gray-400">Value:</span>
                             <span className="text-sm text-purple-400 font-medium">
-                              {asset.value ? `$${asset.value.toLocaleString()}` : 'N/A'}
+                                {asset.totalValue ? `${asset.totalValue.toLocaleString()} TRUST` : 'N/A'}
                             </span>
+                            </div>
+                            {asset.expectedAPY && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-400">APY:</span>
+                                <span className="text-xs text-green-400">
+                                  {asset.expectedAPY}%
+                                </span>
+                              </div>
+                            )}
+                            {asset.maturityDate && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-400">Maturity:</span>
+                                <span className="text-xs text-gray-400">
+                                  {new Date(asset.maturityDate).toLocaleDateString()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
                             <span className="text-xs text-gray-500">RWA</span>
+                            {asset.approvalStatus === 'APPROVED' ? (
+                              <span className="text-xs text-green-400 flex items-center">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                AMC Approved
+                              </span>
+                            ) : asset.approvalStatus === 'REJECTED' ? (
+                              <span className="text-xs text-red-400 flex items-center">
+                                <XCircle className="w-3 h-3 mr-1" />
+                                AMC Rejected
+                              </span>
+                            ) : asset.approvalStatus === 'SUBMITTED_FOR_APPROVAL' ? (
+                              <span className="text-xs text-yellow-400 flex items-center">
+                                <AlertCircle className="w-3 h-3 mr-1" />
+                                Pending AMC Approval
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400 flex items-center">
+                                <AlertCircle className="w-3 h-3 mr-1" />
+                                Status Unknown
+                              </span>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
@@ -1672,7 +2303,7 @@ const Profile: React.FC = () => {
                     ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
                     : 'grid-cols-1'
                 }`}>
-                  {userAssets.map((asset: any, index: number) => (
+                  {getFilteredAssets(userAssets).map((asset: any, index: number) => (
                       <motion.div
                         key={asset.id || index}
                         initial={{ opacity: 0, y: 20 }}
@@ -1725,29 +2356,29 @@ const Profile: React.FC = () => {
               </CardHeader>
               <CardContent>
                 {recentActivity.length > 0 ? (
-                  <div className="space-y-4">
-                    {recentActivity.map((activity, index) => {
-                      const Icon = getStatusIcon(activity.type);
-                      return (
-                        <motion.div
-                          key={index}
-                          className="flex items-center justify-between p-4 bg-gray-900/50 rounded-lg hover:bg-gray-900/70 transition-colors"
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.1 }}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Icon className={`w-5 h-5 ${getStatusColor(activity.type)}`} />
-                            <div>
-                              <p className="text-off-white font-medium">{activity.action}</p>
-                              <p className="text-sm text-gray-400">{activity.asset}</p>
-                            </div>
+                <div className="space-y-4">
+                  {recentActivity.map((activity, index) => {
+                    const Icon = getStatusIcon(activity.type);
+                    return (
+                      <motion.div
+                        key={index}
+                        className="flex items-center justify-between p-4 bg-gray-900/50 rounded-lg hover:bg-gray-900/70 transition-colors"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Icon className={`w-5 h-5 ${getStatusColor(activity.type)}`} />
+                          <div>
+                            <p className="text-off-white font-medium">{activity.action}</p>
+                            <p className="text-sm text-gray-400">{activity.asset}</p>
                           </div>
-                          <span className="text-sm text-gray-500">{activity.time}</span>
-                        </motion.div>
-                      );
-                    })}
-                  </div>
+                        </div>
+                        <span className="text-sm text-gray-500">{activity.time}</span>
+                      </motion.div>
+                    );
+                  })}
+                </div>
                 ) : (
                   <div className="text-center py-16">
                     <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-neon-green/20 to-emerald-500/20 rounded-full flex items-center justify-center">
@@ -1759,7 +2390,7 @@ const Profile: React.FC = () => {
                     </p>
                     <Button
                       variant="neon"
-                      onClick={() => navigate('/create-asset')}
+                      onClick={() => navigate('/create-rwa-asset')}
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Create Your First Asset
@@ -1802,6 +2433,7 @@ const Profile: React.FC = () => {
           setForceRefresh(prev => !prev);
         }}
       />
+
     </div>
   );
 };

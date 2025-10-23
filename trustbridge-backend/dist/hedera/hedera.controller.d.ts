@@ -166,6 +166,37 @@ export declare class HederaController {
         };
         message: string;
     }>;
+    approveAsset(body: {
+        tokenId: string;
+        approved: boolean;
+        comments?: string;
+        verificationScore?: number;
+    }): Promise<{
+        success: boolean;
+        data: any;
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    rejectAsset(body: {
+        tokenId: string;
+        approved: boolean;
+        comments?: string;
+    }): Promise<{
+        success: boolean;
+        data: any;
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
     updateDualTokenization(body: {
         erc721TokenId: string;
         erc721AssetId: string;
@@ -703,6 +734,86 @@ export declare class HederaController {
         data: {
             marketplaceTopic: any;
             offerTopic: any;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    createRWAAssetWithHCS(assetData: {
+        nftTokenId: string;
+        creator: string;
+        name: string;
+        type: string;
+        assetType: string;
+        category: string;
+        totalValue: number;
+        expectedAPY: number;
+        maturityDate: string;
+        location: string;
+        description: string;
+        metadataCid: string;
+        displayImage: string;
+        documentUrls: string[];
+        compressedHash: string;
+    }): Promise<{
+        success: boolean;
+        data: {
+            nftTokenId: string;
+            hcsTransactionId: string;
+            topicId: string;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    getTrustBridgeRWAAssets(): Promise<{
+        success: boolean;
+        data: {
+            assets: any[];
+            count: number;
+            totalMessages: number;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    updateRWAAssetStatus(statusData: {
+        tokenId: string;
+        status: string;
+        adminAddress: string;
+        notes?: string;
+    }): Promise<{
+        success: boolean;
+        data: {
+            tokenId: string;
+            status: string;
+            adminAddress: string;
+            timestamp: number;
+        };
+        message: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message: string;
+        data?: undefined;
+    }>;
+    getTrustBridgeTopicInfo(): Promise<{
+        success: boolean;
+        data: {
+            topicId: string;
         };
         message: string;
         error?: undefined;

@@ -13,7 +13,9 @@ import {
   XCircle,
   Clock,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Package,
+  DollarSign
 } from 'lucide-react';
 import { useAdmin } from '../contexts/AdminContext';
 import { useWallet } from '../contexts/WalletContext';
@@ -21,18 +23,26 @@ import { AdminGuard } from '../contexts/AdminContext';
 import { contractService } from '../services/contractService';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
+import AdminManagement from '../components/Admin/AdminManagement';
 
 const AdminDashboard: React.FC = () => {
-  const { isAdmin, isVerifier, adminRoles, loading } = useAdmin();
+  const { 
+    isAdmin, 
+    isVerifier, 
+    isSuperAdmin, 
+    isPlatformAdmin, 
+    isAmcAdmin, 
+    adminRole, 
+    adminRoles, 
+    loading 
+  } = useAdmin();
   const { address } = useWallet();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
-    totalAttestors: 0,
-    pendingApplications: 0,
-    approvedAttestors: 0,
-    rejectedAttestors: 0,
     totalVerifications: 0,
-    activeVerifications: 0
+    activeVerifications: 0,
+    totalAssets: 0,
+    pendingAssets: 0
   });
 
   useEffect(() => {
@@ -43,15 +53,13 @@ const AdminDashboard: React.FC = () => {
   const loadAdminStats = async () => {
     try {
       // Fetch real data from smart contract
-      const attestors = await contractService.getAllAttestors();
+      const assets = await contractService.getAllAssets();
       
       const stats = {
-        totalAttestors: attestors.length,
-        pendingApplications: attestors.filter(a => a.status === 0).length,
-        approvedAttestors: attestors.filter(a => a.status === 1).length,
-        rejectedAttestors: attestors.filter(a => a.status === 2).length,
-        totalVerifications: attestors.reduce((sum, a) => sum + Number(a.totalVerifications), 0),
-        activeVerifications: attestors.filter(a => a.isActive).length
+        totalAssets: assets.length,
+        pendingAssets: assets.filter(a => a.status === 0).length,
+        totalVerifications: assets.reduce((sum, a) => sum + Number(a.verificationCount || 0), 0),
+        activeVerifications: assets.filter(a => a.isActive).length
       };
       
       setStats(stats);
@@ -59,10 +67,8 @@ const AdminDashboard: React.FC = () => {
       console.error('Failed to load admin stats:', error);
       // Set empty stats on error
       setStats({
-        totalAttestors: 0,
-        pendingApplications: 0,
-        approvedAttestors: 0,
-        rejectedAttestors: 0,
+        totalAssets: 0,
+        pendingAssets: 0,
         totalVerifications: 0,
         activeVerifications: 0
       });
@@ -71,13 +77,13 @@ const AdminDashboard: React.FC = () => {
 
   const adminActions = [
     {
-      id: 'attestor-verification',
-      title: 'Attestor Verification',
-      description: 'Review and approve attestor applications',
-      icon: UserCheck,
-      href: '/dashboard/admin/attestors',
+      id: 'asset-management',
+      title: 'Asset Management',
+      description: 'Manage and verify digital assets',
+      icon: Package,
+      href: '/dashboard/admin/assets',
       color: 'from-blue-500 to-purple-500',
-      available: isVerifier || isAdmin
+      available: isAdmin
     },
     {
       id: 'user-management',
@@ -87,6 +93,33 @@ const AdminDashboard: React.FC = () => {
       href: '/dashboard/admin/users',
       color: 'from-green-500 to-emerald-500',
       available: isAdmin
+    },
+    {
+      id: 'hedera-admin-management',
+      title: 'Hedera Admin Management',
+      description: 'Manage Hedera native admin accounts',
+      icon: Shield,
+      href: '/dashboard/admin/hedera-admins',
+      color: 'from-purple-500 to-indigo-500',
+      available: isSuperAdmin || isPlatformAdmin
+    },
+    {
+      id: 'amc-pool-management',
+      title: 'AMC Pool Management',
+      description: 'Create and manage investment pools',
+      icon: BarChart3,
+      href: '/dashboard/admin/amc-pools',
+      color: 'from-orange-500 to-red-500',
+      available: isAmcAdmin || isSuperAdmin || isPlatformAdmin
+    },
+    {
+      id: 'dividend-management',
+      title: 'Dividend Management',
+      description: 'Create and manage dividend distributions',
+      icon: DollarSign,
+      href: '/dashboard/admin/dividend-management',
+      color: 'from-green-500 to-teal-500',
+      available: isAmcAdmin || isSuperAdmin || isPlatformAdmin
     },
     {
       id: 'system-settings',
@@ -110,24 +143,24 @@ const AdminDashboard: React.FC = () => {
 
   const statCards = [
     {
-      title: 'Total Attestors',
-      value: stats.totalAttestors,
-      icon: Users,
+      title: 'Total Assets',
+      value: stats.totalAssets,
+      icon: Package,
       color: 'text-blue-500',
       bgColor: 'bg-blue-500/10',
       borderColor: 'border-blue-500/20'
     },
     {
-      title: 'Pending Applications',
-      value: stats.pendingApplications,
+      title: 'Pending Assets',
+      value: stats.pendingAssets,
       icon: Clock,
       color: 'text-yellow-500',
       bgColor: 'bg-yellow-500/10',
       borderColor: 'border-yellow-500/20'
     },
     {
-      title: 'Approved Attestors',
-      value: stats.approvedAttestors,
+      title: 'Total Verifications',
+      value: stats.totalVerifications,
       icon: CheckCircle,
       color: 'text-green-500',
       bgColor: 'bg-green-500/10',
@@ -171,20 +204,20 @@ const AdminDashboard: React.FC = () => {
         </div>
       }
     >
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-              <Crown className="w-8 h-8 text-purple-500" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2 sm:gap-3">
+              <Crown className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500" />
               Admin Dashboard
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-2">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1 sm:mt-2">
               Manage and monitor the TrustBridge platform
             </p>
           </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="text-left sm:text-right">
+            <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               Connected as
             </div>
             <div className="font-mono text-sm text-gray-900 dark:text-white">
@@ -200,18 +233,18 @@ const AdminDashboard: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-6 border border-purple-200 dark:border-purple-800"
+          className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-4 sm:p-6 border border-purple-200 dark:border-purple-800"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-purple-500/20 rounded-lg">
-                <Shield className="w-6 h-6 text-purple-500" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="p-2 sm:p-3 bg-purple-500/20 rounded-lg">
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                   Admin Access Active
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                   {isAdmin 
                     ? 'Full administrative access granted. You can manage all platform functions.'
                     : 'Verifier access granted. You can review and approve attestor applications.'
@@ -219,8 +252,8 @@ const AdminDashboard: React.FC = () => {
                 </p>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-purple-500">
+            <div className="text-left sm:text-right">
+              <div className="text-xl sm:text-2xl font-bold text-purple-500">
                 {adminRoles.isAdmin ? 'ADMIN' : 'VERIFIER'}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -231,7 +264,7 @@ const AdminDashboard: React.FC = () => {
         </motion.div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {statCards.map((stat, index) => {
             const Icon = stat.icon;
             return (
@@ -266,7 +299,7 @@ const AdminDashboard: React.FC = () => {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
             Admin Actions
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {adminActions.map((action, index) => {
               const Icon = action.icon;
               return (
@@ -277,7 +310,7 @@ const AdminDashboard: React.FC = () => {
                   transition={{ delay: index * 0.1 }}
                 >
                   <Card 
-                    className={`p-6 transition-all duration-200 ${
+                    className={`p-4 sm:p-6 transition-all duration-200 ${
                       action.available 
                         ? 'hover:shadow-lg hover:scale-105 cursor-pointer' 
                         : 'opacity-50 cursor-not-allowed'
@@ -289,19 +322,19 @@ const AdminDashboard: React.FC = () => {
                       }}
                   >
                     <div className="text-center">
-                      <div className={`w-12 h-12 mx-auto mb-4 rounded-lg bg-gradient-to-r ${action.color} flex items-center justify-center`}>
-                        <Icon className="w-6 h-6 text-white" />
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 rounded-lg bg-gradient-to-r ${action.color} flex items-center justify-center`}>
+                        <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                       </div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                      <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white mb-2">
                         {action.title}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 sm:mb-4">
                         {action.description}
                       </p>
                       {action.available ? (
                         <Button 
                           size="sm" 
-                          className="w-full"
+                          className="w-full text-xs sm:text-sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(action.href);
@@ -310,8 +343,8 @@ const AdminDashboard: React.FC = () => {
                           Access
                         </Button>
                       ) : (
-                        <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
-                          <AlertTriangle className="w-4 h-4" />
+                        <div className="flex items-center justify-center space-x-2 text-xs sm:text-sm text-gray-500">
+                          <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4" />
                           <span>Admin Only</span>
                         </div>
                       )}
@@ -332,23 +365,23 @@ const AdminDashboard: React.FC = () => {
             <Card className="p-6">
               <div className="flex items-center space-x-4">
                 <div className="p-3 bg-blue-500/10 rounded-lg">
-                  <UserCheck className="w-6 h-6 text-blue-500" />
+                  <Package className="w-6 h-6 text-blue-500" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 dark:text-white">
-                    Review Applications
+                    Manage Assets
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    {stats.pendingApplications} pending review
+                    {stats.pendingAssets} pending assets
                   </p>
                 </div>
                 <Button 
                   size="sm"
                   onClick={() => {
-                    navigate('/dashboard/admin/attestors');
+                    navigate('/dashboard/admin/assets');
                   }}
                 >
-                  Review
+                  Manage
                 </Button>
               </div>
             </Card>
@@ -401,6 +434,13 @@ const AdminDashboard: React.FC = () => {
               </div>
             </Card>
           </div>
+
+          {/* Admin Management Section */}
+          {isSuperAdmin && (
+            <div className="mt-8">
+              <AdminManagement />
+            </div>
+          )}
         </div>
       </div>
     </AdminGuard>

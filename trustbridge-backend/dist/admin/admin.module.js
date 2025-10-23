@@ -8,27 +8,24 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminModule = void 0;
 const common_1 = require("@nestjs/common");
-const mongoose_1 = require("@nestjs/mongoose");
-const admin_controller_1 = require("./admin.controller");
+const jwt_1 = require("@nestjs/jwt");
 const admin_service_1 = require("./admin.service");
-const user_schema_1 = require("../schemas/user.schema");
-const attestor_schema_1 = require("../schemas/attestor.schema");
-const verification_request_schema_1 = require("../schemas/verification-request.schema");
+const admin_controller_1 = require("./admin.controller");
+const hedera_module_1 = require("../hedera/hedera.module");
+const auth_module_1 = require("../auth/auth.module");
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
 exports.AdminModule = AdminModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            mongoose_1.MongooseModule.forFeature([
-                { name: user_schema_1.User.name, schema: user_schema_1.UserSchema },
-                { name: attestor_schema_1.Attestor.name, schema: attestor_schema_1.AttestorSchema },
-                { name: verification_request_schema_1.VerificationRequest.name, schema: verification_request_schema_1.VerificationRequestSchema }
-            ])
+            hedera_module_1.HederaModule,
+            auth_module_1.AuthModule,
+            jwt_1.JwtModule.register({}),
         ],
-        controllers: [admin_controller_1.AdminController],
         providers: [admin_service_1.AdminService],
-        exports: [admin_service_1.AdminService]
+        controllers: [admin_controller_1.AdminController],
+        exports: [admin_service_1.AdminService],
     })
 ], AdminModule);
 //# sourceMappingURL=admin.module.js.map

@@ -138,11 +138,28 @@ __decorate([
     __metadata("design:type", String)
 ], Pool.prototype, "poolContract", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Object }),
+    (0, mongoose_1.Prop)({
+        type: {
+            totalReturn: { type: Number, default: 0 },
+            monthlyReturn: { type: Number, default: 0 },
+            volatility: { type: Number, default: 0 },
+            sharpeRatio: { type: Number, default: 0 },
+            maxDrawdown: { type: Number, default: 0 }
+        },
+        default: {}
+    }),
     __metadata("design:type", Object)
 ], Pool.prototype, "performanceMetrics", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Object }),
+    (0, mongoose_1.Prop)({
+        type: {
+            managementFee: { type: Number, default: 0 },
+            performanceFee: { type: Number, default: 0 },
+            entryFee: { type: Number, default: 0 },
+            exitFee: { type: Number, default: 0 }
+        },
+        default: {}
+    }),
     __metadata("design:type", Object)
 ], Pool.prototype, "feeStructure", void 0);
 __decorate([
@@ -154,7 +171,16 @@ __decorate([
     __metadata("design:type", Array)
 ], Pool.prototype, "distributions", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Object }),
+    (0, mongoose_1.Prop)({
+        type: {
+            jurisdiction: { type: String, default: '' },
+            regulatoryStatus: { type: String, default: '' },
+            kycRequired: { type: Boolean, default: false },
+            accreditationRequired: { type: Boolean, default: false },
+            minimumInvestment: { type: Number, default: 0 }
+        },
+        default: {}
+    }),
     __metadata("design:type", Object)
 ], Pool.prototype, "compliance", void 0);
 __decorate([
@@ -162,7 +188,22 @@ __decorate([
     __metadata("design:type", Array)
 ], Pool.prototype, "tags", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Object }),
+    (0, mongoose_1.Prop)({
+        type: {
+            website: { type: String, default: '' },
+            whitepaper: { type: String, default: '' },
+            socialMedia: {
+                type: {
+                    twitter: { type: String, default: '' },
+                    linkedin: { type: String, default: '' },
+                    telegram: { type: String, default: '' }
+                },
+                default: {}
+            },
+            documents: { type: [Object], default: [] }
+        },
+        default: {}
+    }),
     __metadata("design:type", Object)
 ], Pool.prototype, "metadata", void 0);
 __decorate([

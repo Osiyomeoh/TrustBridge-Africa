@@ -26,11 +26,9 @@ let KycService = KycService_1 = class KycService {
     constructor(userModel) {
         this.userModel = userModel;
         this.logger = new common_1.Logger(KycService_1.name);
-        this.personaApiKey = process.env.PERSONA_API_KEY;
-        this.personaEnvironment = process.env.PERSONA_ENVIRONMENT || 'sandbox';
-        this.personaBaseUrl = this.personaEnvironment === 'production'
-            ? 'https://withpersona.com/api/v1'
-            : 'https://sandbox-api.withpersona.com/api/v1';
+        this.diditApiKey = process.env.DIDIT_API_KEY;
+        this.diditWorkflowId = process.env.DIDIT_WORKFLOW_ID;
+        this.diditBaseUrl = 'https://verification.didit.me/v2';
     }
     async startKYC(userId) {
         try {
@@ -38,71 +36,73 @@ let KycService = KycService_1 = class KycService {
             if (!user) {
                 throw new Error('User not found');
             }
-            const inquiryData = {
-                data: {
-                    type: 'inquiry',
-                    attributes: {
-                        referenceId: `user_${userId}`,
-                        inquiryTemplateId: process.env.PERSONA_TEMPLATE_ID || 'itmpl_1234567890',
-                        fields: {
-                            'name-first': user.name?.split(' ')[0] || '',
-                            'name-last': user.name?.split(' ').slice(1).join(' ') || '',
-                            'email-address': user.email || '',
-                            'phone-number': user.phone || '',
-                            'address-street-1': '',
-                            'address-city': '',
-                            'address-subdivision': user.country || '',
-                            'address-postal-code': '',
-                            'address-country-code': this.getCountryCode(user.country || ''),
-                        },
-                    },
-                },
+            const sessionData = {
+                vendor_data: JSON.stringify({ userId, walletAddress: user.walletAddress }),
+                workflow_id: this.diditWorkflowId,
+                callback: `${process.env.FRONTEND_URL || 'http://localhost:3001'}/kyc-callback`,
             };
-            const response = await axios_1.default.post(`${this.personaBaseUrl}/inquiries`, inquiryData, {
+            const response = await axios_1.default.post(`${this.diditBaseUrl}/session/`, sessionData, {
                 headers: {
-                    'Authorization': `Bearer ${this.personaApiKey}`,
+                    'x-api-key': this.diditApiKey,
                     'Content-Type': 'application/json',
-                    'Persona-Version': '2023-01-05',
+                    'accept': 'application/json',
                 },
             });
-            const inquiry = response.data.data;
+            const session = response.data;
             await this.userModel.findByIdAndUpdate(userId, {
-                kycInquiryId: inquiry.id,
+                kycInquiryId: session.session_id,
                 kycStatus: 'in_progress',
+                kycProvider: 'didit',
             });
-            this.logger.log(`KYC started for user ${userId}, inquiry ID: ${inquiry.id}`);
+            this.logger.log(`KYC started for user ${userId}, session ID: ${session.session_id}`);
             return {
-                inquiryId: inquiry.id,
-                inquiryUrl: inquiry.attributes?.webUrl || '',
+                inquiryId: session.session_id,
+                inquiryUrl: session.url,
                 status: 'in_progress',
+                provider: 'didit',
+                sessionToken: session.session_token,
             };
         }
         catch (error) {
             this.logger.error(`Failed to start KYC for user ${userId}:`, error);
+            if (error.response?.status === 403) {
+                this.logger.error('DidIt API returned 403 - API key lacks session creation permissions');
+                throw new Error('KYC service is currently unavailable. Please contact support or try again later.');
+            }
+            if (error.response?.status === 400) {
+                this.logger.error('DidIt API returned 400 - Invalid request data');
+                throw new Error('Invalid KYC request. Please check your profile information.');
+            }
             throw new Error(`Failed to start KYC: ${error.message}`);
         }
     }
     async checkKYCStatus(inquiryId) {
         try {
-            const response = await axios_1.default.get(`${this.personaBaseUrl}/inquiries/${inquiryId}`, {
+            const response = await axios_1.default.get(`${this.diditBaseUrl}/session/${inquiryId}`, {
                 headers: {
-                    'Authorization': `Bearer ${this.personaApiKey}`,
-                    'Persona-Version': '2023-01-05',
+                    'x-api-key': this.diditApiKey,
+                    'Content-Type': 'application/json',
+                    'accept': 'application/json',
                 },
             });
-            const inquiry = response.data.data;
-            const status = inquiry.attributes?.status || 'unknown';
+            const session = response.data;
+            const status = session.status || 'unknown';
             let internalStatus;
             switch (status) {
-                case 'pending':
-                case 'processing':
+                case 'Not Started':
+                    internalStatus = 'not_started';
+                    break;
+                case 'In Progress':
+                case 'Pending':
                     internalStatus = 'in_progress';
                     break;
-                case 'completed':
+                case 'Completed':
+                case 'Approved':
                     internalStatus = 'approved';
                     break;
-                case 'failed':
-                case 'declined':
+                case 'Failed':
+                case 'Rejected':
+                case 'Declined':
                     internalStatus = 'rejected';
                     break;
                 default:
@@ -113,62 +113,30 @@ let KycService = KycService_1 = class KycService {
             }
             return {
                 status: internalStatus,
-                personaStatus: status,
-                inquiryId: inquiry.id,
-                completedAt: inquiry.attributes?.completedAt,
+                diditStatus: status,
+                inquiryId: session.session_id,
+                completedAt: session.completed_at,
             };
         }
         catch (error) {
-            this.logger.error(`Failed to check KYC status for inquiry ${inquiryId}:`, error);
+            this.logger.error(`Failed to check KYC status for session ${inquiryId}:`, error);
             throw new Error(`Failed to check KYC status: ${error.message}`);
         }
     }
     async getKYCInquiry(inquiryId) {
         try {
-            const response = await axios_1.default.get(`${this.personaBaseUrl}/inquiries/${inquiryId}`, {
+            const response = await axios_1.default.get(`${this.diditBaseUrl}/session/${inquiryId}`, {
                 headers: {
-                    'Authorization': `Bearer ${this.personaApiKey}`,
-                    'Persona-Version': '2023-01-05',
+                    'x-api-key': this.diditApiKey,
+                    'Content-Type': 'application/json',
+                    'accept': 'application/json',
                 },
             });
-            return response.data.data;
+            return response.data;
         }
         catch (error) {
-            this.logger.error(`Failed to get KYC inquiry ${inquiryId}:`, error);
-            throw new Error(`Failed to get KYC inquiry: ${error.message}`);
-        }
-    }
-    async handleWebhook(webhookData) {
-        try {
-            this.logger.log('Received Persona webhook:', webhookData);
-            const { data } = webhookData;
-            if (data?.type === 'inquiry') {
-                const inquiryId = data.id;
-                const status = data.attributes?.status;
-                let internalStatus;
-                switch (status) {
-                    case 'pending':
-                    case 'processing':
-                        internalStatus = 'in_progress';
-                        break;
-                    case 'completed':
-                        internalStatus = 'approved';
-                        break;
-                    case 'failed':
-                    case 'declined':
-                        internalStatus = 'rejected';
-                        break;
-                    default:
-                        internalStatus = 'pending';
-                }
-                await this.userModel.findOneAndUpdate({ kycInquiryId: inquiryId }, { kycStatus: internalStatus });
-                this.logger.log(`Updated KYC status for inquiry ${inquiryId} to ${internalStatus}`);
-            }
-            return { processed: true };
-        }
-        catch (error) {
-            this.logger.error('Failed to process Persona webhook:', error);
-            throw new Error(`Failed to process webhook: ${error.message}`);
+            this.logger.error(`Failed to get KYC session ${inquiryId}:`, error);
+            throw new Error(`Failed to get KYC session: ${error.message}`);
         }
     }
     getCountryCode(country) {
@@ -183,6 +151,42 @@ let KycService = KycService_1 = class KycService {
             'Australia': 'AU',
         };
         return countryMap[country] || 'NG';
+    }
+    async handleWebhook(webhookData) {
+        try {
+            this.logger.log('Received DidIt webhook:', webhookData);
+            const { session_id, status } = webhookData;
+            if (session_id) {
+                let internalStatus;
+                switch (status) {
+                    case 'Not Started':
+                        internalStatus = 'not_started';
+                        break;
+                    case 'In Progress':
+                    case 'Pending':
+                        internalStatus = 'in_progress';
+                        break;
+                    case 'Completed':
+                    case 'Approved':
+                        internalStatus = 'approved';
+                        break;
+                    case 'Failed':
+                    case 'Rejected':
+                    case 'Declined':
+                        internalStatus = 'rejected';
+                        break;
+                    default:
+                        internalStatus = 'pending';
+                }
+                await this.userModel.findOneAndUpdate({ kycInquiryId: session_id }, { kycStatus: internalStatus });
+                this.logger.log(`Updated KYC status for session ${session_id} to ${internalStatus}`);
+            }
+            return { processed: true };
+        }
+        catch (error) {
+            this.logger.error('Failed to process DidIt webhook:', error);
+            throw new Error(`Failed to process webhook: ${error.message}`);
+        }
     }
 };
 exports.KycService = KycService;
