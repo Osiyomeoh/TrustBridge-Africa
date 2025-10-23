@@ -29,6 +29,8 @@ export declare class User {
     country?: string;
     role: UserRole;
     kycStatus: KycStatus;
+    kycInquiryId?: string;
+    kycProvider?: string;
     emailVerificationStatus: EmailVerificationStatus;
     reputation: number;
     stakingBalance: number;

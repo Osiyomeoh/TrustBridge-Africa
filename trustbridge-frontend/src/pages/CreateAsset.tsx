@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   Upload, 
   MapPin, 
@@ -58,6 +59,7 @@ interface RWAAssetData {
 const CreateAsset: React.FC = () => {
   const { address } = useWallet();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -286,7 +288,7 @@ const CreateAsset: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-300 mb-6">
             Your RWA asset has been created on Hedera and submitted to the TrustBridge HCS topic for AMC approval. Our team will review it and contact you for physical inspection.
           </p>
-          <Button onClick={() => window.location.href = '/portfolio'}>
+          <Button onClick={() => navigate('/portfolio')}>
             View Portfolio
           </Button>
         </Card>

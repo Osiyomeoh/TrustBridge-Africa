@@ -1,9 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-// GraphQL disabled for now - focusing on REST API
-// import { GraphQLModule } from '@nestjs/graphql';
-// import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -18,6 +15,14 @@ import { InvestmentsModule } from './investments/investments.module';
 import { VerificationModule } from './verification/verification.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { TradingModule } from './trading/trading.module';
+import { AMCModule } from './amc/amc.module';
+import { AMCPoolsModule } from './amc-pools/amc-pools.module';
+import { PoolTokensModule } from './pool-tokens/pool-tokens.module';
+import { DividendsModule } from './dividends/dividends.module';
+import { RWAModule } from './rwa/rwa.module';
+import { CollectionsModule } from './collections/collections.module';
+import { RoyaltiesModule } from './royalties/royalties.module';
 
 // Service modules
 import { HederaModule } from './hedera/hedera.module';
@@ -35,17 +40,10 @@ import { TokenomicsModule } from './tokenomics/tokenomics.module';
 import { IPFSModule } from './ipfs/ipfs.module';
 import { PoolsModule } from './pools/pools.module';
 import { HealthModule } from './health/health.module';
-import { TradingModule } from './trading/trading.module';
-import { AMCModule } from './amc/amc.module';
 import { ApiModule } from './api/api.module';
-import { CollectionsModule } from './collections/collections.module';
-import { RoyaltiesModule } from './royalties/royalties.module';
 import { ActivityModule } from './activity/activity.module';
-import { RWAModule } from './rwa/rwa.module';
 import { KycModule } from './kyc/kyc.module';
-import { AMCPoolsModule } from './amc-pools/amc-pools.module';
-import { PoolTokensModule } from './pool-tokens/pool-tokens.module';
-import { DividendsModule } from './dividends/dividends.module';
+
 import { AppController } from './app.controller';
 
 @Module({
@@ -68,18 +66,6 @@ import { AppController } from './app.controller';
       }
     ),
 
-    // GraphQL - Disabled for now, focusing on REST API
-    // GraphQLModule.forRoot<ApolloDriverConfig>({
-    //   driver: ApolloDriver,
-    //   autoSchemaFile: true,
-    //   playground: true,
-    //   introspection: true,
-    //   context: ({ req }) => ({ req }),
-    //   subscriptions: {
-    //     'graphql-ws': true,
-    //     'subscriptions-transport-ws': true,
-    //   },
-    // }),
 
     // Rate limiting
     ThrottlerModule.forRoot([
@@ -105,6 +91,14 @@ import { AppController } from './app.controller';
     VerificationModule,
     PortfolioModule,
     AnalyticsModule,
+    TradingModule,
+    AMCModule,
+    AMCPoolsModule,
+    PoolTokensModule,
+    DividendsModule,
+    RWAModule,
+    CollectionsModule,
+    RoyaltiesModule,
 
     // Service modules
     HederaModule,
@@ -122,18 +116,9 @@ import { AppController } from './app.controller';
     IPFSModule,
     PoolsModule,
     HealthModule,
-    TradingModule,
-    AMCModule,
     ApiModule,
-    CollectionsModule,
-    RoyaltiesModule,
     ActivityModule,
-    RWAModule,
     KycModule,
-    AMCPoolsModule,
-    TradingModule,
-    PoolTokensModule,
-    DividendsModule,
   ],
 })
 export class AppModule {}

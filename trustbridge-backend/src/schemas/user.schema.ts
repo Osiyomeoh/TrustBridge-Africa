@@ -50,6 +50,12 @@ export class User {
   @Prop({ required: true, enum: KycStatus, default: KycStatus.NOT_STARTED })
   kycStatus: KycStatus;
 
+  @Prop()
+  kycInquiryId?: string;
+
+  @Prop()
+  kycProvider?: string;
+
   @Prop({ required: true, enum: EmailVerificationStatus, default: EmailVerificationStatus.NOT_VERIFIED })
   emailVerificationStatus: EmailVerificationStatus;
 

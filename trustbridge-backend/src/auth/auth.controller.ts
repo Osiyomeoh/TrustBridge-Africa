@@ -519,6 +519,129 @@ export class AuthController {
     }
   }
 
+  // Debug endpoint to check user's kycInquiryId
+  @Get('debug/kyc-inquiry/:userId')
+  @ApiOperation({ summary: 'Debug user KYC inquiry ID' })
+  @ApiResponse({ status: 200, description: 'User KYC inquiry ID retrieved' })
+  async debugKycInquiry(@Param('userId') userId: string) {
+    try {
+      const user = await this.authService.getUserById(userId);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      return {
+        success: true,
+        data: {
+          userId: user._id,
+          email: user.email,
+          kycStatus: user.kycStatus,
+          kycInquiryId: user.kycInquiryId,
+          walletAddress: user.walletAddress
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Failed to get user KYC inquiry ID',
+        error: error.message,
+      };
+    }
+  }
+
+  // Update KYC Inquiry ID
+  @Post('update-kyc-inquiry')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update KYC inquiry ID' })
+  @ApiResponse({ status: 200, description: 'KYC inquiry ID updated' })
+  async updateKycInquiry(@Body() updateData: { userId: string; kycInquiryId: string }, @Request() req: any) {
+    try {
+      console.log('🔧 Update KYC inquiry ID request:', updateData);
+      
+      const user = await this.authService.getUserById(updateData.userId);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      console.log('🔧 Found user for inquiry update:', user.email, 'Current inquiry ID:', user.kycInquiryId);
+      
+      // Update KYC inquiry ID
+      user.kycInquiryId = updateData.kycInquiryId;
+      await user.save();
+
+      console.log('✅ KYC inquiry ID updated successfully:', user.email, 'New inquiry ID:', user.kycInquiryId);
+      
+      return {
+        success: true,
+        message: 'KYC inquiry ID updated successfully',
+        data: {
+          userId: user._id,
+          email: user.email,
+          kycInquiryId: user.kycInquiryId
+        }
+      };
+    } catch (error) {
+      console.error('❌ KYC inquiry ID update failed:', error);
+      return {
+        success: false,
+        message: 'Failed to update KYC inquiry ID',
+        error: error.message,
+      };
+    }
+  }
+
+  // Direct KYC Update (bypass callback system)
+  @Post('update-kyc-direct')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Directly update KYC status' })
+  @ApiResponse({ status: 200, description: 'KYC status updated directly' })
+  async updateKYCDirect(@Body() updateData: { userId: string; kycStatus: string }, @Request() req: any) {
+    try {
+      console.log('🔧 Direct KYC update request:', updateData);
+      
+      const user = await this.authService.getUserById(updateData.userId);
+      if (!user) {
+        return {
+          success: false,
+          message: 'User not found',
+        };
+      }
+
+      console.log('🔧 Found user for direct update:', user.email, 'Current status:', user.kycStatus);
+      
+        // Update KYC status directly
+        user.kycStatus = updateData.kycStatus;
+        await user.save();
+
+      console.log('✅ Direct KYC update successful:', user.email, 'New status:', user.kycStatus);
+      
+      return {
+        success: true,
+        message: 'KYC status updated directly',
+        data: {
+          userId: user._id,
+          email: user.email,
+          kycStatus: user.kycStatus
+        }
+      };
+    } catch (error) {
+      console.error('❌ Direct KYC update failed:', error);
+      return {
+        success: false,
+        message: 'Failed to update KYC status directly',
+        error: error.message,
+      };
+    }
+  }
+
   // Get KYC Status
   @Get('kyc/status')
   @UseGuards(JwtAuthGuard)
@@ -544,17 +667,23 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Callback processed successfully' })
   async diditCallback(@Query() query: any) {
     try {
+      console.log('🔔 DidIt callback received with query:', query);
       const { verificationSessionId, status } = query;
       
       if (!verificationSessionId) {
+        console.log('❌ Missing verification session ID in callback');
         return {
           success: false,
           message: 'Missing verification session ID',
         };
       }
 
+      console.log(`🔔 Processing DidIt callback - Session: ${verificationSessionId}, Status: ${status}`);
+      
       // Process the callback
       const result = await this.authService.processDiditCallback(verificationSessionId, status);
+      
+      console.log('✅ DidIt callback processed successfully:', result);
       
       return {
         success: true,
@@ -562,6 +691,7 @@ export class AuthController {
         message: 'Callback processed successfully',
       };
     } catch (error) {
+      console.error('❌ DidIt callback processing failed:', error);
       return {
         success: false,
         message: 'Failed to process callback',

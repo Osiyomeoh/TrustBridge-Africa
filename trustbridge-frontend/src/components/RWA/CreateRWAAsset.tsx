@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   DollarSign, 
   FileText, 
@@ -54,10 +55,25 @@ interface RWAAssetData {
 const CreateRWAAsset: React.FC = () => {
   const { isConnected, accountId, signer, hederaClient } = useWallet();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
+  const displayImageInputRef = useRef<HTMLInputElement>(null);
+  const evidenceFilesInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    displayImage: boolean;
+    evidenceFiles: boolean;
+    metadata: boolean;
+    currentFile?: string;
+    totalFiles?: number;
+    currentFileIndex?: number;
+  }>({
+    displayImage: false,
+    evidenceFiles: false,
+    metadata: false
+  });
   
   const [assetData, setAssetData] = useState<RWAAssetData>({
     name: '',
@@ -110,6 +126,23 @@ const CreateRWAAsset: React.FC = () => {
       ...prev,
       evidenceFiles: [...prev.evidenceFiles, ...files]
     }));
+    
+    // Reset the file input to allow selecting the same file again
+    if (evidenceFilesInputRef.current) {
+      evidenceFilesInputRef.current.value = '';
+    }
+  };
+
+  const handleDisplayImageChange = (file: File | null) => {
+    setAssetData(prev => ({
+      ...prev,
+      displayImage: file
+    }));
+    
+    // Reset the file input to allow selecting the same file again
+    if (displayImageInputRef.current) {
+      displayImageInputRef.current.value = '';
+    }
   };
 
   const removeFile = (index: number) => {
@@ -164,6 +197,8 @@ const CreateRWAAsset: React.FC = () => {
       let displayImageUrl = '';
       if (assetData.displayImage) {
         console.log('Uploading display image to IPFS...');
+        setUploadProgress(prev => ({ ...prev, displayImage: true, currentFile: assetData.displayImage?.name }));
+        
         const displayImageResult = await ipfsService.uploadFile(assetData.displayImage, {
           name: `${assetData.name} - Display Image`,
           type: assetData.displayImage.type,
@@ -172,25 +207,46 @@ const CreateRWAAsset: React.FC = () => {
         });
         displayImageUrl = displayImageResult.ipfsUrl;
         console.log('✅ Display image uploaded:', displayImageUrl);
+        
+        setUploadProgress(prev => ({ ...prev, displayImage: false }));
       }
 
       // Upload all evidence files to IPFS
       const uploadedFiles = [];
-      for (const file of assetData.evidenceFiles) {
-        console.log(`Uploading evidence file: ${file.name}`);
-        const fileResult = await ipfsService.uploadFile(file, {
-          name: `${assetData.name} - ${file.name}`,
-          type: file.type,
-          size: file.size,
-          description: `Evidence file for ${assetData.selectedCategory}`
-        });
-        uploadedFiles.push({
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          url: fileResult.ipfsUrl,
-          cid: fileResult.cid
-        });
+      if (assetData.evidenceFiles.length > 0) {
+        setUploadProgress(prev => ({ 
+          ...prev, 
+          evidenceFiles: true, 
+          totalFiles: assetData.evidenceFiles.length,
+          currentFileIndex: 0
+        }));
+        
+        for (let i = 0; i < assetData.evidenceFiles.length; i++) {
+          const file = assetData.evidenceFiles[i];
+          console.log(`Uploading evidence file ${i + 1}/${assetData.evidenceFiles.length}: ${file.name}`);
+          
+          setUploadProgress(prev => ({ 
+            ...prev, 
+            currentFile: file.name,
+            currentFileIndex: i + 1
+          }));
+          
+          const fileResult = await ipfsService.uploadFile(file, {
+            name: `${assetData.name} - ${file.name}`,
+            type: file.type,
+            size: file.size,
+            description: `Evidence file for ${assetData.selectedCategory}`
+          });
+          uploadedFiles.push({
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            url: fileResult.ipfsUrl,
+            cid: fileResult.cid
+          });
+        }
+        
+        setUploadProgress(prev => ({ ...prev, evidenceFiles: false }));
       }
 
       // Step 2: Create comprehensive metadata
@@ -221,6 +277,8 @@ const CreateRWAAsset: React.FC = () => {
 
       // Step 3: Upload metadata to IPFS
       console.log('Uploading metadata to IPFS...');
+      setUploadProgress(prev => ({ ...prev, metadata: true, currentFile: 'metadata.json' }));
+      
       const metadataJson = JSON.stringify(metadata);
       const metadataBlob = new Blob([metadataJson], { type: 'application/json' });
       const metadataFile = new File([metadataBlob], 'rwa-metadata.json', { type: 'application/json' });
@@ -231,6 +289,8 @@ const CreateRWAAsset: React.FC = () => {
         size: metadataFile.size,
         description: 'RWA Asset Metadata JSON'
       });
+      
+      setUploadProgress(prev => ({ ...prev, metadata: false }));
 
       if (!metadataUploadResult?.ipfsUrl) {
         throw new Error('Failed to upload metadata to IPFS');
@@ -396,10 +456,10 @@ const CreateRWAAsset: React.FC = () => {
         
         // Submit to backend RWA endpoint (backend will handle HCS automatically)
         const backendResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4001'}/api/hedera/rwa/create-with-hcs`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
           body: JSON.stringify(assetSubmissionData)
         });
         
@@ -478,7 +538,7 @@ const CreateRWAAsset: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-300 mb-6">
             Your RWA asset has been tokenized as an NFT on Hedera with IPFS metadata and submitted to TrustBridge HCS for AMC approval. The NFT contains all your asset documentation and will be reviewed by our team.
           </p>
-          <Button onClick={() => window.location.href = '/profile'}>
+          <Button onClick={() => navigate('/dashboard/profile')}>
             View Profile
           </Button>
         </Card>
@@ -797,14 +857,20 @@ const CreateRWAAsset: React.FC = () => {
                   Display Image * (Main image for the asset)
                 </label>
                 <input
+                  ref={displayImageInputRef}
                   type="file"
                   accept=".jpg,.jpeg,.png,.gif"
-                  onChange={(e) => handleInputChange('displayImage', e.target.files?.[0] || null)}
+                  onChange={(e) => handleDisplayImageChange(e.target.files?.[0] || null)}
                   className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-800 text-off-white focus:outline-none focus:ring-2 focus:ring-neon-green"
                 />
                 <p className="text-sm text-electric-mint mt-1">
                   Upload the main image that will represent your asset
-                      </p>
+                </p>
+                {assetData.displayImage && (
+                  <p className="text-sm text-neon-green mt-1">
+                    ✅ Selected: {assetData.displayImage.name}
+                  </p>
+                )}
                     </div>
                     
               {/* Document Categories */}
@@ -862,6 +928,7 @@ const CreateRWAAsset: React.FC = () => {
                     Upload Evidence Files * (Upload files for selected category)
                   </label>
                   <input
+                    ref={evidenceFilesInputRef}
                     type="file"
                     multiple
                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
@@ -961,6 +1028,35 @@ const CreateRWAAsset: React.FC = () => {
                 </div>
               </div>
 
+              {/* Upload Progress Indicator */}
+              {(uploadProgress.displayImage || uploadProgress.evidenceFiles || uploadProgress.metadata) && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="flex items-center mb-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                    <p className="text-blue-700 dark:text-blue-300 font-medium">Uploading to IPFS...</p>
+                  </div>
+                  
+                  {uploadProgress.displayImage && (
+                    <div className="text-sm text-blue-600 dark:text-blue-400">
+                      📸 Uploading display image: {uploadProgress.currentFile}
+                    </div>
+                  )}
+                  
+                  {uploadProgress.evidenceFiles && (
+                    <div className="text-sm text-blue-600 dark:text-blue-400">
+                      📄 Uploading evidence files: {uploadProgress.currentFile} 
+                      ({uploadProgress.currentFileIndex}/{uploadProgress.totalFiles})
+                    </div>
+                  )}
+                  
+                  {uploadProgress.metadata && (
+                    <div className="text-sm text-blue-600 dark:text-blue-400">
+                      📋 Uploading metadata: {uploadProgress.currentFile}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {error && (
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                   <div className="flex items-center">
@@ -997,7 +1093,14 @@ const CreateRWAAsset: React.FC = () => {
                     disabled={loading}
                     className="bg-neon-green text-black hover:bg-electric-mint"
                   >
-                    {loading ? 'Submitting...' : 'Submit Asset'}
+                    {loading ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                        {uploadProgress.displayImage || uploadProgress.evidenceFiles || uploadProgress.metadata 
+                          ? 'Uploading to IPFS...' 
+                          : 'Creating NFT...'}
+                      </div>
+                    ) : 'Submit Asset'}
                   </Button>
                 )}
               </div>

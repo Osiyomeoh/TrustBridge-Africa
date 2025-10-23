@@ -198,6 +198,74 @@ export declare class AuthController {
         message: string;
         error: any;
     }>;
+    debugKycInquiry(userId: string): Promise<{
+        success: boolean;
+        message: string;
+        data?: undefined;
+        error?: undefined;
+    } | {
+        success: boolean;
+        data: {
+            userId: any;
+            email: any;
+            kycStatus: any;
+            kycInquiryId: any;
+            walletAddress: any;
+        };
+        message?: undefined;
+        error?: undefined;
+    } | {
+        success: boolean;
+        message: string;
+        error: any;
+        data?: undefined;
+    }>;
+    updateKycInquiry(updateData: {
+        userId: string;
+        kycInquiryId: string;
+    }, req: any): Promise<{
+        success: boolean;
+        message: string;
+        data?: undefined;
+        error?: undefined;
+    } | {
+        success: boolean;
+        message: string;
+        data: {
+            userId: any;
+            email: any;
+            kycInquiryId: any;
+        };
+        error?: undefined;
+    } | {
+        success: boolean;
+        message: string;
+        error: any;
+        data?: undefined;
+    }>;
+    updateKYCDirect(updateData: {
+        userId: string;
+        kycStatus: string;
+    }, req: any): Promise<{
+        success: boolean;
+        message: string;
+        data?: undefined;
+        error?: undefined;
+    } | {
+        success: boolean;
+        message: string;
+        data: {
+            userId: any;
+            email: any;
+            kycStatus: any;
+        };
+        error?: undefined;
+    } | {
+        success: boolean;
+        message: string;
+        error: any;
+        data?: undefined;
+    }>;
     getKYCStatus(req: any): Promise<{
         success: boolean;
         data: {

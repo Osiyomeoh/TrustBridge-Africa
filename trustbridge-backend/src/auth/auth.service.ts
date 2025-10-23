@@ -1162,7 +1162,7 @@ export class AuthService {
 
   async processDiditCallback(verificationSessionId: string, status: string) {
     try {
-      this.logger.log(`Processing DidIt callback for session ${verificationSessionId} with status ${status}`);
+      console.log(`🔔 Processing DidIt callback for session ${verificationSessionId} with status ${status}`);
 
       // Find user by verification session ID
       const user = await this.userModel.findOne({ 
@@ -1170,12 +1170,15 @@ export class AuthService {
       });
 
       if (!user) {
+        console.log(`❌ No user found for verification session ${verificationSessionId}`);
         this.logger.warn(`No user found for verification session ${verificationSessionId}`);
         return {
           success: false,
           message: 'User not found for this verification session',
         };
       }
+
+      console.log(`👤 Found user: ${user.email}, current KYC status: ${user.kycStatus}`);
 
       // Map DidIt status to our internal status
       let internalStatus: KycStatus;
@@ -1200,10 +1203,14 @@ export class AuthService {
           internalStatus = KycStatus.PENDING;
       }
 
+      console.log(`🔄 Mapping status '${status}' to internal status '${internalStatus}'`);
+
       // Update user KYC status
+      const oldStatus = user.kycStatus;
       user.kycStatus = internalStatus;
       await user.save();
 
+      console.log(`✅ Updated KYC status for user ${user.email} from '${oldStatus}' to '${internalStatus}'`);
       this.logger.log(`Updated KYC status for user ${user.email} to ${internalStatus}`);
 
       return {
@@ -1213,6 +1220,7 @@ export class AuthService {
         message: `KYC status updated to ${internalStatus}`,
       };
     } catch (error) {
+      console.error('❌ Failed to process DidIt callback:', error);
       this.logger.error('Failed to process DidIt callback:', error);
       throw error;
     }

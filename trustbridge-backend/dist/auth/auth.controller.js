@@ -418,6 +418,100 @@ let AuthController = AuthController_1 = class AuthController {
             };
         }
     }
+    async debugKycInquiry(userId) {
+        try {
+            const user = await this.authService.getUserById(userId);
+            if (!user) {
+                return {
+                    success: false,
+                    message: 'User not found',
+                };
+            }
+            return {
+                success: true,
+                data: {
+                    userId: user._id,
+                    email: user.email,
+                    kycStatus: user.kycStatus,
+                    kycInquiryId: user.kycInquiryId,
+                    walletAddress: user.walletAddress
+                }
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                message: 'Failed to get user KYC inquiry ID',
+                error: error.message,
+            };
+        }
+    }
+    async updateKycInquiry(updateData, req) {
+        try {
+            console.log('🔧 Update KYC inquiry ID request:', updateData);
+            const user = await this.authService.getUserById(updateData.userId);
+            if (!user) {
+                return {
+                    success: false,
+                    message: 'User not found',
+                };
+            }
+            console.log('🔧 Found user for inquiry update:', user.email, 'Current inquiry ID:', user.kycInquiryId);
+            user.kycInquiryId = updateData.kycInquiryId;
+            await user.save();
+            console.log('✅ KYC inquiry ID updated successfully:', user.email, 'New inquiry ID:', user.kycInquiryId);
+            return {
+                success: true,
+                message: 'KYC inquiry ID updated successfully',
+                data: {
+                    userId: user._id,
+                    email: user.email,
+                    kycInquiryId: user.kycInquiryId
+                }
+            };
+        }
+        catch (error) {
+            console.error('❌ KYC inquiry ID update failed:', error);
+            return {
+                success: false,
+                message: 'Failed to update KYC inquiry ID',
+                error: error.message,
+            };
+        }
+    }
+    async updateKYCDirect(updateData, req) {
+        try {
+            console.log('🔧 Direct KYC update request:', updateData);
+            const user = await this.authService.getUserById(updateData.userId);
+            if (!user) {
+                return {
+                    success: false,
+                    message: 'User not found',
+                };
+            }
+            console.log('🔧 Found user for direct update:', user.email, 'Current status:', user.kycStatus);
+            user.kycStatus = updateData.kycStatus;
+            await user.save();
+            console.log('✅ Direct KYC update successful:', user.email, 'New status:', user.kycStatus);
+            return {
+                success: true,
+                message: 'KYC status updated directly',
+                data: {
+                    userId: user._id,
+                    email: user.email,
+                    kycStatus: user.kycStatus
+                }
+            };
+        }
+        catch (error) {
+            console.error('❌ Direct KYC update failed:', error);
+            return {
+                success: false,
+                message: 'Failed to update KYC status directly',
+                error: error.message,
+            };
+        }
+    }
     async getKYCStatus(req) {
         const user = await this.authService.getUserById(req.user.sub);
         return {
@@ -431,14 +525,18 @@ let AuthController = AuthController_1 = class AuthController {
     }
     async diditCallback(query) {
         try {
+            console.log('🔔 DidIt callback received with query:', query);
             const { verificationSessionId, status } = query;
             if (!verificationSessionId) {
+                console.log('❌ Missing verification session ID in callback');
                 return {
                     success: false,
                     message: 'Missing verification session ID',
                 };
             }
+            console.log(`🔔 Processing DidIt callback - Session: ${verificationSessionId}, Status: ${status}`);
             const result = await this.authService.processDiditCallback(verificationSessionId, status);
+            console.log('✅ DidIt callback processed successfully:', result);
             return {
                 success: true,
                 data: result,
@@ -446,6 +544,7 @@ let AuthController = AuthController_1 = class AuthController {
             };
         }
         catch (error) {
+            console.error('❌ DidIt callback processing failed:', error);
             return {
                 success: false,
                 message: 'Failed to process callback',
@@ -745,6 +844,39 @@ __decorate([
     __metadata("design:paramtypes", [UpdateKYCStatusDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "updateKYCStatus", null);
+__decorate([
+    (0, common_1.Get)('debug/kyc-inquiry/:userId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Debug user KYC inquiry ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'User KYC inquiry ID retrieved' }),
+    __param(0, (0, common_1.Param)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "debugKycInquiry", null);
+__decorate([
+    (0, common_1.Post)('update-kyc-inquiry'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Update KYC inquiry ID' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'KYC inquiry ID updated' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "updateKycInquiry", null);
+__decorate([
+    (0, common_1.Post)('update-kyc-direct'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Directly update KYC status' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'KYC status updated directly' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "updateKYCDirect", null);
 __decorate([
     (0, common_1.Get)('kyc/status'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

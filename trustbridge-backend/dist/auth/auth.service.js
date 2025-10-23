@@ -960,17 +960,19 @@ let AuthService = AuthService_1 = class AuthService {
     }
     async processDiditCallback(verificationSessionId, status) {
         try {
-            this.logger.log(`Processing DidIt callback for session ${verificationSessionId} with status ${status}`);
+            console.log(`🔔 Processing DidIt callback for session ${verificationSessionId} with status ${status}`);
             const user = await this.userModel.findOne({
                 kycInquiryId: verificationSessionId
             });
             if (!user) {
+                console.log(`❌ No user found for verification session ${verificationSessionId}`);
                 this.logger.warn(`No user found for verification session ${verificationSessionId}`);
                 return {
                     success: false,
                     message: 'User not found for this verification session',
                 };
             }
+            console.log(`👤 Found user: ${user.email}, current KYC status: ${user.kycStatus}`);
             let internalStatus;
             switch (status) {
                 case 'Not Started':
@@ -992,8 +994,11 @@ let AuthService = AuthService_1 = class AuthService {
                 default:
                     internalStatus = user_schema_1.KycStatus.PENDING;
             }
+            console.log(`🔄 Mapping status '${status}' to internal status '${internalStatus}'`);
+            const oldStatus = user.kycStatus;
             user.kycStatus = internalStatus;
             await user.save();
+            console.log(`✅ Updated KYC status for user ${user.email} from '${oldStatus}' to '${internalStatus}'`);
             this.logger.log(`Updated KYC status for user ${user.email} to ${internalStatus}`);
             return {
                 success: true,
@@ -1003,6 +1008,7 @@ let AuthService = AuthService_1 = class AuthService {
             };
         }
         catch (error) {
+            console.error('❌ Failed to process DidIt callback:', error);
             this.logger.error('Failed to process DidIt callback:', error);
             throw error;
         }

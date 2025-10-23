@@ -49,10 +49,11 @@ const KYCCallback: React.FC = () => {
         variant: 'default',
       });
 
-      // Redirect to profile after 2 seconds
+      // Redirect to profile after 30 seconds to see logs
       setTimeout(() => {
+        console.log('🔄 Redirecting to profile page...');
         navigate('/dashboard/profile');
-      }, 2000);
+      }, 30000);
     } else {
       setStatus('error');
       setMessage(result.message || 'Failed to process KYC verification');
@@ -62,8 +63,14 @@ const KYCCallback: React.FC = () => {
   useEffect(() => {
     const processCallback = async () => {
       try {
+        // Add delay to see logs
+        console.log('🔄 KYCCallback - Starting callback processing...');
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+        
         // Log all URL parameters for debugging
         console.log('🔍 Didit callback received - All URL parameters:', Object.fromEntries(searchParams.entries()));
+        console.log('🔍 Current URL:', window.location.href);
+        console.log('🔍 Search params object:', searchParams);
         
         // Get the status from URL parameters
         const verificationStatus = searchParams.get('status') || 'Approved';
@@ -80,10 +87,19 @@ const KYCCallback: React.FC = () => {
           // Try to call the backend callback endpoint to update database
           let databaseUpdated = false;
           try {
-            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
-            const callbackUrl = `${apiUrl}/api/auth/didit/callback?verificationSessionId=${verificationSessionId}&status=${verificationStatus}`;
+            // Try different backend ports if VITE_API_URL is not set
+            const possiblePorts = ['4001', '3000', '8000', '5000'];
+            let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
             
+            console.log('🔄 API URL from env:', import.meta.env.VITE_API_URL);
+            console.log('🔄 Using API URL:', apiUrl);
+            console.log('🔄 Verification Session ID:', verificationSessionId);
+            console.log('🔄 Status:', verificationStatus);
+            
+            const callbackUrl = `${apiUrl}/api/auth/didit/callback?verificationSessionId=${verificationSessionId}&status=${verificationStatus}`;
             console.log('🔄 Calling backend callback endpoint:', callbackUrl);
+            
+            console.log('🔄 Making fetch request to:', callbackUrl);
             
             const response = await fetch(callbackUrl, {
               method: 'GET',
@@ -93,20 +109,28 @@ const KYCCallback: React.FC = () => {
             });
 
             console.log('📡 Backend response status:', response.status);
+            console.log('📡 Backend response headers:', Object.fromEntries(response.headers.entries()));
+            console.log('📡 Backend response ok:', response.ok);
 
             if (response.ok) {
               const result = await response.json();
               console.log('📡 Backend callback response:', result);
               console.log('📡 Backend KYC status:', result?.kycStatus);
+              console.log('📡 Backend success:', result?.success);
               if (result.success) {
                 console.log('✅ KYC status updated in database successfully');
                 databaseUpdated = true;
+              } else {
+                console.log('❌ Backend returned success: false');
               }
             } else {
+              const errorText = await response.text();
               console.log('❌ Backend callback failed, status:', response.status);
+              console.log('❌ Backend error response:', errorText);
             }
           } catch (error) {
             console.log('❌ Backend not available, continuing with frontend-only update:', error);
+            console.log('❌ Error details:', error.message);
           }
           
           // Update frontend state regardless of backend status
@@ -171,8 +195,7 @@ const KYCCallback: React.FC = () => {
           // Redirect to profile after 3 seconds to allow state to propagate
           setTimeout(() => {
             console.log('🔄 Redirecting to profile...');
-            // Force a page refresh to ensure the updated state is loaded
-            window.location.href = '/dashboard/profile';
+            navigate('/dashboard/profile');
           }, 3000);
         } else {
           console.log('❌ KYC verification not approved, status:', verificationStatus);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Mail, CheckCircle, AlertCircle, Loader2, RefreshCw, Clock, User, Wallet } from 'lucide-react';
 import Button from '../UI/Button';
 import Input from '../UI/Input';
@@ -10,6 +11,7 @@ import { apiService } from '../../services/api';
 
 const EmailVerification: React.FC = () => {
   const { verifyEmail, isLoading, error, user, authStep } = useAuth();
+  const navigate = useNavigate();
   const [code, setCode] = useState('');
   const [isVerified, setIsVerified] = useState(false);
   const [validationError, setValidationError] = useState('');
@@ -22,9 +24,9 @@ const EmailVerification: React.FC = () => {
   useEffect(() => {
     if (user && (user.emailVerificationStatus === 'VERIFIED' || user.emailVerificationStatus === 'verified')) {
       console.log('EmailVerification - User already verified, redirecting to dashboard');
-      window.location.href = '/dashboard/';
+      navigate('/dashboard/');
     }
-  }, [user]);
+  }, [user, navigate]);
 
   // Show loading screen while checking user status
   if (authStep === 'complete' || (user && (user.emailVerificationStatus === 'VERIFIED' || user.emailVerificationStatus === 'verified'))) {
@@ -191,7 +193,7 @@ const EmailVerification: React.FC = () => {
             </div>
 
             <Button
-              onClick={() => window.location.href = '/dashboard/'}
+              onClick={() => navigate('/dashboard/')}
               className="w-full"
               size="lg"
             >
@@ -215,7 +217,7 @@ const EmailVerification: React.FC = () => {
           ]}
           showBackButton={true}
           backButtonText="Back to Profile"
-          onBack={() => window.location.href = '/auth?step=profile'}
+          onBack={() => navigate('/auth?step=profile')}
         />
       </div>
 

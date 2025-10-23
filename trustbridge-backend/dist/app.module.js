@@ -20,6 +20,14 @@ const investments_module_1 = require("./investments/investments.module");
 const verification_module_1 = require("./verification/verification.module");
 const portfolio_module_1 = require("./portfolio/portfolio.module");
 const analytics_module_1 = require("./analytics/analytics.module");
+const trading_module_1 = require("./trading/trading.module");
+const amc_module_1 = require("./amc/amc.module");
+const amc_pools_module_1 = require("./amc-pools/amc-pools.module");
+const pool_tokens_module_1 = require("./pool-tokens/pool-tokens.module");
+const dividends_module_1 = require("./dividends/dividends.module");
+const rwa_module_1 = require("./rwa/rwa.module");
+const collections_module_1 = require("./collections/collections.module");
+const royalties_module_1 = require("./royalties/royalties.module");
 const hedera_module_1 = require("./hedera/hedera.module");
 const chainlink_module_1 = require("./chainlink/chainlink.module");
 const users_module_1 = require("./users/users.module");
@@ -35,17 +43,9 @@ const tokenomics_module_1 = require("./tokenomics/tokenomics.module");
 const ipfs_module_1 = require("./ipfs/ipfs.module");
 const pools_module_1 = require("./pools/pools.module");
 const health_module_1 = require("./health/health.module");
-const trading_module_1 = require("./trading/trading.module");
-const amc_module_1 = require("./amc/amc.module");
 const api_module_1 = require("./api/api.module");
-const collections_module_1 = require("./collections/collections.module");
-const royalties_module_1 = require("./royalties/royalties.module");
 const activity_module_1 = require("./activity/activity.module");
-const rwa_module_1 = require("./rwa/rwa.module");
 const kyc_module_1 = require("./kyc/kyc.module");
-const amc_pools_module_1 = require("./amc-pools/amc-pools.module");
-const pool_tokens_module_1 = require("./pool-tokens/pool-tokens.module");
-const dividends_module_1 = require("./dividends/dividends.module");
 const app_controller_1 = require("./app.controller");
 let AppModule = class AppModule {
 };
@@ -79,6 +79,14 @@ exports.AppModule = AppModule = __decorate([
             verification_module_1.VerificationModule,
             portfolio_module_1.PortfolioModule,
             analytics_module_1.AnalyticsModule,
+            trading_module_1.TradingModule,
+            amc_module_1.AMCModule,
+            amc_pools_module_1.AMCPoolsModule,
+            pool_tokens_module_1.PoolTokensModule,
+            dividends_module_1.DividendsModule,
+            rwa_module_1.RWAModule,
+            collections_module_1.CollectionsModule,
+            royalties_module_1.RoyaltiesModule,
             hedera_module_1.HederaModule,
             chainlink_module_1.ChainlinkModule,
             users_module_1.UsersModule,
@@ -94,18 +102,9 @@ exports.AppModule = AppModule = __decorate([
             ipfs_module_1.IPFSModule,
             pools_module_1.PoolsModule,
             health_module_1.HealthModule,
-            trading_module_1.TradingModule,
-            amc_module_1.AMCModule,
             api_module_1.ApiModule,
-            collections_module_1.CollectionsModule,
-            royalties_module_1.RoyaltiesModule,
             activity_module_1.ActivityModule,
-            rwa_module_1.RWAModule,
             kyc_module_1.KycModule,
-            amc_pools_module_1.AMCPoolsModule,
-            trading_module_1.TradingModule,
-            pool_tokens_module_1.PoolTokensModule,
-            dividends_module_1.DividendsModule,
         ],
     })
 ], AppModule);

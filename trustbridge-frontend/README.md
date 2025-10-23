@@ -1,330 +1,294 @@
-# 🇳🇬 TrustBridge Africa
+# TrustBridge Frontend
 
-## Universal Asset Tokenization Platform
+A modern React-based frontend application for the TrustBridge Real-World Asset (RWA) tokenization platform, featuring advanced trading capabilities, asset management, and Hedera blockchain integration.
 
-TrustBridge Africa is a comprehensive blockchain platform that enables universal asset tokenization across Africa, from digital art to real estate, commodities to intellectual property. Built on Hedera Hashgraph's enterprise-grade blockchain technology with full DeFi integration.
+## 🚀 Features
 
-![TrustBridge Africa](https://img.shields.io/badge/TrustBridge-Africa-green)
-![Hedera](https://img.shields.io/badge/Blockchain-Hedera-blue)
-![DeFi](https://img.shields.io/badge/DeFi-Integrated-purple)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+### Core Functionality
+- **Real-World Asset Management** - Create, view, and manage RWA tokens
+- **AMC Pool Management** - Create and manage Asset Management Company investment pools
+- **Advanced Trading Interface** - Professional-grade trading with order book functionality
+- **Trust Token Economy** - Integrated HBAR and TRUST token management
+- **Portfolio Management** - Comprehensive investment tracking and analytics
+- **Admin Dashboard** - Asset approval and platform management
 
----
+### Blockchain Features
+- **Hedera Integration** - Full HTS (Token Service) and HCS (Consensus Service) integration
+- **HashPack Wallet** - Secure wallet connection and transaction signing
+- **Smart Contract Interaction** - Direct interaction with deployed contracts
+- **IPFS Integration** - Decentralized file storage for asset metadata
+- **Multi-signature Support** - Secure transaction signing with user approval
 
-## 🎯 **Vision**
+### Trading Features
+- **Centrifuge-style Interface** - Professional investment experience
+- **Advanced Order Book** - Market, limit, and stop orders
+- **Automated Yield Distribution** - Yield tracking and claiming
+- **Risk Assessment** - Real-time risk scoring and warnings
+- **Real-time Updates** - Live price feeds and portfolio updates
 
-Enable anyone in Africa to tokenize ANY asset type using enterprise-grade blockchain technology, providing liquidity, transparency, and global access to previously illiquid assets.
+## 🏗️ Technology Stack
 
----
-
-## ✨ **Key Features**
-
-### **🏗️ Universal Asset Tokenization**
-- **Digital Assets**: Direct user creation (NFTs, digital art, collectibles)
-- **Real World Assets (RWA)**: AMC-managed (real estate, agriculture, commodities)
-- **Any Asset Type**: From digital art to real estate to intellectual property
-- **Fractional Ownership**: Micro-investments in high-value assets
-
-### **🏦 DeFi Integration**
-- **DeFi Lending**: Connect with Aave, Compound, MakerDAO
-- **Asset Pools**: Structured financing pools with tranches
-- **Yield Generation**: Automated yield optimization and distribution
-- **Risk Assessment**: AI-powered credit scoring and risk modeling
-- **Liquidity Mining**: Incentivize liquidity provision
-
-### **🏢 Professional Asset Management**
-- **AMC Compliance**: All RWA managed by licensed Asset Management Companies
-- **Regulatory Compliance**: Automated KYC/AML and regulatory reporting
-- **Risk Management**: Professional oversight and risk mitigation
-- **Institutional APIs**: Enterprise-grade integration and reporting
-
-### **🌍 African Market Focus**
-- **Local Payment Methods**: Mobile money integration
-- **Multi-language Support**: English, French, Swahili
-- **Regulatory Compliance**: Country-specific requirements
-- **Mobile-First Design**: Optimized for mobile usage
-
----
-
-## 🚀 **Technology Stack**
-
-### **Frontend**
+### Frontend Framework
 - **React 18** with TypeScript
+- **Vite** for fast development and building
+- **React Router** for navigation
 - **Tailwind CSS** for styling
-- **Framer Motion** for animations
-- **HashPack** wallet integration
-- **IPFS** for decentralized storage
+- **React Hook Form** for form management
 
-### **Backend**
-- **Node.js** with Express
-- **GraphQL** API with Apollo
-- **MongoDB** with Mongoose
-- **WebSocket** for real-time updates
-- **JWT** authentication
+### Blockchain Integration
+- **Hedera SDK** for blockchain interactions
+- **HashPack Wallet** for wallet connection
+- **IPFS** for file storage
+- **Smart Contracts** for advanced functionality
 
-### **Blockchain**
-- **Hedera Hashgraph** (HTS, HCS, HFS, Mirror Node)
-- **IPFS** (Pinata) for metadata storage
-- **Chainlink** for price feeds and oracles
-- **Smart Contracts** for automated settlements
+### State Management
+- **React Context** for global state
+- **Custom Hooks** for reusable logic
+- **Local Storage** for persistence
 
----
-
-## 🏗️ **Architecture**
+## 📁 Project Structure
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    FRONTEND LAYER                      │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐    │
-│  │   Web App   │  │  Mobile App │  │  Admin UI   │    │
-│  └─────────────┘  └─────────────┘  └─────────────┘    │
-└─────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────┐
-│                    API LAYER                           │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐    │
-│  │ REST API    │  │ GraphQL API │  │ WebSocket   │    │
-│  │ (Swagger)   │  │ (Apollo)    │  │ (Real-time) │    │
-│  └─────────────┘  └─────────────┘  └─────────────┘    │
-└─────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────┐
-│                 HEDERA BLOCKCHAIN                      │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐    │
-│  │     HTS     │  │     HCS     │  │     HFS     │    │
-│  │   Tokens    │  │  Messaging  │  │   Storage   │    │
-│  └─────────────┘  └─────────────┘  └─────────────┘    │
-└─────────────────────────────────────────────────────────┘
+trustbridge-frontend/
+├── src/
+│   ├── components/              # Reusable UI components
+│   │   ├── Assets/             # Asset management components
+│   │   ├── AMC/                # AMC pool management
+│   │   ├── Trading/            # Trading interface components
+│   │   ├── Layout/             # Layout components
+│   │   ├── RWA/                # Real-world asset components
+│   │   ├── Admin/              # Admin functionality
+│   │   ├── Auth/               # Authentication components
+│   │   ├── UI/                 # Reusable UI components
+│   │   └── Verification/       # Verification components
+│   ├── pages/                  # Main application pages
+│   │   ├── Dashboard.tsx       # Main dashboard
+│   │   ├── Profile.tsx         # User profile
+│   │   ├── CreateAsset.tsx     # Asset creation
+│   │   ├── AssetMarketplace.tsx # Asset marketplace
+│   │   └── AdminDashboard.tsx  # Admin dashboard
+│   ├── contexts/               # React contexts
+│   │   ├── WalletContext.tsx   # Wallet connection
+│   │   ├── AuthContext.tsx     # Authentication
+│   │   ├── AdminContext.tsx    # Admin functionality
+│   │   └── ThemeContext.tsx    # Theme management
+│   ├── hooks/                  # Custom React hooks
+│   │   ├── useWallet.ts        # Wallet integration
+│   │   ├── useAuth.ts          # Authentication
+│   │   └── useTrustTokenBalance.ts # Token balance
+│   ├── services/               # API and external services
+│   │   ├── api.ts              # API client
+│   │   ├── hederaService.ts    # Hedera integration
+│   │   └── ipfsService.ts      # IPFS integration
+│   ├── types/                  # TypeScript type definitions
+│   ├── utils/                  # Utility functions
+│   └── config/                 # Configuration files
+├── public/                     # Static assets
+├── images/                     # Image assets
+└── package.json                # Dependencies
 ```
 
----
+## 🛠️ Installation & Setup
 
-## 🎯 **User Journeys**
-
-### **1. 🎨 Digital Artist (Direct Path)**
-```
-1. Connect HashPack wallet (5 min)
-2. Upload artwork to IPFS
-3. Create HTS NFT collection directly
-4. Mint NFT with dual signatures
-5. List on marketplace for TRUST tokens
-6. Trade peer-to-peer
-```
-
-### **2. 🏠 Real Estate Developer (AMC Path)**
-```
-1. Find licensed AMC (1-2 weeks)
-2. AMC due diligence & registration
-3. AMC submits property to TrustBridge
-4. AMC creates fungible tokens ($0.50 per token)
-5. AMC manages property for token holders
-6. Investors buy tokens, receive rental income
-```
-
-### **3. 🏦 Institutional Investor (DeFi Path)**
-```
-1. Enterprise API access setup
-2. Connect to DeFi protocols (Aave, Compound, MakerDAO)
-3. Deposit RWA tokens as collateral
-4. Borrow against RWA collateral
-5. Earn lending yields
-6. Advanced portfolio management
-```
-
----
-
-## 🔧 **Installation & Setup**
-
-### **Prerequisites**
-- Node.js 18+ 
-- npm or yarn
+### Prerequisites
+- Node.js 18+ and npm
 - HashPack wallet
 - Hedera testnet account
 
-### **Installation**
-
+### Installation
 ```bash
-# Clone the repository
-git clone https://github.com/trustbridge-africa/frontend.git
-cd trustbridge-frontend
-
 # Install dependencies
 npm install
 
-# Set up environment variables
+# Copy environment file
 cp .env.example .env
-# Edit .env with your configuration
+
+# Configure environment variables
+# Edit .env file with your configuration
 
 # Start development server
 npm run dev
 ```
 
-### **Environment Variables**
-
+### Environment Variables
 ```env
-# Hedera Configuration
+VITE_API_URL=http://localhost:3000/api
 VITE_HEDERA_NETWORK=testnet
-VITE_HEDERA_ACCOUNT_ID=0.0.xxxxxx
-VITE_HEDERA_PRIVATE_KEY=your_private_key
-
-# IPFS Configuration
-VITE_IPFS_GATEWAY=https://indigo-recent-clam-436.mypinata.cloud
-
-# API Configuration
-VITE_API_URL=http://localhost:4000/graphql
-VITE_WS_URL=ws://localhost:4000/graphql
+VITE_TRUST_TOKEN_ID=0.0.xxxxxx
+VITE_TREASURY_ACCOUNT_ID=0.0.xxxxxx
+VITE_PINATA_API_KEY=your-pinata-key
+VITE_PINATA_SECRET_KEY=your-pinata-secret
 ```
 
----
+## 🚀 Getting Started
 
-## 🚀 **Deployment**
+### 1. Wallet Connection
+- Install HashPack wallet extension
+- Connect your Hedera account
+- Ensure you have testnet HBAR and TRUST tokens
 
-### **Development**
+### 2. Asset Creation
+- Navigate to the asset creation page
+- Upload asset documentation and images
+- Provide asset details and valuation
+- Submit for admin approval
+
+### 3. AMC Pool Management
+- Create investment pools with multiple assets
+- Set pool parameters (APY, minimum investment, etc.)
+- Launch pools for public investment
+- Manage pool performance and distributions
+
+### 4. Trading
+- Browse available investment opportunities
+- Place orders through the advanced order book
+- Monitor portfolio performance
+- Claim yield distributions
+
+## 🔧 Available Scripts
+
+### Development
 ```bash
-npm run dev
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run lint         # Run ESLint
+npm run type-check   # Run TypeScript type checking
 ```
 
-### **Production Build**
+### Testing
 ```bash
+npm run test         # Run tests
+npm run test:ui      # Run tests with UI
+npm run test:coverage # Run tests with coverage
+```
+
+## 📱 Component Overview
+
+### Core Components
+- **Dashboard** - Main application dashboard
+- **AssetMarketplace** - Asset discovery and trading
+- **CreateAsset** - Asset creation interface
+- **Profile** - User profile and portfolio
+- **AdminDashboard** - Admin management interface
+
+### Trading Components
+- **AdvancedOrderBook** - Order book interface
+- **YieldDashboard** - Yield management
+- **RiskDashboard** - Risk assessment
+- **MarketplaceAssetModal** - Asset details and trading
+
+### AMC Components
+- **AMCPoolManagement** - Pool creation and management
+- **DividendManagement** - Dividend distribution
+- **AdminManagement** - Admin user management
+
+## 🔐 Security Features
+
+- **Wallet Integration** - Secure HashPack wallet connection
+- **Transaction Signing** - User approval for all transactions
+- **Input Validation** - Comprehensive form validation
+- **Error Handling** - Robust error handling and user feedback
+- **Environment Variables** - Secure configuration management
+
+## 🎨 UI/UX Features
+
+- **Responsive Design** - Mobile-first responsive design
+- **Dark/Light Theme** - Theme switching capability
+- **Modern UI** - Clean and professional interface
+- **Loading States** - Smooth loading animations
+- **Toast Notifications** - User feedback and notifications
+- **Modal Interfaces** - Intuitive modal-based interactions
+
+## 📊 State Management
+
+### Context Providers
+- **WalletContext** - Wallet connection and blockchain interactions
+- **AuthContext** - Authentication state and user management
+- **AdminContext** - Admin functionality and permissions
+- **ThemeContext** - Theme and UI state management
+
+### Custom Hooks
+- **useWallet** - Wallet connection and blockchain operations
+- **useAuth** - Authentication and user management
+- **useTrustTokenBalance** - Token balance tracking
+- **useToast** - Toast notification management
+
+## 🔗 API Integration
+
+### Backend API
+- **Asset Management** - CRUD operations for assets
+- **Pool Management** - AMC pool operations
+- **Trading Operations** - Order placement and execution
+- **User Management** - Authentication and profile management
+
+### Blockchain Services
+- **Hedera Service** - HTS and HCS operations
+- **IPFS Service** - File upload and storage
+- **Contract Service** - Smart contract interactions
+
+## 🚀 Deployment
+
+### Production Build
+```bash
+# Build for production
 npm run build
+
+# Preview production build
 npm run preview
 ```
 
-### **Docker Deployment**
+### Environment Configuration
+- Configure production environment variables
+- Update API endpoints for production
+- Set up CDN for static assets
+
+## 🧪 Testing
+
+### Unit Testing
 ```bash
-docker build -t trustbridge-frontend .
-docker run -p 3000:3000 trustbridge-frontend
+npm run test
 ```
 
----
-
-## 📊 **Platform Features**
-
-### **Core Features**
-- ✅ Universal asset tokenization
-- ✅ AMC-managed RWA
-- ✅ Direct digital assets
-- ✅ Real-time trading
-- ✅ Mobile-first design
-- ✅ Multi-language support
-
-### **DeFi Features**
-- ✅ DeFi lending integration
-- ✅ Asset pools and structured finance
-- ✅ AI-powered risk assessment
-- ✅ Yield generation and optimization
-- ✅ Institutional APIs
-- ✅ Advanced analytics
-
-### **Compliance Features**
-- ✅ AMC compliance management
-- ✅ Automated verification
-- ✅ Regulatory compliance
-- ✅ KYC/AML integration
-- ✅ Insurance integration
-
----
-
-## 🌍 **Competitive Advantages**
-
-### **vs Centrifuge**
-- ✅ **Superior Technology**: Hedera (3s finality) vs Ethereum (15+ min)
-- ✅ **Lower Costs**: $0.001 vs $50+ gas fees
-- ✅ **AMC Compliance**: Professional asset management
-- ✅ **Universal Scope**: Any asset type vs limited scope
-- ✅ **African Focus**: Localized for African markets
-
-### **vs Traditional Platforms**
-- ✅ **Blockchain Native**: True decentralization
-- ✅ **Global Access**: Not limited to local markets
-- ✅ **Fractional Ownership**: Micro-investments possible
-- ✅ **Liquidity**: Secondary market trading
-- ✅ **Transparency**: Immutable records
-
----
-
-## 📈 **Success Metrics**
-
-### **Technical Metrics**
-- **Transaction Speed**: 3 seconds finality
-- **Transaction Cost**: $0.001 average
-- **Uptime**: 99.9% availability
-- **Scalability**: 10,000+ TPS
-
-### **Business Metrics**
-- **Asset Types**: 10+ categories supported
-- **User Onboarding**: <5 minutes
-- **Asset Creation**: <10 minutes
-- **AMC Partnerships**: 50+ licensed AMCs
-- **User Satisfaction**: 4.8/5 rating target
-
----
-
-## 🤝 **Contributing**
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-### **Development Setup**
+### Integration Testing
 ```bash
-# Fork the repository
-git clone https://github.com/your-username/trustbridge-frontend.git
-cd trustbridge-frontend
-
-# Create a feature branch
-git checkout -b feature/amazing-feature
-
-# Make your changes
-# Add tests if applicable
-
-# Commit your changes
-git commit -m 'Add amazing feature'
-
-# Push to the branch
-git push origin feature/amazing-feature
-
-# Open a Pull Request
+npm run test:integration
 ```
 
----
+### E2E Testing
+```bash
+npm run test:e2e
+```
 
-## 📄 **License**
+## 📈 Performance Optimization
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- **Code Splitting** - Lazy loading of components
+- **Bundle Optimization** - Optimized build output
+- **Image Optimization** - Optimized image loading
+- **Caching** - Strategic caching of API responses
+- **Memoization** - React.memo and useMemo optimization
 
----
+## 🤝 Contributing
 
-## 🆘 **Support**
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-- **Documentation**: [docs.trustbridge.africa](https://docs.trustbridge.africa)
-- **Discord**: [discord.gg/trustbridge](https://discord.gg/trustbridge)
-- **Email**: support@trustbridge.africa
-- **Twitter**: [@TrustBridgeAfrica](https://twitter.com/TrustBridgeAfrica)
+## 📝 License
 
----
+This project is licensed under the MIT License.
 
-## 🎉 **Acknowledgments**
+## 🆘 Support
 
-- **Hedera Hashgraph** for enterprise-grade blockchain technology
-- **IPFS** for decentralized storage
-- **HashPack** for wallet integration
-- **Chainlink** for oracle services
-- **African Development Community** for support and feedback
-
----
-
-## 📞 **Contact**
-
-**TrustBridge Africa Team**
-- Website: [trustbridge.africa](https://trustbridge.africa)
-- Email: hello@trustbridge.africa
-- Twitter: [@TrustBridgeAfrica](https://twitter.com/TrustBridgeAfrica)
-- LinkedIn: [TrustBridge Africa](https://linkedin.com/company/trustbridge-africa)
+For support and questions:
+- Create an issue in the repository
+- Contact the development team
+- Check the documentation
 
 ---
 
-*Built with ❤️ for Africa's digital future*
+**TrustBridge Frontend** - Modern React Interface for RWA Tokenization 🚀
 
-
-
+*Built with ❤️ for the future of decentralized finance*

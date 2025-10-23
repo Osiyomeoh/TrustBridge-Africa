@@ -1,1 +1,0 @@
-//# sourceMappingURL=photo-verification.plugin.js.map

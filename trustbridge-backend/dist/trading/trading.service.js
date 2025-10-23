@@ -362,7 +362,7 @@ let TradingService = TradingService_1 = class TradingService {
                 .addTokenTransfer(poolTokenId, buyerAccountId, trade.tokenAmount)
                 .setMaxTransactionFee(new Hbar(2))
                 .setTransactionMemo(`Trade: ${trade.tradeId} | Pool: ${trade.poolId} | Amount: ${trade.tokenAmount} | Price: ${trade.pricePerToken}`);
-            const response = await this.hederaService.executeTransaction(transferTx);
+            const response = await transferTx.execute(this.hederaService['client']);
             trade.hederaTransactionHash = response.transactionId.toString();
             trade.settlementTransactionHash = response.transactionId.toString();
             this.logger.log(`Hedera trade executed: ${trade.tradeId} - TX: ${response.transactionId}`);
@@ -388,10 +388,10 @@ let TradingService = TradingService_1 = class TradingService {
                 status: order.status,
                 paymentToken: order.paymentToken,
                 isMarketOrder: order.isMarketOrder,
-                createdAt: order.createdAt,
+                createdAt: new Date().toISOString(),
                 timestamp: new Date().toISOString()
             };
-            await this.hederaService.submitToHCS('TRADING_EVENTS', JSON.stringify(orderEvent));
+            await this.hederaService.createHCSMessage('TRADING_EVENTS', orderEvent);
             this.logger.log(`Order logged to HCS: ${order.orderId}`);
         }
         catch (error) {
@@ -400,12 +400,12 @@ let TradingService = TradingService_1 = class TradingService {
     }
     async burnTrustTokensForTradingFee(trade, feeAmount) {
         try {
-            const treasuryAccount = this.configService.get('HEDERA_ACCOUNT_ID');
+            const treasuryAccount = process.env.HEDERA_ACCOUNT_ID;
             if (!treasuryAccount) {
                 this.logger.warn('Treasury account not configured, skipping TRUST burn');
                 return;
             }
-            await this.hederaService.burnTrustTokens(treasuryAccount, feeAmount);
+            await this.hederaService.burnTokens(feeAmount);
             this.logger.log(`Burned ${feeAmount} TRUST tokens for trading fee: ${trade.tradeId}`);
         }
         catch (error) {
@@ -429,7 +429,7 @@ let TradingService = TradingService_1 = class TradingService {
                 hederaTransactionHash: trade.hederaTransactionHash,
                 timestamp: new Date().toISOString()
             };
-            await this.hederaService.submitToHCS('TRADING_EVENTS', JSON.stringify(tradeEvent));
+            await this.hederaService.createHCSMessage('TRADING_EVENTS', tradeEvent);
             this.logger.log(`Trade logged to HCS: ${trade.tradeId}`);
         }
         catch (error) {

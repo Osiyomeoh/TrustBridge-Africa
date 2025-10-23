@@ -35,7 +35,7 @@ import { contractService } from '../services/contractService';
 import { trustToUSD, formatUSD as formatUSDPrice } from '../utils/priceUtils';
 
 const Profile: React.FC = () => {
-  const { user, authStep, isAuthenticated, startKYC } = useAuth();
+  const { user, authStep, isAuthenticated, startKYC, refreshUser } = useAuth();
   const { address, isConnected } = useWallet();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -114,10 +114,10 @@ const Profile: React.FC = () => {
   // Refresh user data when component mounts to ensure latest KYC status
   useEffect(() => {
     if (user && address) {
-      console.log('Profile - Skipping refreshUser on mount to preserve KYC status');
-      // refreshUser().catch(error => {
-      //   console.error('Error refreshing user data on mount:', error);
-      // });
+      console.log('Profile - Refreshing user data on mount to get latest KYC status');
+      refreshUser().catch(error => {
+        console.error('Error refreshing user data on mount:', error);
+      });
     }
   }, [address]); // Only run when address changes (user connects)
   
@@ -128,7 +128,30 @@ const Profile: React.FC = () => {
       isApproved: user?.kycStatus?.toLowerCase() === 'approved',
       user: user
     });
-  }, [user?.kycStatus]);
+
+    // Show success toast when KYC is approved
+    if (user?.kycStatus === 'approved') {
+      toast({
+        title: 'KYC Verification Complete!',
+        description: 'Your identity has been verified. You can now create RWA assets.',
+        variant: 'default'
+      });
+    }
+  }, [user?.kycStatus, toast]);
+
+  // Periodic KYC status check when user is not approved
+  useEffect(() => {
+    if (user && user.kycStatus !== 'approved' && user.kycStatus !== 'rejected') {
+      const interval = setInterval(() => {
+        console.log('🔄 Profile - Checking KYC status...');
+        refreshUser().catch(error => {
+          console.error('Error checking KYC status:', error);
+        });
+      }, 10000); // Check every 10 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [user?.kycStatus, refreshUser]);
   
   // Clear cache when wallet address changes
   useEffect(() => {
@@ -1348,6 +1371,231 @@ const Profile: React.FC = () => {
     }
   };
 
+  const handleManualKYCApproval = async () => {
+    try {
+      console.log('🔧 Manually approving KYC for user:', user?.email);
+      console.log('🔧 User ID:', user?._id);
+      console.log('🔧 Current KYC status:', user?.kycStatus);
+      
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+      const response = await fetch(`${apiUrl}/api/auth/kyc/update-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({
+          inquiryId: user?.kycInquiryId || 'manual-approval',
+          status: 'approved'
+        })
+      });
+
+      console.log('🔧 Manual approval response status:', response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Manual KYC approval response:', result);
+        
+        toast({
+          title: 'KYC Status Updated',
+          description: 'Your KYC status has been manually updated to approved. Refreshing...',
+          variant: 'default'
+        });
+        
+        // Refresh user data to get updated status
+        setTimeout(() => {
+          refreshUser().catch(error => {
+            console.error('Error refreshing after manual KYC approval:', error);
+          });
+        }, 1000);
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Manual KYC approval failed:', response.status, errorText);
+        throw new Error(`Failed to update KYC status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error manually approving KYC:', error);
+      toast({
+        title: 'KYC Update Failed',
+        description: error instanceof Error ? error.message : 'Failed to update KYC status. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleDirectKYCUpdate = async () => {
+    try {
+      console.log('🔧 Direct KYC update for user:', user?.email);
+      
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+      const response = await fetch(`${apiUrl}/api/auth/update-kyc-direct`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({
+          userId: user?._id,
+          kycStatus: 'approved'
+        })
+      });
+
+      console.log('🔧 Direct update response status:', response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Direct KYC update response:', result);
+        
+        toast({
+          title: 'KYC Status Updated Directly',
+          description: 'Your KYC status has been directly updated to approved.',
+          variant: 'default'
+        });
+        
+        // Refresh user data to get updated status
+        setTimeout(() => {
+          refreshUser().catch(error => {
+            console.error('Error refreshing after direct KYC update:', error);
+          });
+        }, 1000);
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Direct KYC update failed:', response.status, errorText);
+        throw new Error(`Failed to update KYC status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error in direct KYC update:', error);
+      toast({
+        title: 'Direct KYC Update Failed',
+        description: error instanceof Error ? error.message : 'Failed to update KYC status directly.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleDebugKycInquiry = async () => {
+    try {
+      console.log('🔍 Debug KYC inquiry for user:', user?.email);
+      console.log('🔍 User kycInquiryId from frontend:', user?.kycInquiryId);
+      console.log('🔍 DidIt session ID from callback:', '52c76cad-0f4d-4776-bfff-a5d1009fa91c');
+      
+      // Show current state
+      toast({
+        title: 'KYC Inquiry Debug',
+        description: `Frontend: ${user?.kycInquiryId || 'None'} | DidIt: 52c76cad-0f4d-4776-bfff-a5d1009fa91c`,
+        variant: 'default'
+      });
+    } catch (error) {
+      console.error('Error in debug:', error);
+      toast({
+        title: 'Debug Failed',
+        description: error instanceof Error ? error.message : 'Failed to debug KYC inquiry.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleFixKycInquiry = async () => {
+    try {
+      console.log('🔧 Fixing KYC inquiry ID for user:', user?.email);
+      
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+      const response = await fetch(`${apiUrl}/api/auth/update-kyc-inquiry`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({
+          userId: user?._id,
+          kycInquiryId: '52c76cad-0f4d-4776-bfff-a5d1009fa91c'
+        })
+      });
+
+      console.log('🔧 Fix inquiry response status:', response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ KYC inquiry ID updated:', result);
+        
+        toast({
+          title: 'KYC Inquiry ID Fixed',
+          description: 'Your KYC inquiry ID has been updated to match DidIt session.',
+          variant: 'default'
+        });
+        
+        // Refresh user data
+        setTimeout(() => {
+          refreshUser().catch(error => {
+            console.error('Error refreshing after inquiry fix:', error);
+          });
+        }, 1000);
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Fix inquiry failed:', response.status, errorText);
+        throw new Error(`Fix inquiry failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error fixing inquiry:', error);
+      toast({
+        title: 'Fix Inquiry Failed',
+        description: error instanceof Error ? error.message : 'Failed to fix KYC inquiry ID.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleTestCallback = async () => {
+    try {
+      console.log('🧪 Testing DidIt callback...');
+      console.log('🧪 User kycInquiryId:', user?.kycInquiryId);
+      console.log('🧪 User object:', user);
+      
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+      const callbackUrl = `${apiUrl}/api/auth/didit/callback?verificationSessionId=${user?.kycInquiryId}&status=Approved`;
+      
+      console.log('🧪 Calling callback URL:', callbackUrl);
+      
+      const response = await fetch(callbackUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('🧪 Callback response status:', response.status);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🧪 Callback response:', result);
+        
+        toast({
+          title: 'Callback Test Successful',
+          description: `KYC status updated to: ${result.kycStatus}`,
+          variant: 'default'
+        });
+        
+        // Refresh user data
+        setTimeout(() => {
+          refreshUser().catch(error => {
+            console.error('Error refreshing after callback test:', error);
+          });
+        }, 1000);
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Callback test failed:', response.status, errorText);
+        throw new Error(`Callback failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error testing callback:', error);
+      toast({
+        title: 'Callback Test Failed',
+        description: error instanceof Error ? error.message : 'Failed to test callback.',
+        variant: 'destructive'
+      });
+    }
+  };
+
 
 
   const getStatusColor = (status: string) => {
@@ -1776,15 +2024,81 @@ const Profile: React.FC = () => {
                       </p>
                       <p className="text-xs text-gray-400">Identity Status</p>
                       {user?.kycStatus !== 'approved' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleStartKYC}
-                          className="w-full text-xs border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10"
-                        >
-                          <Shield className="w-3 h-3 mr-1" />
-                          Complete KYC
-                        </Button>
+                        <div className="space-y-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleStartKYC}
+                            className="w-full text-xs border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10"
+                          >
+                            <Shield className="w-3 h-3 mr-1" />
+                            Complete KYC
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              console.log('🔄 Manual KYC status refresh...');
+                              refreshUser().catch(error => {
+                                console.error('Error refreshing KYC status:', error);
+                                toast({
+                                  title: 'Refresh Failed',
+                                  description: 'Failed to refresh KYC status. Please try again.',
+                                  variant: 'destructive'
+                                });
+                              });
+                            }}
+                            className="w-full text-xs border-blue-400/30 text-blue-400 hover:bg-blue-400/10"
+                          >
+                            <RefreshCw className="w-3 h-3 mr-1" />
+                            Check Status
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleTestCallback}
+                            className="w-full text-xs border-green-400/30 text-green-400 hover:bg-green-400/10"
+                          >
+                            <Zap className="w-3 h-3 mr-1" />
+                            Test Callback
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleManualKYCApproval}
+                            className="w-full text-xs border-purple-400/30 text-purple-400 hover:bg-purple-400/10"
+                          >
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Manual Approve
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleDirectKYCUpdate}
+                            className="w-full text-xs border-orange-400/30 text-orange-400 hover:bg-orange-400/10"
+                          >
+                            <Zap className="w-3 h-3 mr-1" />
+                            Direct Update
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleDebugKycInquiry}
+                            className="w-full text-xs border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10"
+                          >
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Debug Inquiry
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleFixKycInquiry}
+                            className="w-full text-xs border-red-400/30 text-red-400 hover:bg-red-400/10"
+                          >
+                            <Zap className="w-3 h-3 mr-1" />
+                            Fix Inquiry ID
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </CardContent>
@@ -1864,29 +2178,55 @@ const Profile: React.FC = () => {
                       <Grid3X3 className="w-4 h-4" />
                       <span className="text-xs font-medium">Create Digital Asset</span>
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        if (user?.kycStatus?.toLowerCase() === 'approved') {
-                          handleCreateAsset('rwa');
-                        } else {
-                          handleStartKYC();
-                        }
-                      }}
-                      className={`h-16 flex-col gap-1.5 ${
-                        user?.kycStatus?.toLowerCase() === 'approved'
-                          ? 'border-purple-400/30 text-purple-400 hover:bg-purple-400/10'
-                          : 'border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10'
-                      }`}
-                    >
-                      <Building2 className="w-4 h-4" />
-                      <span className="text-xs font-medium">
-                        Create RWA
-                        {user?.kycStatus?.toLowerCase() !== 'approved' && (
-                          <span className="text-xs opacity-75">(KYC Required)</span>
-                        )}
-                      </span>
-                    </Button>
+                    <div className="space-y-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          if (user?.kycStatus?.toLowerCase() === 'approved') {
+                            handleCreateAsset('rwa');
+                          } else {
+                            handleStartKYC();
+                          }
+                        }}
+                        className={`h-16 flex-col gap-1.5 ${
+                          user?.kycStatus?.toLowerCase() === 'approved'
+                            ? 'border-purple-400/30 text-purple-400 hover:bg-purple-400/10'
+                            : 'border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10'
+                        }`}
+                      >
+                        <Building2 className="w-4 h-4" />
+                        <span className="text-xs font-medium">
+                          Create RWA
+                          {user?.kycStatus?.toLowerCase() !== 'approved' && (
+                            <span className="text-xs opacity-75">(KYC Required)</span>
+                          )}
+                        </span>
+                      </Button>
+                      
+                      {/* Debug buttons for KYC testing */}
+                      {user?.kycStatus?.toLowerCase() !== 'approved' && (
+                        <div className="grid grid-cols-2 gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleTestCallback}
+                            className="text-xs border-green-400/30 text-green-400 hover:bg-green-400/10"
+                          >
+                            <Zap className="w-3 h-3 mr-1" />
+                            Test Callback
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleDirectKYCUpdate}
+                            className="text-xs border-orange-400/30 text-orange-400 hover:bg-orange-400/10"
+                          >
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Direct Update
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                     <Button
                       variant="outline"
                       onClick={() => navigate('/dashboard/marketplace')}

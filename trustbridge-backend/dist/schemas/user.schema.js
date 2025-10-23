@@ -67,6 +67,14 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "kycStatus", void 0);
 __decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], User.prototype, "kycInquiryId", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], User.prototype, "kycProvider", void 0);
+__decorate([
     (0, mongoose_1.Prop)({ required: true, enum: EmailVerificationStatus, default: EmailVerificationStatus.NOT_VERIFIED }),
     __metadata("design:type", String)
 ], User.prototype, "emailVerificationStatus", void 0);
