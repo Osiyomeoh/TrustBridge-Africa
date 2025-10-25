@@ -36,6 +36,8 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const connectorRef = useRef<DAppConnector | null>(null);
   // Track if connector was successfully initialized (not just created)
   const isInitializedRef = useRef<boolean>(false);
+  // Track IndexedDB health status to prevent repeated checks and failed attempts
+  const indexedDBHealthRef = useRef<{ checked: boolean; working: boolean; error?: string } | null>(null);
 
   // Clear all WalletConnect and IndexedDB data (mimics incognito mode)
   const clearAllWalletData = async (): Promise<void> => {
@@ -204,12 +206,40 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setIsInitializing(true);
     try {
         // Test IndexedDB health first - if it's broken, skip initialization entirely
-        console.log('🔍 Testing IndexedDB health...');
-        const indexedDBHealth = await testIndexedDBHealth();
+        // Cache the result to avoid repeated checks
+        let indexedDBHealth;
+        if (indexedDBHealthRef.current?.checked) {
+          indexedDBHealth = { working: indexedDBHealthRef.current.working, error: indexedDBHealthRef.current.error };
+          console.log('🔍 Using cached IndexedDB health status:', indexedDBHealth.working ? 'working' : `broken (${indexedDBHealth.error})`);
+        } else {
+          console.log('🔍 Testing IndexedDB health...');
+          indexedDBHealth = await testIndexedDBHealth();
+          indexedDBHealthRef.current = { checked: true, working: indexedDBHealth.working, error: indexedDBHealth.error };
+        }
         
         if (!indexedDBHealth.working) {
           console.error('❌ IndexedDB is not working:', indexedDBHealth.error);
-          setError(`IndexedDB is not working in your browser (${indexedDBHealth.error}). This is required for wallet connection. Please try: 1) Using an incognito/private window, 2) Clearing browser data/cache, 3) Checking browser storage permissions, or 4) Trying a different browser.`);
+          
+          // Provide more specific error message based on the error type
+          let errorMessage = `IndexedDB is not working in your browser (${indexedDBHealth.error}). This is required for wallet connection.\n\n`;
+          
+          if (indexedDBHealth.error?.includes('UnknownError') || indexedDBHealth.error?.includes('backing store')) {
+            errorMessage += `🔍 This error typically occurs when:\n`;
+            errorMessage += `• Browser extensions (ad blockers, privacy tools) are blocking IndexedDB\n`;
+            errorMessage += `• IndexedDB state is corrupted from previous sessions\n`;
+            errorMessage += `• Browser storage quota is exceeded\n\n`;
+            errorMessage += `✅ Solutions:\n`;
+            errorMessage += `1. Use an incognito/private window (works around extensions and corrupted state)\n`;
+            errorMessage += `2. Disable browser extensions temporarily\n`;
+            errorMessage += `3. Clear browser data/cache for this site\n`;
+            errorMessage += `4. Check browser storage permissions in settings\n`;
+            errorMessage += `5. Try a different browser\n`;
+            errorMessage += `6. Restart your browser`;
+          } else {
+            errorMessage += `Please try: 1) Using an incognito/private window, 2) Clearing browser data/cache, 3) Checking browser storage permissions, or 4) Trying a different browser.`;
+          }
+          
+          setError(errorMessage);
           setIsInitializing(false);
           return; // Skip initialization entirely
         }
@@ -448,6 +478,34 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     console.log('🔌 Attempting to connect wallet, connector status:', !!connectorRef.current);
 
     try {
+      // Check IndexedDB health first - if it's broken, don't try to initialize
+      if (indexedDBHealthRef.current?.checked && !indexedDBHealthRef.current.working) {
+        console.error('❌ IndexedDB is broken - cannot initialize wallet');
+        
+        // Provide more specific error message based on the error type
+        let errorMessage = `IndexedDB is not working in your browser (${indexedDBHealthRef.current.error}). This is required for wallet connection.\n\n`;
+        
+        if (indexedDBHealthRef.current.error?.includes('UnknownError') || indexedDBHealthRef.current.error?.includes('backing store')) {
+          errorMessage += `🔍 This error typically occurs when:\n`;
+          errorMessage += `• Browser extensions (ad blockers, privacy tools) are blocking IndexedDB\n`;
+          errorMessage += `• IndexedDB state is corrupted from previous sessions\n`;
+          errorMessage += `• Browser storage quota is exceeded\n\n`;
+          errorMessage += `✅ Solutions:\n`;
+          errorMessage += `1. Use an incognito/private window (works around extensions and corrupted state)\n`;
+          errorMessage += `2. Disable browser extensions temporarily\n`;
+          errorMessage += `3. Clear browser data/cache for this site\n`;
+          errorMessage += `4. Check browser storage permissions in settings\n`;
+          errorMessage += `5. Try a different browser\n`;
+          errorMessage += `6. Restart your browser`;
+        } else {
+          errorMessage += `Please try: 1) Using an incognito/private window, 2) Clearing browser data/cache, 3) Checking browser storage permissions, or 4) Trying a different browser.`;
+        }
+        
+        setError(errorMessage);
+        setLoading(false);
+        return;
+      }
+      
       // Use ref for immediate access (avoids state update race condition)
       let currentConnector = connectorRef.current;
       
@@ -478,16 +536,59 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             currentConnector = connectorRef.current;
             
             if (!currentConnector) {
+              // Check if IndexedDB is broken (initialization might have failed due to IndexedDB)
+              if (indexedDBHealthRef.current?.checked && !indexedDBHealthRef.current.working) {
+                console.error('❌ IndexedDB is broken - cannot initialize wallet');
+                
+                // Provide more specific error message based on the error type
+                let errorMessage = `IndexedDB is not working in your browser (${indexedDBHealthRef.current.error}). This is required for wallet connection.\n\n`;
+                
+                if (indexedDBHealthRef.current.error?.includes('UnknownError') || indexedDBHealthRef.current.error?.includes('backing store')) {
+                  errorMessage += `🔍 This error typically occurs when:\n`;
+                  errorMessage += `• Browser extensions (ad blockers, privacy tools) are blocking IndexedDB\n`;
+                  errorMessage += `• IndexedDB state is corrupted from previous sessions\n`;
+                  errorMessage += `• Browser storage quota is exceeded\n\n`;
+                  errorMessage += `✅ Solutions:\n`;
+                  errorMessage += `1. Use an incognito/private window (works around extensions and corrupted state)\n`;
+                  errorMessage += `2. Disable browser extensions temporarily\n`;
+                  errorMessage += `3. Clear browser data/cache for this site\n`;
+                  errorMessage += `4. Check browser storage permissions in settings\n`;
+                  errorMessage += `5. Try a different browser\n`;
+                  errorMessage += `6. Restart your browser`;
+                } else {
+                  errorMessage += `Please try: 1) Using an incognito/private window, 2) Clearing browser data/cache, 3) Checking browser storage permissions, or 4) Trying a different browser.`;
+                }
+                
+                setError(errorMessage);
+                setLoading(false);
+                return;
+              }
+              
               // Wait a bit more after lazy initialization
               await new Promise(resolve => setTimeout(resolve, 500));
               currentConnector = connectorRef.current;
             }
           } catch (lazyInitError) {
             console.error('Lazy initialization failed:', lazyInitError);
+            // Check if it's an IndexedDB error
+            const errorMessage = lazyInitError instanceof Error ? lazyInitError.message : String(lazyInitError);
+            if (errorMessage.includes('IndexedDB') || errorMessage.includes('indexedDB')) {
+              setError(`IndexedDB is not working in your browser. This is required for wallet connection. Please try: 1) Using an incognito/private window, 2) Clearing browser data/cache, 3) Checking browser storage permissions, or 4) Trying a different browser.`);
+              setLoading(false);
+              return;
+            }
           }
         }
         
         if (!currentConnector) {
+          // Check if IndexedDB is broken before showing generic error
+          if (indexedDBHealthRef.current?.checked && !indexedDBHealthRef.current.working) {
+            console.error('❌ IndexedDB is broken - cannot initialize wallet');
+            setError(`IndexedDB is not working in your browser (${indexedDBHealthRef.current.error}). This is required for wallet connection. Please try: 1) Using an incognito/private window, 2) Clearing browser data/cache, 3) Checking browser storage permissions, or 4) Trying a different browser.`);
+            setLoading(false);
+            return;
+          }
+          
           console.error('❌ Wallet initialization failed - connector not available');
           throw new Error('Wallet initialization failed - please refresh the page or try again');
         }

@@ -43,9 +43,13 @@ export class GmailService {
         tls: {
           rejectUnauthorized: false, // Allow self-signed certificates
         },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 10000,
+        connectionTimeout: 20000, // 20 seconds for cloud platforms
+        greetingTimeout: 20000,
+        socketTimeout: 20000,
+        // Add pool settings for better connection management
+        pool: true,
+        maxConnections: 1,
+        maxMessages: 3,
       };
       
       this.transporter = nodemailer.createTransport(cpanelConfig);
@@ -88,57 +92,65 @@ export class GmailService {
   async sendVerificationEmail(to: string, verificationCode: string, userName: string): Promise<boolean> {
     const verificationUrl = `${this.configService.get<string>('FRONTEND_URL', 'http://localhost:3001')}/auth/verify-email?code=${verificationCode}`;
     
-    try {
-      // If Gmail transporter is not available, log to console
-      if (!this.transporter) {
-        this.logger.warn('Gmail transporter not available, logging verification code to console:');
-        this.logger.warn('='.repeat(80));
-        this.logger.warn(`VERIFICATION EMAIL FOR: ${to}`);
-        this.logger.warn(`USER: ${userName}`);
-        this.logger.warn(`VERIFICATION CODE: ${verificationCode}`);
-        this.logger.warn(`VERIFICATION URL: ${verificationUrl}`);
-        this.logger.warn('='.repeat(80));
-        return true; // Return true so the flow continues
-      }
-      
-      // Get from email address (prioritize cPanel, then Gmail, then default)
-      const cpanelFromEmail = this.configService.get<string>('CPANEL_SMTP_FROM_EMAIL');
-      const gmailUser = this.configService.get<string>('GMAIL_USER');
-      const fromEmail = cpanelFromEmail || gmailUser || 'noreply@trustbridge.africa';
-      
-      const mailOptions = {
-        from: {
-          name: 'TrustBridge',
-          address: fromEmail,
-        },
-        to: to,
-        subject: 'Verify Your TrustBridge Account - 6-Digit Code',
-        html: this.getVerificationEmailTemplate(userName, verificationUrl, verificationCode),
-        text: this.getVerificationEmailText(userName, verificationUrl, verificationCode),
-      };
+    // Always log to console as a fallback (for Render logs)
+    this.logger.warn('='.repeat(80));
+    this.logger.warn(`VERIFICATION EMAIL FOR: ${to}`);
+    this.logger.warn(`USER: ${userName}`);
+    this.logger.warn(`VERIFICATION CODE: ${verificationCode}`);
+    this.logger.warn(`VERIFICATION URL: ${verificationUrl}`);
+    this.logger.warn('='.repeat(80));
+    
+    // If no transporter, return immediately (console logging is enough)
+    if (!this.transporter) {
+      this.logger.warn('No SMTP transporter configured - using console logging only');
+      return true;
+    }
+    
+    // Get from email address (prioritize cPanel, then Gmail, then default)
+    const cpanelFromEmail = this.configService.get<string>('CPANEL_SMTP_FROM_EMAIL');
+    const gmailUser = this.configService.get<string>('GMAIL_USER');
+    const fromEmail = cpanelFromEmail || gmailUser || 'noreply@trustbridge.africa';
+    
+    const mailOptions = {
+      from: {
+        name: 'TrustBridge',
+        address: fromEmail,
+      },
+      to: to,
+      subject: 'Verify Your TrustBridge Account - 6-Digit Code',
+      html: this.getVerificationEmailTemplate(userName, verificationUrl, verificationCode),
+      text: this.getVerificationEmailText(userName, verificationUrl, verificationCode),
+    };
 
+    // Send email asynchronously (fire and forget) - don't block the request
+    // This prevents timeouts on cloud platforms where SMTP connections can be slow
+    this.sendEmailAsync(mailOptions, to).catch((error) => {
+      this.logger.error(`Failed to send verification email to ${to} (async):`, error);
+      // Error already logged, but email is still logged to console above
+    });
+    
+    // Return immediately - email is being sent in background
+    return true;
+  }
+
+  /**
+   * Send email asynchronously without blocking the request
+   * This prevents timeout issues on cloud platforms
+   */
+  private async sendEmailAsync(mailOptions: any, recipientEmail: string): Promise<void> {
+    try {
       // Add timeout wrapper to prevent hanging (especially on cloud platforms)
       const sendMailPromise = this.transporter.sendMail(mailOptions);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email sending timeout after 15 seconds - likely network/firewall issue on hosting platform')), 15000)
+        setTimeout(() => reject(new Error('Email sending timeout after 25 seconds - likely network/firewall issue on hosting platform')), 25000)
       );
 
       const result = await Promise.race([sendMailPromise, timeoutPromise]);
-      this.logger.log(`Verification email sent to ${to}: ${(result as any).messageId}`);
-      return true;
+      this.logger.log(`✅ Verification email sent successfully to ${recipientEmail}: ${(result as any).messageId}`);
     } catch (error) {
-      this.logger.error('Failed to send verification email:', error);
-      
-      // Fallback: Log to console if email fails
-      this.logger.warn('FALLBACK: Logging verification code to console due to email failure:');
-      this.logger.warn('='.repeat(80));
-      this.logger.warn(`VERIFICATION EMAIL FOR: ${to}`);
-      this.logger.warn(`USER: ${userName}`);
-      this.logger.warn(`VERIFICATION CODE: ${verificationCode}`);
-      this.logger.warn(`VERIFICATION URL: ${verificationUrl}`);
-      this.logger.warn('='.repeat(80));
-      
-      return true; // Return true so the flow continues
+      // Log error but don't throw - email is already logged to console
+      this.logger.error(`❌ Failed to send verification email to ${recipientEmail}:`, error);
+      throw error; // Re-throw for caller to handle if needed
     }
   }
 

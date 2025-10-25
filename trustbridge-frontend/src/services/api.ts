@@ -114,7 +114,7 @@ export const apiService = {
   loginWithWallet: (walletData: any) => apiClient.post('/auth/wallet', walletData).then(res => res.data),
   completeProfile: (profileData: any) => apiClient.post('/auth/complete-profile', profileData).then(res => res.data),
   verifyEmail: (data: { token: string }) => apiClient.post('/auth/verify-email', data).then(res => res.data),
-  resendVerification: (email: string) => apiClient.post('/auth/resend-verification', { email }).then(res => res.data),
+  resendVerification: (email: string) => apiClient.post('/auth/resend-verification', { email }, { timeout: 20000 }).then(res => res.data), // 20 second timeout for email sending
   getProfile: () => apiClient.get('/auth/me').then(res => res.data),
   checkWalletUser: (address: string) => apiClient.get(`/auth/check-wallet/${address}`).then(res => res.data),
   checkEmailUser: (email: string) => apiClient.get(`/auth/check-email/${encodeURIComponent(email)}`).then(res => res.data),
