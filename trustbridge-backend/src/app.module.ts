@@ -43,6 +43,7 @@ import { HealthModule } from './health/health.module';
 import { ApiModule } from './api/api.module';
 import { ActivityModule } from './activity/activity.module';
 import { KycModule } from './kyc/kyc.module';
+import { AIModule } from './ai/ai.module';
 
 import { AppController } from './app.controller';
 
@@ -119,6 +120,7 @@ import { AppController } from './app.controller';
     ApiModule,
     ActivityModule,
     KycModule,
+    AIModule,
   ],
 })
 export class AppModule {}

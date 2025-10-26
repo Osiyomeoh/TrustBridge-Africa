@@ -37,6 +37,12 @@ export declare class User {
     stakingRewards: number;
     totalInvested: number;
     investmentCount: number;
+    trustTokenBalance: number;
+    aiUsage?: {
+        daily: Record<string, number>;
+        monthly: Record<string, number>;
+        totalQueries: number;
+    };
     lastInvestmentDate?: Date;
     lastActivity?: Date;
     region?: string;

@@ -46,6 +46,7 @@ const health_module_1 = require("./health/health.module");
 const api_module_1 = require("./api/api.module");
 const activity_module_1 = require("./activity/activity.module");
 const kyc_module_1 = require("./kyc/kyc.module");
+const ai_module_1 = require("./ai/ai.module");
 const app_controller_1 = require("./app.controller");
 let AppModule = class AppModule {
 };
@@ -105,6 +106,7 @@ exports.AppModule = AppModule = __decorate([
             api_module_1.ApiModule,
             activity_module_1.ActivityModule,
             kyc_module_1.KycModule,
+            ai_module_1.AIModule,
         ],
     })
 ], AppModule);

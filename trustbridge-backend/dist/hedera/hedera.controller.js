@@ -936,6 +936,9 @@ let HederaController = class HederaController {
                 ...asset,
                 status: currentStatuses.get(asset.rwaTokenId) || asset.status
             }));
+            assetsWithStatus.forEach((asset, index) => {
+                console.log(`🔍 Asset ${index + 1} - displayImage:`, asset.assetData?.displayImage);
+            });
             console.log('🔧 Assets with updated statuses:', assetsWithStatus.length);
             return {
                 success: true,

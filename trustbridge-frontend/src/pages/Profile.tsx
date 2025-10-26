@@ -349,7 +349,7 @@ const Profile: React.FC = () => {
                   // Check if it's an IPFS CID or URL
                   if (metadataString.startsWith('baf') || metadataString.startsWith('Qm')) {
                     // It's an IPFS CID, fetch the metadata
-                    const ipfsUrl = `https://indigo-recent-clam-436.mypinata.cloud/ipfs/${metadataString}`;
+                    const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${metadataString}`;
                     try {
                       const ipfsResponse = await fetch(ipfsUrl);
                       if (ipfsResponse.ok) {
@@ -806,7 +806,7 @@ const Profile: React.FC = () => {
             } catch {
               // Check if it's an IPFS CID
               if (metadataString.startsWith('baf') && !metadataString.includes('/')) {
-                const ipfsUrl = `https://indigo-recent-clam-436.mypinata.cloud/ipfs/${metadataString}`;
+                const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${metadataString}`;
                 try {
                   const metadataResponse = await fetch(ipfsUrl);
                   if (metadataResponse.ok) {
@@ -2457,13 +2457,17 @@ const Profile: React.FC = () => {
                       >
                         <CardContent className="p-3">
                           <div className="aspect-square bg-gradient-to-br from-purple-400/20 to-purple-600/20 rounded mb-3 flex items-center justify-center relative group">
-                            {asset.imageURI ? (
+                            {(asset.displayImage || asset.imageURI) ? (
                               <img 
-                                src={asset.imageURI} 
+                                src={asset.displayImage || asset.imageURI} 
                                 alt={asset.name || 'RWA Asset'} 
                                 className="w-full h-full object-cover rounded"
                                 onError={(e) => {
+                                  console.error('❌ Profile image failed to load:', asset.displayImage || asset.imageURI);
                                   e.currentTarget.style.display = 'none';
+                                }}
+                                onLoad={() => {
+                                  console.log('✅ Profile image loaded successfully:', asset.displayImage || asset.imageURI);
                                 }}
                               />
                             ) : null}

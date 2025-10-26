@@ -13,7 +13,9 @@ import Navigation from './components/Layout/Navigation';
 import UniversalHeader from './components/Layout/UniversalHeader';
 import AnimatedBackground from './components/UI/AnimatedBackground';
 import { Toaster } from './components/UI/Toaster';
+import AIChatbot from './components/AI/AIChatbot';
 import Landing from './pages/Landing';
+import AIStudio from './pages/AIStudio';
 import Auth from './pages/Auth';
 import Portfolio from './pages/Portfolio';
 import Analytics from './pages/Analytics';
@@ -93,6 +95,9 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) 
         {children}
       </div>
       <AnimatedBackground />
+      
+      {/* AI Components - Available on all dashboard pages */}
+      <AIChatbot />
     </div>
   );
 };
@@ -256,6 +261,7 @@ const App: React.FC = () => {
                         <Route path="/create-digital-asset" element={<CreateDigitalAsset />} />
                         <Route path="/create-rwa-asset" element={<CreateRWAAsset />} />
                         <Route path="/submit-rwa-asset" element={<RWAAssetSubmission />} />
+                        <Route path="/ai-studio" element={<AIStudio />} />
                         <Route path="/rwa-trading" element={<RWATradingInterface />} />
                         <Route path="/secondary-trading" element={<SecondaryTradingInterface />} />
                         <Route path="/rwa-management" element={<RWAAssetManagement />} />

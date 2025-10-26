@@ -74,6 +74,16 @@ export class User {
   @Prop({ default: 0 })
   investmentCount: number;
 
+  @Prop({ default: 0 })
+  trustTokenBalance: number;
+
+  @Prop({ type: Object })
+  aiUsage?: {
+    daily: Record<string, number>;
+    monthly: Record<string, number>;
+    totalQueries: number;
+  };
+
   @Prop()
   lastInvestmentDate?: Date;
 

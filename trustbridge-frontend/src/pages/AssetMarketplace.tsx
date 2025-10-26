@@ -181,7 +181,7 @@ const AssetMarketplace: React.FC = () => {
               
               // If it's just a CID (starts with 'baf'), reconstruct the URL
               if (metadataString.startsWith('baf') && !metadataString.includes('/')) {
-                ipfsUrlToFetch = `https://indigo-recent-clam-436.mypinata.cloud/ipfs/${metadataString}`;
+                ipfsUrlToFetch = `https://gateway.pinata.cloud/ipfs/${metadataString}`;
                 console.log(`📦 Detected IPFS CID - reconstructed URL: ${ipfsUrlToFetch}`);
               } else if (metadataString.startsWith('http')) {
                 console.log(`📡 Detected IPFS URL: ${ipfsUrlToFetch}`);
@@ -233,7 +233,13 @@ const AssetMarketplace: React.FC = () => {
             }
           }
           
-          // Use simple SVG placeholder if no valid image
+          // Normalize IPFS URLs to use the public gateway (do this BEFORE setting placeholders)
+          if (imageUrl && imageUrl.includes('indigo-recent-clam-436.mypinata.cloud')) {
+            imageUrl = imageUrl.replace('indigo-recent-clam-436.mypinata.cloud', 'gateway.pinata.cloud');
+            console.log(`🔄 Normalized old IPFS URL to: ${imageUrl}`);
+          }
+          
+          // Use simple SVG placeholder if no valid image (AFTER normalization)
           if (!imageUrl) {
             const placeholderText = metadata.name || 'NFT';
             imageUrl = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Arial" font-size="24" fill="%2300ff88" text-anchor="middle" dy=".3em">${encodeURIComponent(placeholderText)}</text></svg>`;
@@ -260,7 +266,7 @@ const AssetMarketplace: React.FC = () => {
           } catch (error) {
             console.warn(`⚠️ Failed to verify blockchain state for ${tokenId}-${serialNumber}:`, error);
           }
-
+          
           const assetObj = {
             id: `${tokenId}-${serialNumber}`,
             tokenId,
@@ -300,7 +306,45 @@ const AssetMarketplace: React.FC = () => {
       
       const marketplaceAssets = (await Promise.all(nftPromises)).filter(Boolean);
       
-      console.log('📊 Marketplace assets loaded from Hedera:', marketplaceAssets.length);
+      // Fetch RWA assets from HCS topic
+      try {
+        console.log('🏛️ Fetching RWA assets from HCS topic...');
+        const rwaResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4001'}/api/hedera/rwa/trustbridge-assets`);
+        if (rwaResponse.ok) {
+          const rwaData = await rwaResponse.json();
+          if (rwaData.success && rwaData.data?.assets) {
+            const rwaAssets = rwaData.data.assets.map((asset: any) => {
+              return {
+                id: `rwa-${asset.rwaTokenId}`,
+                tokenId: asset.rwaTokenId,
+                name: asset.assetData?.name || asset.name || 'RWA Asset',
+                description: asset.assetData?.description || '',
+                displayImage: asset.assetData?.displayImage,
+                imageURI: asset.assetData?.displayImage,
+                image: asset.assetData?.displayImage,
+                price: asset.assetData?.totalValue || '100',
+                totalValue: asset.assetData?.totalValue || '100',
+                owner: asset.creator,
+                category: asset.assetData?.category || 'RWA',
+                type: 'rwa',
+                status: asset.status || 'SUBMITTED_FOR_APPROVAL',
+                isActive: true,
+                isTradeable: asset.status === 'APPROVED',
+                location: asset.assetData?.location || '',
+                expectedAPY: asset.assetData?.expectedAPY || 0,
+                createdAt: asset.timestamp || new Date().toISOString()
+              };
+            });
+            console.log('🏛️ RWA assets loaded:', rwaAssets.length);
+            // Merge RWA assets with digital assets
+            marketplaceAssets.push(...rwaAssets);
+          }
+        }
+      } catch (rwaError) {
+        console.warn('⚠️ Failed to fetch RWA assets:', rwaError);
+      }
+      
+      console.log('📊 Total marketplace assets (Digital + RWA):', marketplaceAssets.length);
       setAssets(marketplaceAssets);
       
       // Calculate collection stats
@@ -425,12 +469,36 @@ const AssetMarketplace: React.FC = () => {
       });
     }
 
-    // Sort assets by selected criteria
+    // Sort assets - prioritize assets with images first
     filtered.sort((a, b) => {
+      // Check if assets have images (not SVG placeholders)
+      const aHasImage = a.imageURI && a.imageURI && 
+        !a.imageURI.startsWith('data:image/svg+xml') && 
+        !a.imageURI.includes('svg');
+      const bHasImage = b.imageURI && b.imageURI && 
+        !b.imageURI.startsWith('data:image/svg+xml') && 
+        !b.imageURI.includes('svg');
+      
+      // Also check displayImage field
+      const aHasDisplayImage = a.displayImage && 
+        !a.displayImage.startsWith('data:image/svg+xml') && 
+        !a.displayImage.includes('svg');
+      const bHasDisplayImage = b.displayImage && 
+        !b.displayImage.startsWith('data:image/svg+xml') && 
+        !b.displayImage.includes('svg');
+      
+      const aHasValidImage = aHasImage || aHasDisplayImage;
+      const bHasValidImage = bHasImage || bHasDisplayImage;
+      
+      // Priority 1: Assets with images come first
+      if (aHasValidImage && !bHasValidImage) return -1;
+      if (!aHasValidImage && bHasValidImage) return 1;
+      
+      // Priority 2: Sort by selected criteria (only if both have same image status)
       if (sortBy === 'floor' || sortBy === 'volume') {
-      const aValue = parseFloat(a.price || a.floorPrice || '0');
-      const bValue = parseFloat(b.price || b.floorPrice || '0');
-      return sortOrder === 'desc' ? bValue - aValue : aValue - bValue;
+        const aValue = parseFloat(a.price || a.floorPrice || '0');
+        const bValue = parseFloat(b.price || b.floorPrice || '0');
+        return sortOrder === 'desc' ? bValue - aValue : aValue - bValue;
       }
       // Sort by date (most recent first)
       const aDate = new Date(a.listedAt || 0).getTime();
@@ -834,15 +902,24 @@ const AssetMarketplace: React.FC = () => {
                     }}
                   >
                     <Card className="overflow-hidden bg-gray-900 border-gray-700 hover:border-neon-green/50 transition-all duration-300 group-hover:shadow-lg group-hover:shadow-neon-green/20">
-                      <div className="relative">
-                        <img
-                          src={asset.imageURI || asset.image}
-                          alt={asset.name}
-                          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                          onError={(e) => {
-                            e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Arial" font-size="24" fill="%2300ff88" text-anchor="middle" dy=".3em">NFT</text></svg>';
-                          }}
-                        />
+                                              <div className="relative">
+                          <img
+                            src={asset.displayImage || asset.imageURI || asset.image}
+                            alt={asset.name}
+                            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => {
+                              const currentSrc = (e.target as HTMLImageElement).src;
+                              // If already using fallback, don't change it
+                              if (currentSrc.includes('data:image/svg+xml')) {
+                                return;
+                              }
+                              console.warn('⚠️ Image failed to load, using fallback:', {
+                                assetName: asset.name,
+                                originalSrc: asset.displayImage || asset.imageURI || asset.image
+                              });
+                              e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Arial" font-size="24" fill="%2300ff88" text-anchor="middle" dy=".3em">NFT</text></svg>';
+                            }}
+                          />
                         <div className="absolute top-3 right-3">
                           <button className="p-2 bg-black/50 rounded-full hover:bg-black/70 transition-colors">
                             <Heart className="w-4 h-4 text-white" />

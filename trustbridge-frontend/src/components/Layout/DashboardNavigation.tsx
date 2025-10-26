@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, BarChart3, Settings, X, Zap, User, LogOut, ChevronLeft, ChevronRight, ChevronDown, Shield, Coins, Vote, BarChart3 as BarChart, Activity, Building2, Crown, Coins as CoinsIcon, TreePine, Package, PieChart } from 'lucide-react';
+import { TrendingUp, BarChart3, Settings, X, Zap, User, LogOut, ChevronLeft, ChevronRight, ChevronDown, Shield, Coins, Vote, BarChart3 as BarChart, Activity, Building2, Crown, Coins as CoinsIcon, TreePine, Package, PieChart, Bot } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ThemeToggle from '../UI/ThemeToggle';
 import { useSidebar } from '../../contexts/SidebarContext';
@@ -92,6 +92,7 @@ const DashboardNavigation: React.FC = () => {
     { id: 'discovery', label: 'Discovery', icon: TrendingUp, href: '/dashboard/marketplace' },
     { id: 'profile', label: 'Profile', icon: User, href: '/dashboard/profile' },
     { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/dashboard/analytics' },
+    { id: 'ai-studio', label: 'AI Studio', icon: Bot, href: '/dashboard/ai-studio' },
     { id: 'get-test-tokens', label: 'Get Test Tokens', icon: CoinsIcon, href: '/dashboard/get-test-tokens' },
     { id: 'settings', label: 'Settings', icon: Settings, href: '/dashboard/settings' },
   ];

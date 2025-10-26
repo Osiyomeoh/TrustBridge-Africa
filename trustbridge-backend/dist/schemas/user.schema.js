@@ -99,6 +99,14 @@ __decorate([
     __metadata("design:type", Number)
 ], User.prototype, "investmentCount", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({ default: 0 }),
+    __metadata("design:type", Number)
+], User.prototype, "trustTokenBalance", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Object }),
+    __metadata("design:type", Object)
+], User.prototype, "aiUsage", void 0);
+__decorate([
     (0, mongoose_1.Prop)(),
     __metadata("design:type", Date)
 ], User.prototype, "lastInvestmentDate", void 0);

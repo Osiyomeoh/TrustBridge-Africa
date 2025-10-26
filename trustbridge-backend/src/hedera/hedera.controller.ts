@@ -1352,6 +1352,11 @@ export class HederaController {
         status: currentStatuses.get(asset.rwaTokenId) || asset.status
       }));
       
+      // Debug: Log displayImage values
+      assetsWithStatus.forEach((asset, index) => {
+        console.log(`🔍 Asset ${index + 1} - displayImage:`, asset.assetData?.displayImage);
+      });
+      
       console.log('🔧 Assets with updated statuses:', assetsWithStatus.length);
       
       return {

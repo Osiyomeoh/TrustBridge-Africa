@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import Navigation from './Navigation';
 import Header from './Header';
 import Footer from './Footer';
+import AIChatbot from '../AI/AIChatbot';
 import { cn } from '../../utils/helpers';
 
 interface LayoutProps {
@@ -38,6 +39,9 @@ const Layout: React.FC<LayoutProps> = ({ children, className }) => {
         {/* Footer */}
         <Footer />
       </div>
+      
+      {/* AI Chatbot - Available on all pages */}
+      <AIChatbot />
     </div>
   );
 };

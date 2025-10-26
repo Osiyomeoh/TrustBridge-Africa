@@ -12,7 +12,8 @@ import {
   Package,
   Truck,
   Wrench,
-  Shield
+  Shield,
+  Brain
 } from 'lucide-react';
 import { useWallet } from '../../contexts/WalletContext';
 import { useToast } from '../../hooks/useToast';
@@ -74,6 +75,8 @@ const CreateRWAAsset: React.FC = () => {
     evidenceFiles: false,
     metadata: false
   });
+  
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<any>(null);
   
   const [assetData, setAssetData] = useState<RWAAssetData>({
     name: '',
@@ -499,7 +502,7 @@ const CreateRWAAsset: React.FC = () => {
   };
 
   const nextStep = () => {
-    if (currentStep < 5) {
+    if (currentStep < 6) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -521,7 +524,9 @@ const CreateRWAAsset: React.FC = () => {
       case 4:
         return assetData.selectedCategory && assetData.evidenceFiles.length > 0 && assetData.displayImage;
       case 5:
-        return true;
+        return true; // AI Analysis step - always valid
+      case 6:
+        return true; // Review step - always valid
       default:
         return false;
     }
@@ -974,8 +979,57 @@ const CreateRWAAsset: React.FC = () => {
             </motion.div>
               )}
 
-              {/* Step 5: Review & Submit */}
-              {currentStep === 5 && (
+          {/* Step 5: AI Analysis */}
+          {currentStep === 5 && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-6"
+            >
+              <div className="text-center mb-6">
+                <Brain className="w-16 h-16 text-blue-600 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  AI-Powered Asset Analysis
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Get instant validation, pricing, and risk assessment for your real-world asset
+                </p>
+              </div>
+
+              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-8 text-center max-w-4xl mx-auto">
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  AI Analysis feature is temporarily unavailable. Skipping to submit your asset.
+                </p>
+                <Button
+                  onClick={() => {
+                    setAiAnalysisResult({ validation: { status: 'skipped' } });
+                    setCurrentStep(6);
+                  }}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  Continue to Review
+                </Button>
+              </div>
+
+              <div className="flex justify-center space-x-4 mt-6">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentStep(4)}
+                >
+                  Back to Documents
+                </Button>
+                <Button
+                  onClick={() => setCurrentStep(6)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  Skip Analysis & Continue
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+              {/* Step 6: Review & Submit */}
+              {currentStep === 6 && (
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -1025,6 +1079,42 @@ const CreateRWAAsset: React.FC = () => {
                       <p><strong>Document Category:</strong> {documentCategories.find(cat => cat.value === assetData.selectedCategory)?.label || 'None'}</p>
                     </div>
                   </div>
+
+                  {/* AI Analysis Results */}
+                  {aiAnalysisResult && (
+                    <div>
+                      <h3 className="font-medium text-gray-900 dark:text-white mb-2 flex items-center">
+                        <Brain className="w-4 h-4 mr-2 text-blue-500" />
+                        AI Analysis Results
+                      </h3>
+                      <div className="text-sm text-electric-mint space-y-1">
+                        <p><strong>Validation:</strong> 
+                          <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                            aiAnalysisResult.validation?.status === 'valid' ? 'bg-green-100 text-green-800' :
+                            aiAnalysisResult.validation?.status === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {aiAnalysisResult.validation?.status?.toUpperCase() || 'N/A'}
+                          </span>
+                        </p>
+                        {aiAnalysisResult.marketValue && (
+                          <p><strong>Suggested Value:</strong> ${aiAnalysisResult.marketValue.suggested?.toLocaleString() || 'N/A'}</p>
+                        )}
+                        {aiAnalysisResult.riskAssessment && (
+                          <p><strong>Risk Level:</strong> {aiAnalysisResult.riskAssessment.level?.toUpperCase() || 'N/A'}</p>
+                        )}
+                        {aiAnalysisResult.compliance && (
+                          <p><strong>Compliance:</strong> 
+                            <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                              aiAnalysisResult.compliance.status === 'compliant' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {aiAnalysisResult.compliance.status?.toUpperCase() || 'N/A'}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1079,7 +1169,7 @@ const CreateRWAAsset: React.FC = () => {
                   Previous
                 </Button>
 
-                {currentStep < 5 ? (
+                {currentStep < 6 ? (
                   <Button
                     onClick={nextStep}
                     disabled={!isStepValid(currentStep)}

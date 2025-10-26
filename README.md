@@ -343,6 +343,45 @@ Hedera Hashgraph
 
 ---
 
+## 🤖 **Google AI Studio Integration - Powered by Gemini**
+
+TrustBridge is powered by **Google AI Studio** and **Gemini AI**, providing advanced AI capabilities for investment analysis and content generation:
+
+### **🧠 AI-Powered Investment Features**
+- **Investment Analysis** - AI-driven portfolio optimization and risk assessment
+- **Market Intelligence** - Real-time market insights and trend analysis
+- **Asset Valuation** - AI-powered asset pricing and valuation models
+- **Risk Assessment** - Intelligent risk analysis and portfolio diversification
+- **Investment Recommendations** - Personalized investment advice based on user profile
+
+### **🎨 Creative AI Tools**
+- **Image Generation** - Create visual content for assets and marketing materials
+- **Video Generation** - Generate promotional videos and asset demonstrations
+- **Audio Transcription** - Convert audio to text for analysis and documentation
+- **Document Processing** - Intelligent document analysis and data extraction
+- **Content Creation** - AI-generated marketing content and asset descriptions
+
+### **🔍 Real-Time Data Integration**
+- **Google Search Integration** - Real-time Google Search results for market research
+- **Maps Integration** - Location-based asset insights and geographic analysis
+- **News Analysis** - AI-powered news sentiment analysis and market impact assessment
+- **Social Media Monitoring** - Track social sentiment around assets and markets
+
+### **💰 AI Credit System - TRUST Token Economy**
+- **Flexible Pricing** - 2 TRUST tokens for basic queries, 4 TRUST for video generation
+- **Usage Limits** - 50 daily queries, 1000 monthly queries per user
+- **Cost Optimization** - Google AI Studio provides cost-effective AI services
+- **Revenue Generation** - AI services generate TRUST token demand and platform revenue
+
+### **🎯 AI Studio Features**
+- **Conversational AI** - Chat with AI for investment guidance and market insights
+- **Multi-Modal AI** - Text, image, audio, and video processing capabilities
+- **Real-Time Processing** - Fast AI responses with 2.5 Flash-Lite for instant results
+- **Safety & Compliance** - Built-in safety filters and compliance checking
+- **Scalable Infrastructure** - Enterprise-grade AI infrastructure for high-volume usage
+
+---
+
 ## 🔧 **Technology Stack - Enterprise Grade**
 
 ### **Frontend Technologies**
@@ -549,6 +588,7 @@ Hedera Hashgraph
 ### **Q1 2025**
 - ✅ **Core Platform** - Asset tokenization and trading
 - ✅ **AMC Integration** - Pool management system
+- ✅ **Google AI Studio Integration** - Powered by Gemini AI
 - ✅ **Advanced Trading** - Order book and yield distribution
 - ✅ **Mobile App** - iOS and Android applications
 

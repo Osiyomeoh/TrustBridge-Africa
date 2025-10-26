@@ -41,9 +41,6 @@ const Dashboard: React.FC = () => {
   // Check if KYC is required - only require KYC if user exists and KYC is not approved
   const isKYCRequired = user ? user.kycStatus?.toLowerCase() !== 'approved' : false;
   
-  // Handle cases where user might not be authenticated
-  const isAuthenticated = !!user;
-  
   // Debug logging
   console.log('Dashboard Debug:', {
     user: user?.name,
@@ -105,9 +102,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleToggleIntegrationTest = () => {
-    setShowIntegrationTest(!showIntegrationTest);
-  };
 
   // Format analytics data for display
   const stats = useMemo(() => {
@@ -120,8 +114,8 @@ const Dashboard: React.FC = () => {
       ];
     }
 
-    const data = analyticsData.data || analyticsData;
-    const hederaStatus = hederaData?.status || 'disconnected';
+    const data = (analyticsData as any)?.data || analyticsData;
+    const hederaStatus = (hederaData as any)?.status || 'disconnected';
     
     return [
       {
@@ -455,6 +449,16 @@ const Dashboard: React.FC = () => {
               </p>
             </CardContent>
           </Card>
+        </motion.div>
+
+
+        {/* AI Studio Section */}
+        <motion.div
+          className="mb-8"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 1.1 }}
+        >
         </motion.div>
 
         {/* Simple Stats Section */}
