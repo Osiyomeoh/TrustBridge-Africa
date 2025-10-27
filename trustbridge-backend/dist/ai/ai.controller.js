@@ -126,7 +126,11 @@ let AIController = class AIController {
     }
     async getAILimits() {
         try {
-            return this.aiService.getAILimits();
+            return {
+                dailyLimit: 50,
+                monthlyLimit: 1000,
+                message: 'AI usage limits (free within limits)'
+            };
         }
         catch (error) {
             throw new common_1.HttpException('Failed to get AI limits information', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
@@ -186,7 +190,7 @@ let AIController = class AIController {
     }
     async analyzeRWAAsset(body, req) {
         try {
-            const analysis = await this.aiService.analyzeRWAAsset(body.assetData, body.documents, 'test-user');
+            const analysis = await this.aiService.analyzeAsset(body.assetData);
             return { analysis };
         }
         catch (error) {
@@ -195,7 +199,7 @@ let AIController = class AIController {
     }
     async analyzeDigitalAsset(body, req) {
         try {
-            const analysis = await this.aiService.analyzeDigitalAsset(body.assetData, body.contentFiles, 'test-user');
+            const analysis = await this.aiService.analyzeAsset(body.assetData);
             return { analysis };
         }
         catch (error) {

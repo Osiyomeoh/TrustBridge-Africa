@@ -29,6 +29,18 @@ let MobileController = class MobileController {
     constructor(mobileService) {
         this.mobileService = mobileService;
     }
+    async handleUSSD(body, res) {
+        try {
+            console.log('📱 USSD Request received:', body);
+            const { sessionId, phoneNumber, text } = body;
+            const response = await this.mobileService.processUSSDRequest(sessionId, phoneNumber, text || '');
+            return res.status(common_1.HttpStatus.OK).send(response);
+        }
+        catch (error) {
+            console.error('❌ USSD Error:', error);
+            return res.status(common_1.HttpStatus.OK).send('END Error processing request. Please try again.');
+        }
+    }
     async getMobileDashboard(userId) {
         const dashboard = await this.mobileService.getMobileDashboard(userId);
         return {
@@ -164,6 +176,16 @@ let MobileController = class MobileController {
     }
 };
 exports.MobileController = MobileController;
+__decorate([
+    (0, common_1.Post)('ussd'),
+    (0, swagger_1.ApiOperation)({ summary: 'Handle USSD requests from Africa\'s Talking' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'USSD response sent successfully' }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], MobileController.prototype, "handleUSSD", null);
 __decorate([
     (0, common_1.Get)('dashboard/:userId'),
     (0, swagger_1.ApiOperation)({ summary: 'Get mobile dashboard for user' }),

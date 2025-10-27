@@ -20,6 +20,7 @@ const hedera_module_1 = require("../hedera/hedera.module");
 const chainlink_module_1 = require("../chainlink/chainlink.module");
 const websocket_module_1 = require("../websocket/websocket.module");
 const notifications_module_1 = require("../notifications/notifications.module");
+const paga_module_1 = require("../paga/paga.module");
 let MobileModule = class MobileModule {
 };
 exports.MobileModule = MobileModule;
@@ -37,6 +38,7 @@ exports.MobileModule = MobileModule = __decorate([
             chainlink_module_1.ChainlinkModule,
             websocket_module_1.WebSocketModule,
             notifications_module_1.NotificationsModule,
+            paga_module_1.PagaModule,
         ],
         controllers: [mobile_controller_1.MobileController],
         providers: [mobile_service_1.MobileService],

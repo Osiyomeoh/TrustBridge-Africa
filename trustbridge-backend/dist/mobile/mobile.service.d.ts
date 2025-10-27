@@ -8,6 +8,7 @@ import { HederaService } from '../hedera/hedera.service';
 import { ChainlinkService } from '../chainlink/chainlink.service';
 import { WebSocketService } from '../websocket/websocket.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PagaService } from '../paga/paga.service';
 export interface MobileDashboard {
     user: any;
     assets: any[];
@@ -57,8 +58,9 @@ export declare class MobileService {
     private chainlinkService;
     private webSocketService;
     private notificationsService;
+    private pagaService;
     private readonly logger;
-    constructor(assetModel: Model<AssetDocument>, userModel: Model<UserDocument>, verificationModel: Model<VerificationRequestDocument>, settlementModel: Model<SettlementDocument>, operationModel: Model<OperationDocument>, hederaService: HederaService, chainlinkService: ChainlinkService, webSocketService: WebSocketService, notificationsService: NotificationsService);
+    constructor(assetModel: Model<AssetDocument>, userModel: Model<UserDocument>, verificationModel: Model<VerificationRequestDocument>, settlementModel: Model<SettlementDocument>, operationModel: Model<OperationDocument>, hederaService: HederaService, chainlinkService: ChainlinkService, webSocketService: WebSocketService, notificationsService: NotificationsService, pagaService: PagaService);
     getMobileDashboard(userId: string): Promise<MobileDashboard>;
     trackOperation(operationId: string): Promise<OperationTracking>;
     getUserOperations(userId: string): Promise<OperationTracking[]>;
@@ -78,4 +80,11 @@ export declare class MobileService {
     private getCurrentStep;
     private getOperationSteps;
     private calculateTrends;
+    private ussdSessions;
+    processUSSDRequest(sessionId: string, phoneNumber: string, text: string): Promise<string>;
+    private handleUSSDMenu;
+    private showMainMenu;
+    private handleRegistrationFlow;
+    private handleTokenizeFlow;
+    private handlePortfolio;
 }

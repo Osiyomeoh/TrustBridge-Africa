@@ -42,7 +42,11 @@ export declare class AIController {
         trustTokenBalance: number;
         costPerQuery: number;
     }>;
-    getAILimits(): Promise<any>;
+    getAILimits(): Promise<{
+        dailyLimit: number;
+        monthlyLimit: number;
+        message: string;
+    }>;
     generateImage(body: {
         prompt: string;
     }, req: any): Promise<{
@@ -81,12 +85,12 @@ export declare class AIController {
         assetData: any;
         documents: any[];
     }, req: any): Promise<{
-        analysis: any;
+        analysis: AIQueryResponse;
     }>;
     analyzeDigitalAsset(body: {
         assetData: any;
         contentFiles: any[];
     }, req: any): Promise<{
-        analysis: any;
+        analysis: AIQueryResponse;
     }>;
 }

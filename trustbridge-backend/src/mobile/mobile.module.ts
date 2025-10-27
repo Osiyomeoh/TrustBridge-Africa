@@ -12,6 +12,8 @@ import { HederaModule } from '../hedera/hedera.module';
 import { ChainlinkModule } from '../chainlink/chainlink.module';
 import { WebSocketModule } from '../websocket/websocket.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { PagaModule } from '../paga/paga.module';
+// PaystackService removed - using direct API calls
 
 @Module({
   imports: [
@@ -27,6 +29,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     ChainlinkModule,
     WebSocketModule,
     NotificationsModule,
+    PagaModule,
   ],
   controllers: [MobileController],
   providers: [MobileService],

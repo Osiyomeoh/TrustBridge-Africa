@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, Res, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery } from '@nestjs/swagger';
+import { Response } from 'express';
 import { MobileService } from './mobile.service';
 
 export class SubmitVerificationDto {
@@ -29,6 +30,33 @@ export class UpdateOperationStatusDto {
 @Controller('mobile')
 export class MobileController {
   constructor(private readonly mobileService: MobileService) {}
+
+  @Post('ussd')
+  @ApiOperation({ summary: 'Handle USSD requests from Africa\'s Talking' })
+  @ApiResponse({ status: 200, description: 'USSD response sent successfully' })
+  async handleUSSD(
+    @Body() body: any,
+    @Res() res: Response
+  ) {
+    try {
+      console.log('📱 USSD Request received:', body);
+      
+      const { sessionId, phoneNumber, text } = body;
+      
+      // Process USSD request
+      const response = await this.mobileService.processUSSDRequest(
+        sessionId,
+        phoneNumber,
+        text || ''
+      );
+      
+      // Return USSD response format
+      return res.status(HttpStatus.OK).send(response);
+    } catch (error) {
+      console.error('❌ USSD Error:', error);
+      return res.status(HttpStatus.OK).send('END Error processing request. Please try again.');
+    }
+  }
 
   @Get('dashboard/:userId')
   @ApiOperation({ summary: 'Get mobile dashboard for user' })

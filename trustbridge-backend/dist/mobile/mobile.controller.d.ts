@@ -1,3 +1,4 @@
+import { Response } from 'express';
 import { MobileService } from './mobile.service';
 export declare class SubmitVerificationDto {
     assetId: string;
@@ -25,6 +26,7 @@ export declare class UpdateOperationStatusDto {
 export declare class MobileController {
     private readonly mobileService;
     constructor(mobileService: MobileService);
+    handleUSSD(body: any, res: Response): Promise<Response<any, Record<string, any>>>;
     getMobileDashboard(userId: string): Promise<{
         success: boolean;
         data: import("./mobile.service").MobileDashboard;

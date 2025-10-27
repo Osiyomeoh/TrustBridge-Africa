@@ -1,0 +1,72 @@
+📱 MANUAL USSD TEST STEPS
+═══════════════════════════════════════════════════════════════
+
+To test the complete Paga payment flow:
+
+1. Start with empty session (new user):
+   POST /api/mobile/ussd
+   {"sessionId":"manual001","phoneNumber":"+2348123456789","text":""}
+   
+   Response: Shows "1. Register (Free)" menu
+   
+2. Register new user:
+   {"sessionId":"manual001","phoneNumber":"+2348123456789","text":"1"}
+   
+   Response: Enter full name
+   
+3. Enter name:
+   {"sessionId":"manual001","phoneNumber":"+2348123456789","text":"*Ibrahim"}
+   
+   Response: Enter state
+   
+4. Enter state:
+   {"sessionId":"manual001","phoneNumber":"+2348123456789","text":"*Ibrahim*Lagos"}
+   
+   Response: Enter town
+   
+5. Enter town:
+   {"sessionId":"manual001","phoneNumber":"+2348123456789","text":"*Ibrahim*Lagos*Ikeja"}
+   
+   Response: Registration complete! ✅
+   
+6. Start new session (now registered):
+   {"sessionId":"manual002","phoneNumber":"+2348123456789","text":""}
+   
+   Response: Shows "1. Tokenize My Asset" menu
+   
+7. Select Tokenize:
+   {"sessionId":"manual002","phoneNumber":"+2348123456789","text":"1"}
+   
+   Response: Choose Asset Type (Farmland, Real Estate, etc.)
+   
+8. Choose Farmland:
+   {"sessionId":"manual002","phoneNumber":"+2348123456789","text":"*1"}
+   
+   Response: Enter land size
+   
+9. Enter size:
+   {"sessionId":"manual002","phoneNumber":"+2348123456789","text":"*1*10"}
+   
+   Response: Enter location
+   
+10. Enter location:
+   {"sessionId":"manual002","phoneNumber":"+2348123456789","text":"*1*10*Lagos"}
+   
+    Response: Enter value
+   
+11. Enter value:
+   {"sessionId":"manual002","phoneNumber":"+2348123456789","text":"*1*10*Lagos*5000000"}
+   
+    Response: ⭐ PAYMENT OPTIONS - Including Paga Agent!
+    
+12. Select Paga (Option 1):
+   {"sessionId":"manual002","phoneNumber":"+2348123456789","text":"*1*10*Lagos*5000000*1"}
+   
+    Response: ⭐ Paga payment instructions with payment code
+    
+13. Confirm payment:
+   {"sessionId":"manual002","phoneNumber":"+2348123456789","text":"*1*10*Lagos*5000000*1*1"}
+   
+    Response: ✅ Asset submitted to blockchain!
+
+═══════════════════════════════════════════════════════════════

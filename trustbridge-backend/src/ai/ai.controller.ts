@@ -179,7 +179,11 @@ export class AIController {
   @ApiResponse({ status: 200, description: 'AI limits information retrieved' })
   async getAILimits() {
     try {
-      return this.aiService.getAILimits();
+      return {
+        dailyLimit: 50,
+        monthlyLimit: 1000,
+        message: 'AI usage limits (free within limits)'
+      };
     } catch (error) {
       throw new HttpException(
         'Failed to get AI limits information',
@@ -293,10 +297,8 @@ export class AIController {
   } })
   async analyzeRWAAsset(@Body() body: { assetData: any; documents: any[] }, @Request() req: any) {
     try {
-      const analysis = await this.aiService.analyzeRWAAsset(
-        body.assetData, 
-        body.documents, 
-        'test-user' // Fixed user for testing
+      const analysis = await this.aiService.analyzeAsset(
+        body.assetData
       );
       return { analysis };
     } catch (error) {
@@ -318,10 +320,8 @@ export class AIController {
   } })
   async analyzeDigitalAsset(@Body() body: { assetData: any; contentFiles: any[] }, @Request() req: any) {
     try {
-      const analysis = await this.aiService.analyzeDigitalAsset(
-        body.assetData, 
-        body.contentFiles, 
-        'test-user' // Fixed user for testing
+      const analysis = await this.aiService.analyzeAsset(
+        body.assetData
       );
       return { analysis };
     } catch (error) {

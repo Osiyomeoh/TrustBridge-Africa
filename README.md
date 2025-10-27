@@ -13,6 +13,14 @@ TrustBridge is not just another DeFi platform—it's a **complete ecosystem** th
 ### **🎯 Our Mission**
 Democratize access to **$1 trillion+** in real-world assets and **$100 billion+** in digital assets by creating a **secure, transparent, and efficient** platform for asset tokenization, fractional ownership, and institutional-grade trading across both physical and digital asset classes.
 
+### **📱 USSD Integration - Bankless Financial Inclusion**
+- **Mobile-First Access** - Tokenize assets via USSD (*384#) on any phone
+- **No Internet Required** - Works on feature phones without data
+- **Cash Payments** - Pay via Paga agent network (87,000+ locations)
+- **Bank USSD Payments** - Pay directly from any Nigerian bank via USSD
+- **Farmers & Rural Access** - Enables bankless users to participate in tokenization
+- **Payment Flexibility** - Multiple payment options (Paga agents, Bank USSD, mobile money)
+
 ---
 
 ## 🚀 **What We've Built - The Complete Ecosystem**
@@ -20,6 +28,7 @@ Democratize access to **$1 trillion+** in real-world assets and **$100 billion+*
 ### **💰 Trust Economy - Dual Token System**
 - **TRUST Token** - Native platform token with deflationary mechanics
 - **HBAR Integration** - Hedera's native cryptocurrency for fees and transactions
+- **Trust Exchange** - Built-in exchange to swap HBAR for TRUST tokens
 - **Token Burning** - Automatic deflationary token burning on transactions
 - **Staking Rewards** - Earn rewards by staking TRUST tokens
 - **Governance** - TRUST token holders participate in platform governance
@@ -539,6 +548,11 @@ TrustBridge is powered by **Google AI Studio** and **Gemini AI**, providing adva
 - ✅ **HTS Integration** - Token creation, transfers, and management
 - ✅ **HCS Integration** - Complete audit trail and event logging
 - ✅ **Chainlink Oracles** - Real-time price feeds and external data
+- ✅ **Trust Exchange** - Built-in HBAR ↔ TRUST token exchange
+- ✅ **USSD Integration** - Mobile access via *384# (Africa's Talking)
+- ✅ **Paga Integration** - Bank USSD payment processing
+- ✅ **Mobile Payments** - Cash-based payments via Paga agents
+- ✅ **Financial Inclusion** - Bankless tokenization for unbanked users
 
 ### **Scaling Strategy**
 - **Production Domain** - [tbafrica.xyz](https://tbafrica.xyz)
@@ -550,6 +564,82 @@ TrustBridge is powered by **Google AI Studio** and **Gemini AI**, providing adva
 
 ---
 
+## 📱 **USSD & Mobile Integration - Banking the Unbanked**
+
+### **Mobile Access for Everyone**
+TrustBridge enables **anyone with a phone** to participate in the tokenization economy, even without internet, a smartphone, or a bank account.
+
+### **USSD Interface - *384#**
+- **Universal Access** - Works on any phone (feature phone or smartphone)
+- **No Data Required** - Uses USSD protocol (standard across all telecoms)
+- **Menu-Driven** - Simple step-by-step interface
+- **Multilingual** - Supports major African languages
+
+### **Multiple Payment Options**
+- **Paga Agent Payments** - Pay with cash at 87,000+ Paga agents nationwide
+- **Bank USSD** - Pay via any Nigerian bank (*737#, *901#, etc.)
+- **Mobile Money** - Integration with mobile money providers
+- **Cash Accessibility** - No bank account required
+
+### **Target Users**
+- **Farmers** - Tokenize farmland and agricultural assets
+- **Rural Communities** - Access financial services without infrastructure
+- **Unbanked Population** - Participate in tokenization without banks
+- **Micro-Entrepreneurs** - Tokenize small businesses and assets
+
+### **How It Works**
+1. **User dials *384#** on their phone
+2. **Registers asset details** via USSD menu
+3. **Selects payment method** (Paga agent, bank USSD)
+4. **Pays tokenization fee** (₦500)
+5. **Asset created on blockchain** (Hedera HTS + HCS)
+6. **Asset listed for investors**
+
+### **Technical Implementation**
+- **USSD Gateway** - Integrated with Africa's Talking
+- **Paga API Integration** - Bank USSD payment processing
+- **Session Management** - Secure USSD session handling
+- **Webhook Integration** - Payment confirmation callbacks
+- **SMS Notifications** - Real-time payment and transaction updates
+
+---
+
+## 💱 **Trust Token Exchange - HBAR ↔ TRUST**
+
+### **Built-In Exchange**
+TrustBridge features a **native exchange** that allows users to swap HBAR for TRUST tokens seamlessly within the platform.
+
+### **Exchange Features**
+- **HBAR to TRUST** - Swap HBAR for TRUST tokens at market rates
+- **TRUST to HBAR** - Convert TRUST tokens back to HBAR when needed
+- **Real-Time Rates** - Market-driven exchange rates
+- **Instant Swaps** - Fast transaction execution on Hedera
+- **Low Fees** - Competitive exchange fees
+- **Secure Transactions** - All swaps recorded on blockchain
+
+### **How to Use the Exchange**
+1. **Navigate to Exchange** - Access the Trust Exchange page
+2. **Select Direction** - Choose HBAR → TRUST or TRUST → HBAR
+3. **Enter Amount** - Specify the amount to exchange
+4. **Review Rate** - Check the current exchange rate
+5. **Confirm Swap** - Approve the transaction with HashPack
+6. **Receive Tokens** - Tokens are instantly transferred to your wallet
+
+### **Use Cases**
+- **Platform Fees** - Acquire TRUST tokens for platform fees
+- **Governance** - Get TRUST tokens to participate in governance
+- **Staking** - Swap HBAR for TRUST to stake and earn rewards
+- **Trading** - Use TRUST tokens for RWA investments and AMC pools
+- **Yield Distribution** - Convert TRUST tokens to HBAR for withdrawals
+
+### **Token Economics**
+- **HBAR** - Used for blockchain transaction fees
+- **TRUST** - Used for platform fees, governance, and staking
+- **Exchange Rate** - Dynamically priced based on market demand
+- **Deflationary** - TRUST tokens are burned on transactions
+
+---
+
 ## 🤝 **Partnerships & Integrations**
 
 ### **Blockchain Partners**
@@ -557,6 +647,11 @@ TrustBridge is powered by **Google AI Studio** and **Gemini AI**, providing adva
 - **Chainlink** - Oracle price feeds
 - **IPFS** - Decentralized file storage
 - **HashPack** - Wallet integration
+
+### **Financial Inclusion Partners**
+- **Africa's Talking** - USSD gateway and SMS services
+- **Paga** - Bank USSD payment processing
+- **Mobile Network Operators** - USSD infrastructure
 
 ### **Financial Partners**
 - **Asset Management Companies** - Professional asset managers
@@ -590,7 +685,9 @@ TrustBridge is powered by **Google AI Studio** and **Gemini AI**, providing adva
 - ✅ **AMC Integration** - Pool management system
 - ✅ **Google AI Studio Integration** - Powered by Gemini AI
 - ✅ **Advanced Trading** - Order book and yield distribution
-- ✅ **Mobile App** - iOS and Android applications
+- ✅ **USSD Integration** - Mobile access via *384#
+- ✅ **Paga Integration** - Bank USSD payment processing
+- ✅ **Financial Inclusion** - Bankless tokenization capabilities
 
 ### **Q2 2025**
 - 🔄 **DeFi Integration** - Lending and borrowing

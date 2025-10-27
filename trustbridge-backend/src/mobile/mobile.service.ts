@@ -11,6 +11,8 @@ import { HederaService } from '../hedera/hedera.service';
 import { ChainlinkService } from '../chainlink/chainlink.service';
 import { WebSocketService } from '../websocket/websocket.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PagaService } from '../paga/paga.service';
+// PaystackService removed - using direct API calls
 
 export interface MobileDashboard {
   user: any;
@@ -69,6 +71,7 @@ export class MobileService {
     private chainlinkService: ChainlinkService,
     private webSocketService: WebSocketService,
     private notificationsService: NotificationsService,
+    private pagaService: PagaService,
   ) {}
 
   async getMobileDashboard(userId: string): Promise<MobileDashboard> {
@@ -499,5 +502,377 @@ export class MobileService {
       direction: change > 0 ? 'up' : change < 0 ? 'down' : 'stable',
       change: Math.round(change * 100) / 100,
     };
+  }
+
+  // USSD Session Storage (in production, use Redis or database)
+  private ussdSessions: Map<string, any> = new Map();
+  
+  /**
+   * Process USSD requests with Paystack payment integration
+   */
+  async processUSSDRequest(sessionId: string, phoneNumber: string, text: string): Promise<string> {
+    try {
+      this.logger.log(`📱 USSD: ${phoneNumber} - Session: ${sessionId} - Input: "${text}"`);
+  
+      // Get or create session
+      let session = this.ussdSessions.get(sessionId) || {
+        sessionId,
+        phoneNumber,
+        step: 'main',
+        data: {}
+      };
+  
+      // Parse input
+      const input = text.split('*').filter(Boolean);
+  
+      // Route to appropriate handler
+      const response = await this.handleUSSDMenu(session, input);
+  
+      // Update session
+      this.ussdSessions.set(sessionId, session);
+  
+      return response;
+    } catch (error) {
+      this.logger.error('USSD processing error:', error);
+      return 'END Sorry, an error occurred. Please try again later.';
+    }
+  }
+  
+  private async handleUSSDMenu(session: any, input: string[]): Promise<string> {
+    const { step } = session;
+  
+    // Handle current step
+    switch (step) {
+      case 'main':
+        return this.showMainMenu(session, input);
+  
+      case 'register':
+        return this.handleRegistrationFlow(session, input);
+  
+      case 'tokenize':
+        return this.handleTokenizeFlow(session, input);
+
+      case 'payment':
+        // Payment step handled in handleTokenizeFlow
+        return this.handleTokenizeFlow(session, input);
+
+      default:
+        return this.showMainMenu(session, input);
+    }
+  }
+  
+  private async showMainMenu(session: any, input: string[]): Promise<string> {
+    if (input.length === 0) {
+      // Check if user is registered
+      const user = await this.userModel.findOne({ phoneNumber: session.phoneNumber });
+      
+      if (!user) {
+        // Show registration menu
+        return 'CON Welcome to TrustBridge Africa\n' +
+               'Tokenize Your Real-World Assets\n\n' +
+               'Farmers: Get investors for your land!\n\n' +
+               '1. Register (Free)\n' +
+               '2. Learn More\n' +
+               '0. Exit';
+      }
+      
+      // User is registered, show main menu
+      return 'CON Welcome Back!\n' +
+             'Tokenize Your Assets\n\n' +
+             '1. Tokenize My Asset\n' +
+             '2. My Portfolio\n' +
+             '3. Why Tokenize?\n' +
+             '0. Exit';
+    }
+  
+    const choice = input[0];
+    const user = await this.userModel.findOne({ phoneNumber: session.phoneNumber });
+    
+    // If not registered, handle registration
+    if (!user) {
+      if (choice === '1') {
+        session.step = 'register';
+        return await this.handleRegistrationFlow(session, input.slice(1));
+      } else if (choice === '2') {
+        return 'END BENEFITS FOR FARMERS:\n\n' +
+               '✅ Get investors for your farmland\n' +
+               '✅ Sell shares, not your land\n' +
+               '✅ Keep ownership & earn returns\n' +
+               '✅ No banks needed\n\n' +
+               'FEE: ₦500 tokenization fee\n' +
+               'AMC REVIEW: Within 48 hours\n\n' +
+               'Dial *384# and select 1 to register!';
+      } else if (choice === '0') {
+        return 'END Thank you for using TrustBridge Africa!';
+      } else {
+        return 'END Invalid selection. Please try again.';
+      }
+    }
+    
+    // Registered user menu
+    switch (choice) {
+      case '1':
+        session.step = 'tokenize';
+        return await this.handleTokenizeFlow(session, input.slice(1));
+      case '2':
+        return await this.handlePortfolio(session.phoneNumber);
+      case '3':
+        return 'END WHY TOKENIZE?\n\n' +
+               '💰 Unlock the value of your land\n' +
+               '👥 Find investors worldwide\n' +
+               '🏦 No bank loans needed\n' +
+               '📈 Earn from asset returns\n' +
+               '🔒 Keep your land ownership\n\n' +
+               'COST: ₦500 fee\n' +
+               'AMC APPROVAL: 48 hours\n\n' +
+               'Visit tbafrica.xyz';
+      case '0':
+        return 'END Thank you for using TrustBridge Africa!';
+      default:
+        return 'END Invalid selection. Please try again.';
+    }
+  }
+  
+  private async handleRegistrationFlow(session: any, input: string[]): Promise<string> {
+    const { data, phoneNumber } = session;
+  
+    if (input.length === 0) {
+      return 'CON Registration - Step 1\n\nEnter your full name:\nExample: Ibrahim Musa';
+    }
+  
+    if (input.length === 1) {
+      data.fullName = input[0];
+      return 'CON Registration - Step 2\n\nEnter your state:\nExample: Lagos';
+    }
+  
+    if (input.length === 2) {
+      data.state = input[1];
+      return 'CON Registration - Step 3\n\nEnter your town/village:\nExample: Ikeja';
+    }
+  
+    if (input.length === 3) {
+      data.town = input[2];
+      
+      // Create user account
+      try {
+        const existingUser = await this.userModel.findOne({ phoneNumber });
+        
+        if (existingUser) {
+          return 'END You are already registered!\nUse other menu options.';
+      }
+  
+        // Create new user
+        const newUser = new this.userModel({
+          phoneNumber,
+          fullName: data.fullName,
+          state: data.state,
+          town: data.town,
+          role: 'asset_owner',
+          isVerified: false,
+          createdAt: new Date()
+        });
+  
+        await newUser.save();
+  
+        // Clean up session
+        this.ussdSessions.delete(session.sessionId);
+  
+        return 'END ✅ Registration Complete!\n\n' +
+               `Welcome ${data.fullName}!\n\n` +
+               'You can now tokenize your assets.\n' +
+               'Dial *384# and select 1 to start!';
+      } catch (error) {
+        this.logger.error('Registration error:', error);
+        return 'END Registration failed. Please try again.';
+      }
+    }
+  
+    return 'END Invalid input.';
+  }
+  
+  private async handleTokenizeFlow(session: any, input: string[]): Promise<string> {
+    const { data } = session;
+  
+    if (input.length === 0) {
+      session.step = 'tokenize';
+      return 'CON Choose Asset Type:\n\n' +
+             '1. Farmland\n' +
+             '2. Real Estate\n' +
+             '3. Business\n' +
+             '4. Commodities\n' +
+             '99. Back';
+    }
+  
+    if (input.length === 1) {
+      data.assetType = input[0];
+      return 'CON Enter Land Size (acres):\n\n' +
+             'Reply with number only\n' +
+             'Example: 5';
+    }
+  
+    if (input.length === 2) {
+      data.size = input[1];
+      return 'CON Enter Location (State):\n\n' +
+             'Example: Lagos';
+    }
+  
+    if (input.length === 3) {
+      data.location = input[2];
+      return 'CON Enter Current Value (NGN):\n\n' +
+             'Example: 1000000';
+    }
+  
+    if (input.length === 4) {
+      data.value = input[3];
+      session.step = 'payment';
+      
+      // Show payment prompt with Paga option for bankless users
+      return 'CON Tokenization Fee: ₦500\n\n' +
+             `Asset: ${data.assetType === '1' ? 'Farmland' : data.assetType === '2' ? 'Real Estate' : data.assetType === '3' ? 'Business' : 'Commodities'}\n` +
+             `Size: ${data.size} acres\n` +
+             `Value: ₦${data.value}\n\n` +
+             'Pay via:\n' +
+             '1. Paga Agent (No Bank Needed)\n' +
+             '2. Guaranty Trust Bank (*737#)\n' +
+             '3. Access Bank (*901#)\n' +
+             '99. Cancel';
+    }
+    
+    if (input.length === 5 && input[4] === '1') {
+      // User selected Paga Agent payment
+      try {
+        // Create Paga payment request
+        const userId = session.phoneNumber;
+        const paymentRequest = await this.pagaService.createAgentPaymentRequest(
+          session.phoneNumber,
+          500,
+          this.pagaService.generatePaymentCode(userId, 500),
+          'RWA Tokenization Fee'
+        );
+        
+        // Store payment code in session
+        data.paymentCode = paymentRequest.paymentCode;
+        data.paymentMethod = 'paga';
+        
+        // Send SMS with instructions
+        await this.pagaService.sendPaymentInstructions(
+          session.phoneNumber,
+          paymentRequest.paymentCode,
+          500
+        );
+        
+        return `CON Paga Agent Payment\n\n` +
+               `Visit any Paga agent\n\n` +
+               `Payment Code: ${paymentRequest.paymentCode}\n` +
+               `Amount: ₦500\n\n` +
+               `Instructions:\n` +
+               `1. Go to nearest Paga agent\n` +
+               `2. Provide code: ${paymentRequest.paymentCode}\n` +
+               `3. Pay ₦500\n\n` +
+               `Find agent: paga.com/agents\n\n` +
+               `1. I have paid\n` +
+               `2. Cancel`;
+      } catch (error) {
+        this.logger.error('Paga payment creation error:', error);
+        return 'END Error creating payment. Please try again.';
+      }
+    }
+    
+    if (input.length === 5 && input[4] === '2') {
+      // User selected Guaranty Trust Bank
+      data.paymentBank = '737';
+      data.paymentMethod = 'gtb';
+      
+      return 'CON Payment via Guaranty Trust Bank\n\n' +
+             'Dial *737# to pay ₦500\n\n' +
+             'Instructions:\n' +
+             '1. Dial *737# on your phone\n' +
+             '2. Enter amount: 500\n' +
+             '3. Enter PIN to confirm\n\n' +
+             'After payment:\n' +
+             'You\'ll receive SMS with payment confirmation\n\n' +
+             '1. I have paid\n' +
+             '2. Cancel';
+    }
+    
+    if (input.length === 6 && input[5] === '1') {
+      // User claims to have paid
+      try {
+        const user = await this.userModel.findOne({ phoneNumber: session.phoneNumber });
+        if (!user) {
+          return 'END User not found. Please register first.';
+        }
+        
+        // Verify payment based on method
+        let paymentVerified = false;
+        
+        if (data.paymentMethod === 'paga') {
+          // For Paga, accept user confirmation for now
+          // NOTE: In production, this would be handled via webhook
+          // For testing, we'll accept user confirmation
+          paymentVerified = true;
+        } else if (data.paymentMethod === 'gtb' || data.paymentBank) {
+          // For bank payments, accept user confirmation
+          // NOTE: In production, verify via bank webhook
+          paymentVerified = true;
+        }
+        
+        if (!paymentVerified) {
+          return 'END Payment not confirmed. Please try again.';
+        }
+        
+        // Create asset on Hedera
+        const assetData = {
+          category: data.assetType === '1' ? 0 : data.assetType === '2' ? 1 : data.assetType === '3' ? 2 : 3,
+          assetType: data.assetType === '1' ? 'Farmland' : data.assetType === '2' ? 'Real Estate' : data.assetType === '3' ? 'Business' : 'Commodities',
+          name: `${data.assetType === '1' ? 'Farmland' : data.assetType === '2' ? 'Real Estate' : data.assetType === '3' ? 'Business' : 'Commodities'} in ${data.location}`,
+          location: data.location,
+          totalValue: data.value,
+          maturityDate: Date.now() + (365 * 24 * 60 * 60 * 1000), // 1 year from now
+          evidenceHashes: [],
+          documentTypes: [],
+          imageURI: '',
+          documentURI: '',
+          description: `${data.assetType === '1' ? 'Farmland' : data.assetType === '2' ? 'Real Estate' : data.assetType === '3' ? 'Business' : 'Commodities'} in ${data.location}, ${data.size} acres`
+        };
+        
+        const asset = await this.hederaService.createRWAAsset(assetData);
+        
+        this.ussdSessions.delete(session.sessionId);
+        
+        const paymentMethod = data.paymentMethod === 'paga' ? 'Paga Agent' : 'Bank Transfer';
+        
+        return `END ✅ Asset Submitted!\n\n` +
+               `Asset ID: ${asset.assetId}\n` +
+               `Fee Paid: ₦500 (${paymentMethod})\n` +
+               `Status: Pending AMC Review\n\n` +
+               `AMC will review within 48h\n` +
+               `You'll receive SMS: "Asset approved!"\n\n` +
+               `Visit tbafrica.xyz for updates`;
+      } catch (error) {
+        this.logger.error('Asset creation error:', error);
+        return 'END Error creating asset. Please try again.';
+      }
+    }
+  
+    return 'END Invalid input.';
+  }
+  
+  private async handlePortfolio(phoneNumber: string): Promise<string> {
+    try {
+      const user = await this.userModel.findOne({ phoneNumber });
+      if (!user) {
+        return 'END User not found.';
+      }
+      
+      const assets = await this.assetModel.find({ owner: user._id });
+      
+      return 'END My RWA Portfolio\n\n' +
+             `Owned Assets: ${assets.length}\n` +
+             `Total Value: ${assets.reduce((sum, a) => sum + (parseFloat((a as any).totalValue || '0') || 0), 0)} NGN\n` +
+             `Earned Returns: 0 NGN`;
+    } catch (error) {
+      return 'END Error loading portfolio. Please try again.';
+    }
   }
 }

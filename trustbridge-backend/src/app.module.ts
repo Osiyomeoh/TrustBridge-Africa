@@ -44,6 +44,7 @@ import { ApiModule } from './api/api.module';
 import { ActivityModule } from './activity/activity.module';
 import { KycModule } from './kyc/kyc.module';
 import { AIModule } from './ai/ai.module';
+import { PagaModule } from './paga/paga.module';
 
 import { AppController } from './app.controller';
 
@@ -121,6 +122,7 @@ import { AppController } from './app.controller';
     ActivityModule,
     KycModule,
     AIModule,
+    PagaModule,
   ],
 })
 export class AppModule {}
