@@ -1,5 +1,8 @@
 import { ethers } from 'ethers';
-import TradingEngineABI from '../../../trustbridge-backend/contracts/artifacts/contracts/TradingEngine.sol/TradingEngine.json';
+
+// Note: This service is for Ethereum-based trading
+// TrustBridge uses Hedera HTS/HCS for trading, not Ethereum contracts
+// This file is kept for reference but not used in production
 
 // Deployed contract addresses from hedera-universal-system.json
 const TRADING_ENGINE_ADDRESS = "0x6DF144710E0CD4a96D36f50248027ABFe6DDA91A";
