@@ -43,7 +43,6 @@ export default defineConfig({
     rollupOptions: {
       external: [
         '@walletconnect/qrcode-modal',
-        '@walletconnect/web3wallet',
         '@walletconnect/types',
         '@walletconnect/sign-client'
       ],
