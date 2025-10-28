@@ -1,4 +1,4 @@
-import{M as re,A as xt,R as L,C as x,E as ht,O as Z,F as X,G as j,I as ko}from"./hedera-D5CU5mDT.js";import"@walletconnect/types";import"@walletconnect/web3wallet";import"@walletconnect/qrcode-modal";import"./vendor-CfIwEunB.js";/**
+import{M as re,A as xt,R as L,C as x,E as ht,O as Z,F as X,G as j,I as ko}from"./hedera-BnU6hsMf.js";import"@walletconnect/types";import"@walletconnect/web3wallet";import"@walletconnect/qrcode-modal";import"@walletconnect/sign-client";import"./vendor-CfIwEunB.js";/**
  * @license
  * Copyright 2019 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause

@@ -43,7 +43,8 @@ export default defineConfig({
       external: [
         '@walletconnect/qrcode-modal',
         '@walletconnect/web3wallet',
-        '@walletconnect/types'
+        '@walletconnect/types',
+        '@walletconnect/sign-client'
       ],
       output: {
         manualChunks: {
