@@ -39,6 +39,19 @@ export default defineConfig({
       transformMixedEsModules: true,
     },
     sourcemap: false, // Disable sourcemaps for problematic packages
+    rollupOptions: {
+      external: [
+        '@walletconnect/qrcode-modal',
+        '@walletconnect/web3wallet',
+        '@walletconnect/types'
+      ],
+      output: {
+        manualChunks: {
+          'vendor': ['react', 'react-dom', 'react-router-dom'],
+          'hedera': ['@hashgraph/sdk', '@hashgraph/hedera-wallet-connect']
+        }
+      }
+    }
   },
   server: {
     port: 3001,
