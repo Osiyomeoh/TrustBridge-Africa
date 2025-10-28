@@ -42,9 +42,7 @@ export default defineConfig({
     sourcemap: false, // Disable sourcemaps for problematic packages
     rollupOptions: {
       external: [
-        '@walletconnect/qrcode-modal',
-        '@walletconnect/types',
-        '@walletconnect/sign-client'
+        // Remove all WalletConnect packages from external to fix runtime errors
       ],
       output: {
         manualChunks: {
