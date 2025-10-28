@@ -1,5 +1,8 @@
 import { ethers } from 'ethers';
-import GovernanceABI from '../../../trustbridge-backend/contracts/artifacts/contracts/Governance.sol/Governance.json';
+
+// Note: This service is for Ethereum-based governance
+// TrustBridge uses Hedera HCS for governance, not Ethereum contracts
+// This file is kept for reference but not used in production
 
 // Deployed contract addresses from hedera-universal-system.json
 const GOVERNANCE_ADDRESS = "0x9E12ae4320D02b566e9E25dD007c04c727c9fa5b";

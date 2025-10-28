@@ -1,5 +1,8 @@
 import { ethers } from 'ethers';
-import SPVManagerABI from '../../../trustbridge-backend/contracts/artifacts/contracts/SPVManager.sol/SPVManager.json';
+
+// Note: This service is for Ethereum-based SPV operations
+// TrustBridge uses Hedera HTS/HCS for SPV management, not Ethereum contracts
+// This file is kept for reference but not used in production
 
 // Deployed contract addresses from hedera-universal-system.json
 const SPV_MANAGER_ADDRESS = "0xBd75613A1A3dA62D52b0de6B840513E60df82850";

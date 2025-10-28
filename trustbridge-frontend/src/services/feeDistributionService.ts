@@ -1,5 +1,8 @@
 import { ethers } from 'ethers';
-import FeeDistributionABI from '../../../trustbridge-backend/contracts/artifacts/contracts/FeeDistribution.sol/FeeDistribution.json';
+
+// Note: This service is for Ethereum-based fee distribution
+// TrustBridge uses Hedera HTS for fee distribution, not Ethereum contracts
+// This file is kept for reference but not used in production
 
 // Deployed contract addresses from hedera-universal-system.json
 const FEE_DISTRIBUTION_ADDRESS = "0x091320a22B021BD5630a5df8bC0eA213fDeeee27";

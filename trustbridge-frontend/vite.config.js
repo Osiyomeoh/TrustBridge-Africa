@@ -30,7 +30,8 @@ export default defineConfig({
       '@walletconnect/modal'
     ],
     exclude: [
-      // Exclude problematic packages from optimization
+      
+     
     ]
   },
   build: {

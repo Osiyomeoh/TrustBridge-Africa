@@ -1,5 +1,8 @@
 import { ethers } from 'ethers';
-import TrustTokenABI from '../../../trustbridge-backend/contracts/artifacts/contracts/TrustToken.sol/TrustToken.json';
+
+// Note: This service is for Ethereum-based TRUST token operations
+// TrustBridge uses Hedera HTS for TRUST token, not Ethereum contracts
+// This file is kept for reference but not used in production
 
 // Deployed contract addresses from fresh deployment
 const TRUST_TOKEN_ADDRESS = "0x0fB610F665dCfd6A55515eBe735413ceB82a1501";

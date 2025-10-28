@@ -1,6 +1,8 @@
 import { ethers } from 'ethers';
-import PoolManagerABI from '../../../trustbridge-backend/contracts/artifacts/contracts/PoolManager.sol/PoolManager.json';
-import PoolTokenABI from '../../../trustbridge-backend/contracts/artifacts/contracts/PoolToken.sol/PoolToken.json';
+
+// Note: This service is for Ethereum-based pool operations
+// TrustBridge uses Hedera HTS/HCS for pool management, not Ethereum contracts
+// This file is kept for reference but not used in production
 
 // Deployed contract addresses from hedera-universal-system.json
 const POOL_MANAGER_ADDRESS = "0x3473ABb1c690782829256b14CB13e02110490fD5";
