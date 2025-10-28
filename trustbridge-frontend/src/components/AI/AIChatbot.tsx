@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../../hooks/useToast';
-import Button from '../ui/Button';
-import Input from '../ui/Input';
-import Card, { CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Badge } from '../ui/Badge';
+import Button from '../UI/Button';
+import Input from '../UI/Input';
+import Card, { CardContent, CardHeader, CardTitle } from '../UI/Card';
+import { Badge } from '../UI/Badge';
 import { 
   MessageCircle, 
   Send, 

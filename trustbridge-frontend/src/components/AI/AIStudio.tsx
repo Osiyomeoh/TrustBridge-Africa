@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import Card, { CardContent, CardHeader, CardTitle } from '../ui/Card';
-import Button from '../ui/Button';
-import Input from '../ui/Input';
-import { Textarea } from '../ui/Textarea';
-import { Badge } from '../ui/Badge';
+import Card, { CardContent, CardHeader, CardTitle } from '../UI/Card';
+import Button from '../UI/Button';
+import Input from '../UI/Input';
+import { Textarea } from '../UI/Textarea';
+import { Badge } from '../UI/Badge';
 import { 
   Bot, 
   Image, 

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import Card, { CardContent, CardHeader, CardTitle } from '../ui/Card';
-import Button from '../ui/Button';
-import Input from '../ui/Input';
-import { Badge } from '../ui/Badge';
+import Card, { CardContent, CardHeader, CardTitle } from '../UI/Card';
+import Button from '../UI/Button';
+import Input from '../UI/Input';
+import { Badge } from '../UI/Badge';
 import { 
   Bot, 
   TrendingUp, 
