@@ -1,20 +1,84 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 @Injectable()
 export class GmailService {
   private readonly logger = new Logger(GmailService.name);
   private transporter: nodemailer.Transporter;
+  private resend: Resend | null = null;
 
   constructor(private configService: ConfigService) {
     this.initializeTransporter();
   }
 
+  /**
+   * Check if Resend API key is configured
+   */
+  private hasResend(): boolean {
+    return !!this.configService.get<string>('RESEND_API_KEY');
+  }
+
+  /**
+   * Send email via Resend API (works on Render since it uses HTTP)
+   */
+  private async sendViaResend(to: string, subject: string, html: string, text: string, fromEmail: string): Promise<boolean> {
+    if (!this.resend) {
+      throw new Error('Resend client not initialized');
+    }
+
+    try {
+      const { data, error } = await this.resend.emails.send({
+        from: fromEmail,
+        to: to,
+        subject: subject,
+        html: html,
+        text: text,
+      });
+
+      if (error) {
+        throw new Error(`Resend API error: ${JSON.stringify(error)}`);
+      }
+
+      this.logger.log(`✅ Email sent via Resend to ${to}: ${data?.id}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`❌ Resend API error:`, error);
+      throw error;
+    }
+  }
+
   private initializeTransporter() {
+    // Check if we're on Render (which blocks SMTP connections)
+    const isRender = process.env.RENDER || process.env.RENDER_EXTERNAL_URL || false;
+    
+    // Initialize Resend if API key is configured
+    const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
+    if (resendApiKey) {
+      this.resend = new Resend(resendApiKey);
+      this.logger.log('✅ Resend client initialized');
+      
+      // If on Render, use Resend (HTTP API works on Render)
+      if (isRender) {
+        this.logger.log('✅ Render detected with Resend API - using Resend for email (HTTP API, works on Render)');
+        this.transporter = null; // We'll use Resend API instead
+        return;
+      }
+      // If not on Render, Resend will be preferred but SMTP is still available as fallback
+    }
+    
+    // If on Render without Resend, use console logging only
+    if (isRender) {
+      this.logger.warn('🚨 Render detected - SMTP connections are blocked. Using console logging only.');
+      this.logger.warn('💡 To enable email on Render, set RESEND_API_KEY environment variable');
+      this.transporter = null;
+      return;
+    }
+    
     // Priority: cPanel SMTP > Gmail > Console logging
     
-    // Try cPanel SMTP first (recommended for Render/cloud platforms)
+    // Try cPanel SMTP first (recommended for cloud platforms, but not Render)
     const cpanelHost = this.configService.get<string>('CPANEL_SMTP_HOST');
     const cpanelPort = this.configService.get<string>('CPANEL_SMTP_PORT');
     const cpanelUser = this.configService.get<string>('CPANEL_SMTP_USER');
@@ -100,26 +164,42 @@ export class GmailService {
     this.logger.warn(`VERIFICATION URL: ${verificationUrl}`);
     this.logger.warn('='.repeat(80));
     
+    // Get from email address (prioritize Resend, then cPanel, then Gmail, then default)
+    const resendFromEmail = this.configService.get<string>('RESEND_FROM_EMAIL');
+    const cpanelFromEmail = this.configService.get<string>('CPANEL_SMTP_FROM_EMAIL');
+    const gmailUser = this.configService.get<string>('GMAIL_USER');
+    const fromEmail = resendFromEmail || cpanelFromEmail || gmailUser || 'noreply@tbafrica.xyz';
+    
+    const subject = 'Verify Your TrustBridge Account - 6-Digit Code';
+    const html = this.getVerificationEmailTemplate(userName, verificationUrl, verificationCode);
+    const text = this.getVerificationEmailText(userName, verificationUrl, verificationCode);
+    
+    // Check if Resend is configured (preferred for Render since it uses HTTP API)
+    if (this.resend && this.hasResend()) {
+      // Use Resend API (works on Render since it uses HTTP)
+      this.sendViaResend(to, subject, html, text, fromEmail).catch((error) => {
+        this.logger.error(`Failed to send verification email via Resend to ${to}:`, error);
+        // Email is already logged to console above
+      });
+      return true; // Return immediately
+    }
+    
     // If no transporter, return immediately (console logging is enough)
     if (!this.transporter) {
-      this.logger.warn('No SMTP transporter configured - using console logging only');
+      this.logger.warn('No email service configured - using console logging only');
       return true;
     }
     
-    // Get from email address (prioritize cPanel, then Gmail, then default)
-    const cpanelFromEmail = this.configService.get<string>('CPANEL_SMTP_FROM_EMAIL');
-    const gmailUser = this.configService.get<string>('GMAIL_USER');
-    const fromEmail = cpanelFromEmail || gmailUser || 'noreply@trustbridge.africa';
-    
+    // Use SMTP (only works if not on Render)
     const mailOptions = {
       from: {
         name: 'TrustBridge',
         address: fromEmail,
       },
       to: to,
-      subject: 'Verify Your TrustBridge Account - 6-Digit Code',
-      html: this.getVerificationEmailTemplate(userName, verificationUrl, verificationCode),
-      text: this.getVerificationEmailText(userName, verificationUrl, verificationCode),
+      subject: subject,
+      html: html,
+      text: text,
     };
 
     // Send email asynchronously (fire and forget) - don't block the request
@@ -161,7 +241,7 @@ export class GmailService {
       // Get from email address (prioritize cPanel, then Gmail, then default)
       const cpanelFromEmail = this.configService.get<string>('CPANEL_SMTP_FROM_EMAIL');
       const gmailUser = this.configService.get<string>('GMAIL_USER');
-      const fromEmail = cpanelFromEmail || gmailUser || 'noreply@trustbridge.africa';
+      const fromEmail = cpanelFromEmail || gmailUser || 'noreply@tbafrica.xyz';
       
       const mailOptions = {
         from: {
