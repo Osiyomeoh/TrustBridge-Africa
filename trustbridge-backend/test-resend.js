@@ -4,7 +4,7 @@ const { Resend } = require('resend');
 async function testResend() {
   console.log('🔍 Testing Resend Email Service...\n');
 
-  const resendApiKey = process.env.RESEND_API_KEY || 're_6cesPtps_7JrcjAircmy4V7eiF1xE4mat';
+  const resendApiKey = process.env.RESEND_API_KEY;
   // Use tbafrica.xyz domain (must be verified in Resend dashboard)
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@tbafrica.xyz';
   const testEmail = process.env.TEST_EMAIL || 'devcasta1@gmail.com';
