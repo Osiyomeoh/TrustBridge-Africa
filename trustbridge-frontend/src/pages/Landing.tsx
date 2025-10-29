@@ -602,7 +602,7 @@ const Landing: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-6">
-                <span className="text-sm text-off-white/70">© 2024 TrustBridge Africa</span>
+                <span className="text-sm text-off-white/70">© 2025 TrustBridge Africa</span>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-neon-green rounded-full animate-pulse"></div>
                   <span className="text-sm text-neon-green">Live on Hedera</span>
