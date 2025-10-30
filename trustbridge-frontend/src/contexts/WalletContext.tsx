@@ -174,17 +174,65 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
         
         // Initialize with timeout to prevent hanging
+        // Also catch unhandled promise rejections from IndexedDB
         try {
           const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
           const initTimeoutMs = isProduction ? 20000 : 10000; // 20 seconds in production, 10 seconds locally
           
-          const initPromise = newConnector.init();
-          const initTimeout = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error(`WalletConnect init() timed out after ${initTimeoutMs/1000} seconds`)), initTimeoutMs)
-          );
+          // Set up global error handler to catch IndexedDB errors
+          let indexedDBError: Error | null = null;
           
-          await Promise.race([initPromise, initTimeout]);
-          console.log('🔧 DAppConnector.init() completed successfully');
+          const errorHandler = (event: ErrorEvent) => {
+            if (event.error && (
+              event.error.message?.includes('indexedDB') ||
+              event.error.message?.includes('IndexedDB') ||
+              event.error.message?.includes('backing store') ||
+              event.error.name === 'UnknownError'
+            )) {
+              indexedDBError = event.error;
+              console.error('🔴 Caught IndexedDB error:', event.error);
+              return true; // Prevent default error handling
+            }
+            return false;
+          };
+          
+          const unhandledRejectionHandler = (event: PromiseRejectionEvent) => {
+            if (event.reason && (
+              event.reason.message?.includes('indexedDB') ||
+              event.reason.message?.includes('IndexedDB') ||
+              event.reason.message?.includes('backing store') ||
+              event.reason.name === 'UnknownError' ||
+              (event.reason.toString && event.reason.toString().includes('UnknownError'))
+            )) {
+              indexedDBError = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
+              console.error('🔴 Caught unhandled IndexedDB rejection:', event.reason);
+              event.preventDefault(); // Prevent default error handling
+            }
+          };
+          
+          // Add error handlers
+          window.addEventListener('error', errorHandler);
+          window.addEventListener('unhandledrejection', unhandledRejectionHandler);
+          
+          try {
+            const initPromise = newConnector.init();
+            const initTimeout = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error(`WalletConnect init() timed out after ${initTimeoutMs/1000} seconds`)), initTimeoutMs)
+            );
+            
+            await Promise.race([initPromise, initTimeout]);
+            
+            // Check if IndexedDB error occurred
+            if (indexedDBError) {
+              throw indexedDBError;
+            }
+            
+            console.log('🔧 DAppConnector.init() completed successfully');
+          } finally {
+            // Remove error handlers
+            window.removeEventListener('error', errorHandler);
+            window.removeEventListener('unhandledrejection', unhandledRejectionHandler);
+          }
           
           // Add a delay to ensure WalletConnect is fully ready (longer in production)
           const initDelay = isProduction ? 1000 : 500; // 1 second in production, 500ms locally
@@ -213,7 +261,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             connectorRef.current = newConnector;
             setConnector(newConnector);
             isInitializedRef.current = false; // Mark as not initialized
-            setError('IndexedDB is blocked or unavailable. Please enable storage permissions in your browser settings or try again.');
+            setError('IndexedDB is blocked or unavailable. Please try: 1) Refreshing the page, 2) Using an incognito/private window, 3) Checking browser storage permissions, or 4) Trying a different browser.');
           } else {
             console.warn('⚠️ Init failed but setting connector anyway (will retry on connect)');
             // Still set connector - might be a network/timing issue
