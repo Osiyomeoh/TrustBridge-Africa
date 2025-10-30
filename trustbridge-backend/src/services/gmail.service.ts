@@ -77,9 +77,19 @@ export class GmailService {
         text: this.getVerificationEmailText(userName, verificationUrl, verificationCode),
       };
 
-      const result = await this.transporter.sendMail(mailOptions);
-      this.logger.log(`Verification email sent to ${to}: ${result.messageId}`);
-      return true;
+      // Add timeout to prevent hanging (5 seconds max)
+      const sendMailPromise = this.transporter.sendMail(mailOptions);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Email sending timeout after 5 seconds')), 5000)
+      );
+
+      try {
+        const result = await Promise.race([sendMailPromise, timeoutPromise]);
+        this.logger.log(`Verification email sent to ${to}: ${(result as any).messageId}`);
+        return true;
+      } catch (timeoutError) {
+        throw timeoutError; // Re-throw to be caught by outer catch
+      }
     } catch (error) {
       this.logger.error('Failed to send verification email:', error);
       
