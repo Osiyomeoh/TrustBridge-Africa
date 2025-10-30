@@ -107,6 +107,60 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
+  // Test if IndexedDB is actually working (not just checking if API exists)
+  const testIndexedDBHealth = async (): Promise<{ working: boolean; error?: string }> => {
+    try {
+      if (!window.indexedDB) {
+        return { working: false, error: 'IndexedDB API not available' };
+      }
+      
+      // Try to open a test database to verify IndexedDB actually works
+      return new Promise((resolve) => {
+        const testDBName = `trustbridge-health-check-${Date.now()}`;
+        let resolved = false;
+        
+        const request = indexedDB.open(testDBName, 1);
+        
+        request.onsuccess = () => {
+          if (resolved) return;
+          resolved = true;
+          try {
+            request.result.close();
+            const deleteRequest = indexedDB.deleteDatabase(testDBName);
+            deleteRequest.onsuccess = () => resolve({ working: true });
+            deleteRequest.onerror = () => resolve({ working: true }); // DB works even if delete fails
+            deleteRequest.onblocked = () => resolve({ working: true }); // DB works even if delete is blocked
+            setTimeout(() => resolve({ working: true }), 1000); // Timeout delete
+          } catch (e) {
+            resolve({ working: true }); // Opening succeeded, so IndexedDB works
+          }
+        };
+        
+        request.onerror = () => {
+          if (resolved) return;
+          resolved = true;
+          const error = request.error?.name || 'Unknown error';
+          resolve({ working: false, error: `IndexedDB error: ${error}` });
+        };
+        
+        request.onblocked = () => {
+          if (resolved) return;
+          resolved = true;
+          resolve({ working: false, error: 'IndexedDB is blocked' });
+        };
+        
+        // Timeout after 3 seconds
+        setTimeout(() => {
+          if (resolved) return;
+          resolved = true;
+          resolve({ working: false, error: 'IndexedDB test timed out' });
+        }, 3000);
+      });
+    } catch (error) {
+      return { working: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  };
+
   // Fetch HBAR balance from Mirror Node
   const fetchBalance = async (accountId: string) => {
     try {
@@ -149,6 +203,19 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     
     setIsInitializing(true);
     try {
+        // Test IndexedDB health first - if it's broken, skip initialization entirely
+        console.log('🔍 Testing IndexedDB health...');
+        const indexedDBHealth = await testIndexedDBHealth();
+        
+        if (!indexedDBHealth.working) {
+          console.error('❌ IndexedDB is not working:', indexedDBHealth.error);
+          setError(`IndexedDB is not working in your browser (${indexedDBHealth.error}). This is required for wallet connection. Please try: 1) Using an incognito/private window, 2) Clearing browser data/cache, 3) Checking browser storage permissions, or 4) Trying a different browser.`);
+          setIsInitializing(false);
+          return; // Skip initialization entirely
+        }
+        
+        console.log('✅ IndexedDB health check passed');
+        
         // Check if there's an active connection
         const hasStoredConnection = localStorage.getItem('walletConnected') === 'true';
         
