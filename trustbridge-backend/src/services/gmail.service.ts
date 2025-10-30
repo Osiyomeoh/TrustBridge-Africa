@@ -36,11 +36,25 @@ export class GmailService {
         subject: subject,
         html: html,
         text: text,
-        // Add headers to reduce spam score
+        // Add headers to reduce spam score and mark as transactional
         headers: {
           'X-Entity-Ref-ID': `verification-${Date.now()}`, // Transactional identifier
+          'X-Transaction-Type': 'verification', // Mark as transactional email
           'List-Unsubscribe': `<${this.configService.get<string>('FRONTEND_URL', 'https://www.tbafrica.xyz')}/unsubscribe>`, // Reduce spam score
+          'Precedence': 'bulk', // Helps email clients identify transactional emails
+          'Auto-Submitted': 'auto-generated', // Marks as automated transactional email
         },
+        // Add tags for better tracking and categorization
+        tags: [
+          {
+            name: 'category',
+            value: 'transactional'
+          },
+          {
+            name: 'type',
+            value: 'verification'
+          }
+        ],
       });
 
       if (error) {
@@ -183,11 +197,16 @@ export class GmailService {
     // Check if Resend is configured (preferred for Render since it uses HTTP API)
     if (this.resend && this.hasResend()) {
       // Use Resend API (works on Render since it uses HTTP)
-      this.sendViaResend(to, subject, html, text, fromEmail).catch((error) => {
+      // Wait for Resend to complete (it's fast, uses HTTP API)
+      try {
+        await this.sendViaResend(to, subject, html, text, fromEmail);
+        this.logger.log(`✅ Verification email sent via Resend to ${to}`);
+        return true;
+      } catch (error) {
         this.logger.error(`Failed to send verification email via Resend to ${to}:`, error);
-        // Email is already logged to console above
-      });
-      return true; // Return immediately
+        // Email is already logged to console above, but return false so caller knows it failed
+        return false;
+      }
     }
     
     // If no transporter, return immediately (console logging is enough)

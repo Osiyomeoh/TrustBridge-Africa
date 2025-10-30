@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Search, Wallet, LogOut, User, Menu, X, ChevronDown, UserPlus } from 'lucide-react';
 import Button from '../UI/Button';
@@ -31,6 +31,7 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
   const { openProfileCompletion } = useProfileCompletion();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isWalletDropdownOpen, setIsWalletDropdownOpen] = React.useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = React.useState(false);
 
   const handleConnectWallet = async () => {
     try {
@@ -57,26 +58,38 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
 
   const handleDisconnectWallet = async () => {
     try {
-      // Logout from backend and clear auth state
-      await logout();
-      
-      // Disconnect wallet
+      // Disconnect wallet first (this should always work regardless of profile status)
       await disconnectWallet();
+      
+      // Try to logout from backend (non-blocking - don't fail if this errors)
+      // Users without completed profiles may not have valid tokens, so this might fail
+      try {
+        await logout();
+      } catch (logoutError) {
+        console.warn('Logout failed (this is OK if user hasn\'t completed profile):', logoutError);
+        // Still clear local auth state even if backend logout fails
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+      }
       
       // Navigate to home page
       navigate('/');
       
       toast({
-        title: 'Logged Out',
-        description: 'You have been logged out successfully.',
+        title: 'Disconnected',
+        description: 'Wallet disconnected successfully.',
         variant: 'default'
       });
     } catch (error) {
       console.error('Error disconnecting wallet:', error);
+      // Even if disconnect fails, try to clear local state and navigate
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      navigate('/');
       toast({
-        title: 'Logout Failed',
-        description: 'Failed to log out. Please try again.',
-        variant: 'destructive'
+        title: 'Disconnected',
+        description: 'Wallet has been disconnected.',
+        variant: 'default'
       });
     }
   };
@@ -100,7 +113,7 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
             <img 
               src="/images/tb4.png" 
               alt="TrustBridge Africa Logo" 
-              className="h-20 sm:h-24 md:h-28 lg:h-32 w-auto"
+              className="h-16 sm:h-20 w-auto"
             />
           </Link>
 
@@ -136,18 +149,58 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
             <div className="hidden sm:flex items-center space-x-2 lg:space-x-3">
               {isConnected ? (
                 needsProfileCompletion ? (
-                  <>
-                    {/* Complete Profile Button */}
-                    <Button
-                      onClick={handleCompleteProfile}
-                      variant="neon"
-                      size="sm"
-                      className="flex items-center space-x-2"
+                  <div className="relative">
+                    {/* Complete Profile Dropdown Button */}
+                    <button
+                      onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                      className="flex items-center space-x-2 lg:space-x-3 hover:opacity-80 transition-opacity bg-gradient-to-r from-neon-green to-emerald-500 rounded-lg px-2 lg:px-3 py-1.5 lg:py-2 border border-neon-green hover:border-emerald-400"
                     >
-                      <UserPlus className="w-4 h-4" />
-                      <span>Complete Profile</span>
-                    </Button>
-                  </>
+                      <UserPlus className="w-4 h-4 text-black" />
+                      <span className="text-xs lg:text-sm text-black font-medium">
+                        Complete Profile
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-black" />
+                    </button>
+
+                    {/* Profile Dropdown Menu */}
+                    {isProfileDropdownOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-48 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50">
+                        <div className="py-2">
+                          {/* Complete Profile Option */}
+                          <button
+                            onClick={() => {
+                              handleCompleteProfile();
+                              setIsProfileDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center space-x-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 hover:text-off-white transition-colors"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                            <span>Complete Profile</span>
+                          </button>
+                          
+                          {/* Disconnect Option */}
+                          <button
+                            onClick={() => {
+                              handleDisconnectWallet();
+                              setIsProfileDropdownOpen(false);
+                            }}
+                            className="w-full flex items-center space-x-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 hover:text-red-400 transition-colors"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span>Disconnect</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Backdrop to close dropdown */}
+                    {isProfileDropdownOpen && (
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                      />
+                    )}
+                  </div>
                 ) : (
                 <div className="relative">
                   {/* Wallet Dropdown Button */}
@@ -310,6 +363,20 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
                     >
                       <UserPlus className="w-4 h-4" />
                       <span>Complete Profile</span>
+                    </Button>
+                    
+                    {/* Disconnect Button - Mobile */}
+                    <Button
+                      onClick={() => {
+                        handleDisconnectWallet();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center space-x-2 w-full justify-start text-red-400 border-red-400 hover:bg-red-400/10"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Disconnect</span>
                     </Button>
                   </>
                 ) : (

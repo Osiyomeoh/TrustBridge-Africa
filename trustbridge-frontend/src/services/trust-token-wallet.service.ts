@@ -103,7 +103,24 @@ export class TrustTokenWalletService {
       
       console.log(`✅ HBAR transfer successful: ${hbarTransferId}`);
 
-      // Step 5: Mint TRUST tokens to user
+      // Step 5: Associate TRUST token with user account (if not already associated)
+      console.log(`🔗 Step 5/6: Associating TRUST token with user account...`);
+      try {
+        const hederaClient = this.contractService['client'];
+        await this.contractService.associateTrustToken(userAccountId, signer, hederaClient);
+        console.log(`✅ TRUST token associated with user account`);
+      } catch (associateError: any) {
+        // If already associated, that's fine - continue
+        if (associateError.message?.includes('TOKEN_ALREADY_ASSOCIATED')) {
+          console.log(`✅ TRUST token already associated`);
+        } else {
+          console.error('❌ Token association failed:', associateError);
+          throw new Error(`Token association failed: ${associateError.message}`);
+        }
+      }
+
+      // Step 6: Mint TRUST tokens to user
+      console.log(`🔨 Step 6/6: Minting and transferring TRUST tokens...`);
       const mintId = await this.contractService.mintTrustTokens(userAccountId, trustAmount);
       console.log(`✅ TRUST tokens minted: ${mintId}`);
 

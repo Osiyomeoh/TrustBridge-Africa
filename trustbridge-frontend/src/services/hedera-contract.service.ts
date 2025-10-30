@@ -9,7 +9,10 @@ import {
   TokenId,
   TransferTransaction,
   TokenMintTransaction,
-  TokenBurnTransaction
+  TokenBurnTransaction,
+  TokenAssociateTransaction,
+  TransactionId,
+  AccountBalanceQuery
 } from '@hashgraph/sdk';
 
 export interface ContractConfig {
@@ -216,7 +219,84 @@ export class HederaContractService {
   }
 
   /**
+   * Check if account is already associated with TRUST token
+   */
+  async isTrustTokenAssociated(accountId: string, hederaClient: Client): Promise<boolean> {
+    try {
+      const balanceQuery = new AccountBalanceQuery()
+        .setAccountId(AccountId.fromString(accountId));
+      
+      const balance = await balanceQuery.execute(hederaClient);
+      const trustTokenIdString = this.config.trustTokenId;
+      
+      // Check if tokens map exists and has the TRUST token (using get() instead of has())
+      // If the token is in the balance map, the account is associated (even if balance is 0)
+      if (balance.tokens) {
+        const tokenBalance = balance.tokens.get(trustTokenIdString);
+        const isAssociated = tokenBalance !== undefined && tokenBalance !== null;
+        return isAssociated;
+      }
+      
+      return false;
+    } catch (error) {
+      console.warn('Failed to check token association status:', error);
+      // If we can't check, assume not associated to be safe
+      return false;
+    }
+  }
+
+  /**
+   * Associate TRUST token with user account (requires user's wallet to sign)
+   * Only associates if not already associated
+   */
+  async associateTrustToken(accountId: string, signer: any, hederaClient: Client): Promise<string> {
+    try {
+      // First, check if already associated
+      const isAssociated = await this.isTrustTokenAssociated(accountId, hederaClient);
+      
+      if (isAssociated) {
+        console.log(`✅ TRUST token already associated with account ${accountId} - skipping association`);
+        return 'already-associated';
+      }
+      
+      console.log(`🔗 Associating TRUST token with account ${accountId}...`);
+      
+      const accountIdObj = AccountId.fromString(accountId);
+      const associateTx = new TokenAssociateTransaction()
+        .setAccountId(accountIdObj)
+        .setTokenIds([TokenId.fromString(this.config.trustTokenId)])
+        .setMaxTransactionFee(new Hbar(2));
+
+      // Don't set transaction ID manually - freezeWithSigner handles it internally
+      // Setting it manually causes "list is locked" error
+      associateTx.freezeWithSigner(signer);
+      
+      console.log('Requesting signature for TRUST token association...');
+      const signedAssociateTx = await signer.signTransaction(associateTx);
+      
+      console.log('Executing token association...');
+      const associateResponse = await signedAssociateTx.execute(hederaClient);
+      await associateResponse.getReceipt(hederaClient);
+      
+      const transactionId = associateResponse.transactionId.toString();
+      console.log(`✅ TRUST token associated with account ${accountId}: ${transactionId}`);
+      
+      return transactionId;
+    } catch (error: any) {
+      // If already associated, that's fine - just log and continue
+      if (error.message?.includes('TOKEN_ALREADY_ASSOCIATED_TO_ACCOUNT') || 
+          error.message?.includes('TOKEN_ALREADY_ASSOCIATED')) {
+        console.log(`✅ TRUST token already associated with account ${accountId}`);
+        return 'already-associated';
+      }
+      console.error('Failed to associate TRUST token:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Mint TRUST tokens (operator only)
+   * Note: User's account must be associated with TRUST token before calling this method
    */
   async mintTrustTokens(toAccountId: string, amount: number): Promise<string> {
     try {

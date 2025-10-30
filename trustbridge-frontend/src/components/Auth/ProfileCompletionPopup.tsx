@@ -118,6 +118,12 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
     try {
       await completeProfile(formData);
       setStep('verify-email');
+      // Show success message with spam folder notice
+      toast({
+        title: 'Profile Completed!',
+        description: 'Verification code sent to your email. Please check your spam folder if you don\'t see it.',
+        variant: 'default'
+      });
     } catch (error) {
       console.error('Profile completion failed:', error);
       
@@ -125,6 +131,11 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
       // If so, go to verification step instead of staying on form
       if (user && user.email && user.emailVerificationStatus) {
         setStep('verify-email');
+        toast({
+          title: 'Verification Code Sent',
+          description: 'Please check your email (including spam folder) for the verification code.',
+          variant: 'default'
+        });
       }
     }
   };
@@ -181,7 +192,7 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
       console.log('Resend verification response:', response);
       toast({
         title: 'Code Resent',
-        description: 'A new verification code has been sent to your email.',
+        description: 'A new verification code has been sent. Please check your spam folder if you don\'t see it.',
         variant: 'default'
       });
     } catch (error) {
@@ -395,9 +406,24 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
                 <h3 className="text-lg font-semibold text-off-white mb-2">
                   Verify Your Email
                 </h3>
-                <p className="text-sm text-electric-mint">
+                <p className="text-sm text-electric-mint mb-3">
                   We've sent a 6-digit verification code to <strong>{user?.email || formData.email}</strong>
                 </p>
+                
+                {/* Spam Folder Warning */}
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mb-4">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-left">
+                      <p className="text-xs text-yellow-400 font-medium mb-1">
+                        Can't find the email?
+                      </p>
+                      <p className="text-xs text-yellow-300/80">
+                        Please check your <strong>spam/junk folder</strong>. The verification email may have been filtered there.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-4">
