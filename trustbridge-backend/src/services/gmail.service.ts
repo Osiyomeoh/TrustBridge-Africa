@@ -30,11 +30,17 @@ export class GmailService {
 
     try {
       const { data, error } = await this.resend.emails.send({
-        from: fromEmail,
+        from: `TrustBridge <${fromEmail}>`, // Proper from name format
         to: to,
+        replyTo: fromEmail, // Add reply-to for better deliverability
         subject: subject,
         html: html,
         text: text,
+        // Add headers to reduce spam score
+        headers: {
+          'X-Entity-Ref-ID': `verification-${Date.now()}`, // Transactional identifier
+          'List-Unsubscribe': `<${this.configService.get<string>('FRONTEND_URL', 'https://www.tbafrica.xyz')}/unsubscribe>`, // Reduce spam score
+        },
       });
 
       if (error) {
@@ -170,7 +176,7 @@ export class GmailService {
     const gmailUser = this.configService.get<string>('GMAIL_USER');
     const fromEmail = resendFromEmail || cpanelFromEmail || gmailUser || 'noreply@tbafrica.xyz';
     
-    const subject = 'Verify Your TrustBridge Account - 6-Digit Code';
+    const subject = 'Your TrustBridge verification code: ' + verificationCode;
     const html = this.getVerificationEmailTemplate(userName, verificationUrl, verificationCode);
     const text = this.getVerificationEmailText(userName, verificationUrl, verificationCode);
     
@@ -584,34 +590,23 @@ export class GmailService {
           </div>
           
           <div class="content">
-            <div class="greeting">Welcome to TrustBridge, ${userName}!</div>
+            <div class="greeting">Hello ${userName},</div>
             
             <div class="message">
-              Thank you for joining TrustBridge, the revolutionary platform that's transforming how African assets are tokenized and traded. We're excited to have you on this journey toward financial inclusion and prosperity.
+              Please use the verification code below to verify your email address and complete your account setup.
             </div>
             
             <div class="verification-section">
-              <div class="verification-label">Your 6-Digit Verification Code</div>
+              <div class="verification-label">Your Verification Code</div>
               <div class="code">${code}</div>
               <div style="margin-top: 20px;">
-                <a href="${verificationUrl}" class="button">Verify My Account</a>
+                <a href="${verificationUrl}" class="button">Verify Email Address</a>
               </div>
             </div>
             
             <div class="warning">
               <span class="warning-icon">⏰</span>
-              <strong>Security Notice:</strong> This verification code expires in 10 minutes for your security. If you didn't request this code, please ignore this email.
-            </div>
-            
-            <div class="features">
-              <div class="features-title">What you can do with TrustBridge:</div>
-              <ul class="features-list">
-                <li>Browse and invest in verified African assets</li>
-                <li>Track your portfolio performance in real-time</li>
-                <li>Participate in asset tokenization opportunities</li>
-                <li>Access advanced analytics and market insights</li>
-                <li>Connect with a community of African investors</li>
-              </ul>
+              <strong>Important:</strong> This code expires in 10 minutes. If you didn't request this code, please ignore this email or contact support.
             </div>
           </div>
           
@@ -634,28 +629,20 @@ export class GmailService {
 
   private getVerificationEmailText(userName: string, verificationUrl: string, code: string): string {
     return `
-Welcome to TrustBridge, ${userName}!
+Hello ${userName},
 
-Thank you for joining TrustBridge, the revolutionary platform that's transforming how African assets are tokenized and traded.
+Please use the verification code below to verify your email address and complete your account setup.
 
-To complete your account setup, please use this 6-digit verification code:
+Verification Code: ${code}
 
-${code}
+Or click this link to verify: ${verificationUrl}
 
-Or visit this link: ${verificationUrl}
+This code expires in 10 minutes.
 
-What happens next?
-- Access your personalized dashboard
-- Complete KYC verification for full platform access  
-- Start tokenizing African assets
-- Connect with investors and asset owners
+If you didn't request this code, please ignore this email or contact our support team.
 
-This verification code will expire in 10 minutes for security reasons.
-
-If you didn't create a TrustBridge account, please ignore this email.
-
+Best regards,
 TrustBridge Team
-Building the future of African finance
     `;
   }
 
