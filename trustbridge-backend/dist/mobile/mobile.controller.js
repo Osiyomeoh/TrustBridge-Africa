@@ -32,12 +32,18 @@ let MobileController = class MobileController {
     async handleUSSD(body, res) {
         try {
             console.log('📱 USSD Request received:', body);
-            const { sessionId, phoneNumber, text } = body;
-            const response = await this.mobileService.processUSSDRequest(sessionId, phoneNumber, text || '');
+            const sessionId = body.sessionId || body.sessionId;
+            const phoneNumber = body.phoneNumber || body.phoneNumber;
+            const text = body.text || body.text || '';
+            console.log(`📱 Processing USSD - Phone: ${phoneNumber}, Text: "${text}"`);
+            const response = await this.mobileService.processUSSDRequest(sessionId, phoneNumber, text);
+            console.log(`📱 USSD Response: ${response.substring(0, 100)}...`);
+            res.set('Content-Type', 'text/plain; charset=utf-8');
             return res.status(common_1.HttpStatus.OK).send(response);
         }
         catch (error) {
             console.error('❌ USSD Error:', error);
+            res.set('Content-Type', 'text/plain; charset=utf-8');
             return res.status(common_1.HttpStatus.OK).send('END Error processing request. Please try again.');
         }
     }

@@ -40,5 +40,10 @@ export declare class PagaController {
     handleWebhook(body: any): Promise<{
         success: boolean;
         message: string;
+        paymentStatus?: undefined;
+    } | {
+        success: boolean;
+        message: string;
+        paymentStatus: any;
     }>;
 }

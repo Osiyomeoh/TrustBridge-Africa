@@ -415,7 +415,7 @@ const Profile: React.FC = () => {
           setNftsLoading(false);
             return; // Successfully loaded from Mirror Node
           } else {
-            console.log('⚠️ No NFTs found from Mirror Node, checking cache and fallback...');
+            console.log('⚠️ No NFTs found from Mirror Node');
           }
         } else {
           console.warn('⚠️ Mirror Node response not OK:', response.status);
@@ -1135,6 +1135,17 @@ const Profile: React.FC = () => {
       collectionsCount: 0
     };
   }, [portfolioData, portfolioLoading, userAssetsData, userNFTs, nftsLoading, address, hederaAssets, rwaAssets, usdValue]);
+
+  // Refresh handler
+  const handleRefresh = () => {
+    console.log('🔄 Manual refresh triggered');
+    setForceRefresh(prev => !prev);
+    toast({
+      title: 'Refreshing Assets',
+      description: 'Fetching latest assets from Hedera Mirror Node...',
+      variant: 'default'
+    });
+  };
 
   // Asset filtering function
   const getFilteredAssets = (assets: any[]) => {
@@ -1914,6 +1925,22 @@ const Profile: React.FC = () => {
         >
           {activeTab === 'portfolio' && (
             <div className="space-y-6">
+              {/* Portfolio Header */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-off-white">Portfolio Overview</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={nftsLoading || portfolioLoading}
+                  className="text-neon-green border-neon-green hover:bg-neon-green/10"
+                  title="Refresh portfolio data"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${nftsLoading || portfolioLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+              
               {/* Portfolio Overview */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Portfolio Value Card */}
@@ -2053,51 +2080,6 @@ const Profile: React.FC = () => {
                             <RefreshCw className="w-3 h-3 mr-1" />
                             Check Status
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleTestCallback}
-                            className="w-full text-xs border-green-400/30 text-green-400 hover:bg-green-400/10"
-                          >
-                            <Zap className="w-3 h-3 mr-1" />
-                            Test Callback
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleManualKYCApproval}
-                            className="w-full text-xs border-purple-400/30 text-purple-400 hover:bg-purple-400/10"
-                          >
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Manual Approve
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleDirectKYCUpdate}
-                            className="w-full text-xs border-orange-400/30 text-orange-400 hover:bg-orange-400/10"
-                          >
-                            <Zap className="w-3 h-3 mr-1" />
-                            Direct Update
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleDebugKycInquiry}
-                            className="w-full text-xs border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/10"
-                          >
-                            <AlertCircle className="w-3 h-3 mr-1" />
-                            Debug Inquiry
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleFixKycInquiry}
-                            className="w-full text-xs border-red-400/30 text-red-400 hover:bg-red-400/10"
-                          >
-                            <Zap className="w-3 h-3 mr-1" />
-                            Fix Inquiry ID
-                          </Button>
                         </div>
                       )}
                     </div>
@@ -2202,30 +2184,6 @@ const Profile: React.FC = () => {
                           )}
                         </span>
                       </Button>
-                      
-                      {/* Debug buttons for KYC testing */}
-                      {user?.kycStatus?.toLowerCase() !== 'approved' && (
-                        <div className="grid grid-cols-2 gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleTestCallback}
-                            className="text-xs border-green-400/30 text-green-400 hover:bg-green-400/10"
-                          >
-                            <Zap className="w-3 h-3 mr-1" />
-                            Test Callback
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleDirectKYCUpdate}
-                            className="text-xs border-orange-400/30 text-orange-400 hover:bg-orange-400/10"
-                          >
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Direct Update
-                          </Button>
-                        </div>
-                      )}
                     </div>
                     <Button
                       variant="outline"
@@ -2281,6 +2239,16 @@ const Profile: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-off-white">Hedera Digital Assets</h2>
                 <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={nftsLoading}
+                    className="text-neon-green border-neon-green hover:bg-neon-green/10"
+                    title="Refresh assets from Hedera Mirror Node"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${nftsLoading ? 'animate-spin' : ''}`} />
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -2396,7 +2364,33 @@ const Profile: React.FC = () => {
 
           {activeTab === 'rwa-assets' && (
             <div className="space-y-6">
-              {assetsLoading ? (
+              {/* RWA Assets Header */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-off-white">Real World Assets</h2>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={isLoadingRWA}
+                    className="text-purple-400 border-purple-400 hover:bg-purple-400/10"
+                    title="Refresh RWA assets"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingRWA ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                    className="text-purple-400 border-purple-400 hover:bg-purple-400/10"
+                  >
+                    {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              
+              {assetsLoading || isLoadingRWA ? (
                 <Card variant="floating" className="text-center py-16">
                   <CardContent>
                     <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-purple-400/20 to-purple-600/20 rounded-full flex items-center justify-center">

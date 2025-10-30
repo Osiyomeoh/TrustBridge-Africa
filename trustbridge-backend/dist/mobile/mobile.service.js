@@ -504,19 +504,23 @@ let MobileService = MobileService_1 = class MobileService {
     }
     async handleRegistrationFlow(session, input) {
         const { data, phoneNumber } = session;
-        if (input.length === 0) {
+        const actualInput = input[0] === '1' ? input.slice(1) : input;
+        this.logger.log(`🔍 Registration Flow - Input: ${JSON.stringify(input)} → Actual: ${JSON.stringify(actualInput)}, Length: ${actualInput.length}`);
+        if (actualInput.length === 0) {
             return 'CON Registration - Step 1\n\nEnter your full name:\nExample: Ibrahim Musa';
         }
-        if (input.length === 1) {
-            data.fullName = input[0];
+        if (actualInput.length === 1) {
+            this.logger.log(`📝 Step 1 → Step 2: Full name = "${actualInput[0]}"`);
+            data.fullName = actualInput[0];
             return 'CON Registration - Step 2\n\nEnter your state:\nExample: Lagos';
         }
-        if (input.length === 2) {
-            data.state = input[1];
+        if (actualInput.length === 2) {
+            this.logger.log(`📝 Step 2 → Step 3: State = "${actualInput[1]}"`);
+            data.state = actualInput[1];
             return 'CON Registration - Step 3\n\nEnter your town/village:\nExample: Ikeja';
         }
-        if (input.length === 3) {
-            data.town = input[2];
+        if (actualInput.length === 3) {
+            data.town = actualInput[2];
             try {
                 const existingUser = await this.userModel.findOne({ phoneNumber });
                 if (existingUser) {

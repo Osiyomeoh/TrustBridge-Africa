@@ -27,8 +27,10 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       process.env.FRONTEND_URL || 'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:3000'
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://trust-bridge-africa.vercel.app',
+      process.env.TBAFRICA_URL || 'https://www.tbafrica.xyz',
+      'http://localhost:3000',
+      'http://localhost:3001'
     ],
     credentials: true,
   });

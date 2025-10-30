@@ -32,7 +32,7 @@ import { ipfsService } from '../services/ipfs';
 import { requiresAMC } from '../utils/amcRequirements';
 import TrustTokenPurchase from '../components/TrustToken/TrustTokenPurchase';
 import AMCRequiredModal from '../components/ComingSoon/AMCRequiredModal';
-import { TrustTokenService } from '../services/trust-token.service';
+import ProgressModal, { ProgressStep } from '../components/UI/ProgressModal';
 import { trustTokenWalletService } from '../services/trust-token-wallet.service';
 
 interface DigitalAssetForm {
@@ -78,6 +78,9 @@ const CreateDigitalAsset: React.FC = () => {
   const [showAMCModal, setShowAMCModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<{ id: number; name: string; description: string } | null>(null);
   const [showTrustPurchase, setShowTrustPurchase] = useState(false);
+  const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
+  const [currentProgressStep, setCurrentProgressStep] = useState<string | undefined>();
+  const [progressError, setProgressError] = useState<string | null>(null);
 
   
   const [formData, setFormData] = useState<DigitalAssetForm>({
@@ -237,6 +240,18 @@ const CreateDigitalAsset: React.FC = () => {
     }));
   };
 
+  // Helper function to update progress
+  const updateProgress = (stepId: string, status: 'pending' | 'processing' | 'completed' | 'error', message?: string) => {
+    setProgressSteps(prev => 
+      prev.map(step => 
+        step.id === stepId ? { ...step, status, message } : step
+      )
+    );
+    if (status === 'processing') {
+      setCurrentProgressStep(stepId);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!isConnected || !accountId) {
       toast({
@@ -270,6 +285,7 @@ const CreateDigitalAsset: React.FC = () => {
 
     // Deduct TRUST tokens as platform fee (burn them via HSCS contract)
     try {
+      updateProgress('trust-payment', 'processing', `Burning ${trustTokenCost} TRUST tokens...`);
       console.log(`Burning ${trustTokenCost} TRUST tokens as platform fee...`);
       
       // Require wallet connection for real transactions
@@ -290,6 +306,8 @@ const CreateDigitalAsset: React.FC = () => {
       // Update the user's balance
       await refreshBalance();
       
+      updateProgress('trust-payment', 'completed', `Paid ${trustTokenCost} TRUST tokens`);
+      
       toast({
         title: 'Platform Fee Paid',
         description: `${trustTokenCost} TRUST tokens have been burned as platform fee. Transaction ID: ${transactionId}`,
@@ -298,11 +316,14 @@ const CreateDigitalAsset: React.FC = () => {
     } catch (error) {
       console.error('Failed to burn TRUST tokens:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to process TRUST token payment. Please try again.';
+      updateProgress('trust-payment', 'error', errorMessage);
+      setProgressError(errorMessage);
       toast({
         title: 'Payment Failed',
         description: errorMessage,
         variant: 'destructive'
       });
+      setIsCreating(false);
       return;
     }
     
@@ -319,6 +340,19 @@ const CreateDigitalAsset: React.FC = () => {
     }
 
     setIsCreating(true);
+    setProgressError(null);
+    
+    // Initialize progress steps
+    const initialSteps: ProgressStep[] = [
+      { id: 'trust-payment', label: 'Paying Platform Fee', status: 'pending', message: 'Burning TRUST tokens...' },
+      { id: 'metadata-upload', label: 'Uploading Metadata', status: 'pending', message: 'Preparing asset metadata...' },
+      { id: 'nft-collection', label: 'Creating NFT Collection', status: 'pending', message: 'Creating token collection on Hedera...' },
+      { id: 'nft-mint', label: 'Minting NFT', status: 'pending', message: 'Minting your unique NFT...' },
+      { id: 'finalize', label: 'Finalizing Asset', status: 'pending', message: 'Saving asset reference...' }
+    ];
+    setProgressSteps(initialSteps);
+    setCurrentProgressStep('trust-payment');
+
     try {
       let assetTokenId: string | undefined;
       let assetTopicId: string | undefined;
@@ -468,6 +502,7 @@ const CreateDigitalAsset: React.FC = () => {
       console.log(`✅ Generated supply key: ${supplyKey.publicKey.toString()}`);
 
       // Step 2b: Create HTS NFT Collection
+      updateProgress('nft-collection', 'processing', 'Creating NFT collection on Hedera...');
       console.log('🏗️ Creating HTS NFT Collection...');
       
       const nftTokenCreateTx = new TokenCreateTransaction()
@@ -484,20 +519,24 @@ const CreateDigitalAsset: React.FC = () => {
         .setMaxTransactionFee(5000)
         .setTransactionValidDuration(120);
 
+      updateProgress('nft-collection', 'processing', 'Please approve the transaction in HashPack...');
       console.log('Requesting HashPack approval for NFT collection creation...');
       nftTokenCreateTx.freezeWithSigner(signer);
       const signedNftTokenTx = await signer.signTransaction(nftTokenCreateTx);
       const nftTokenResponse = await signedNftTokenTx.execute(hederaClient);
       
       if (nftTokenResponse.transactionId) {
+        updateProgress('nft-collection', 'processing', 'Waiting for transaction confirmation...');
         console.log('Getting NFT collection creation receipt...');
         const nftTokenReceipt = await nftTokenResponse.getReceipt(hederaClient);
         const nftTokenId = nftTokenReceipt.tokenId?.toString();
         
         if (nftTokenId) {
           console.log(`✅ NFT Collection created: ${nftTokenId}`);
+          updateProgress('nft-collection', 'completed', `Collection created: ${nftTokenId}`);
           
           // Step 2c: Mint NFT with proper dual signatures
+          updateProgress('nft-mint', 'processing', 'Preparing NFT mint transaction...');
           console.log('🎨 Minting NFT with proper dual signatures...');
           console.log('💡 Note: NFT minting requires BOTH treasury account AND supply key signatures');
           console.log('💡 TrustBridge Flow: Users create NFT assets that can be traded on the platform');
@@ -529,6 +568,7 @@ const CreateDigitalAsset: React.FC = () => {
           let metadataBuffer;
           
           if (metadataJson.length > 100) {
+            updateProgress('metadata-upload', 'processing', 'Uploading metadata to IPFS...');
             console.log('📤 Metadata too large - uploading to IPFS...');
             
             // Upload metadata JSON to IPFS
@@ -537,7 +577,9 @@ const CreateDigitalAsset: React.FC = () => {
             
             const metadataUploadResult = await ipfsService.uploadFile(metadataFile, {
               name: `${formData.name} - Metadata`,
-              description: 'NFT Metadata JSON'
+              description: 'NFT Metadata JSON',
+              type: 'application/json',
+              size: metadataFile.size
             });
             
             // ipfsService.uploadFile returns the data object directly
@@ -551,12 +593,16 @@ const CreateDigitalAsset: React.FC = () => {
             console.log('✅ Metadata uploaded to IPFS:', metadataIpfsUrl);
             console.log('📦 Metadata CID:', metadataCid);
             
+            updateProgress('metadata-upload', 'completed', 'Metadata uploaded to IPFS');
+            
             // Store only the CID (not full URL) to stay under 100 bytes limit
             metadataBuffer = Buffer.from(metadataCid);
             console.log(`📏 Using IPFS CID as metadata: ${metadataCid} (${metadataBuffer.length} bytes)`);
           } else {
             // Metadata is small enough to store directly
+            updateProgress('metadata-upload', 'processing', 'Preparing metadata...');
             metadataBuffer = Buffer.from(metadataJson);
+            updateProgress('metadata-upload', 'completed', 'Metadata prepared');
             console.log(`📏 Using full metadata directly (${metadataBuffer.length} bytes)`);
           }
           
@@ -572,6 +618,7 @@ const CreateDigitalAsset: React.FC = () => {
               .setMaxTransactionFee(5000)
               .setTransactionValidDuration(120);
             
+            updateProgress('nft-mint', 'processing', 'Please approve the mint transaction in HashPack...');
             console.log('🔧 Treasury account signs first (via HashPack)...');
             
             // First: Treasury account signs via HashPack
@@ -579,18 +626,21 @@ const CreateDigitalAsset: React.FC = () => {
             const treasurySignedTx = await signer.signTransaction(nftMintTx);
             
             console.log('✅ Treasury signature obtained from HashPack');
+            updateProgress('nft-mint', 'processing', 'Applying supply key signature...');
             console.log('🔧 Supply key signs second (local signing)...');
             
             // Second: Supply key signs locally
             const dualSignedTx = await treasurySignedTx.sign(supplyKey);
             
             console.log('✅ Supply key signature added');
+            updateProgress('nft-mint', 'processing', 'Executing transaction on Hedera...');
             console.log('🔧 Executing dual-signed transaction...');
             
             // Execute the dual-signed transaction
             const nftMintResponse = await dualSignedTx.execute(hederaClient);
             
             if (nftMintResponse.transactionId) {
+              updateProgress('nft-mint', 'processing', 'Waiting for transaction confirmation...');
               console.log('🔧 Getting transaction receipt...');
               const nftMintReceipt = await nftMintResponse.getReceipt(hederaClient);
               serialNumber = nftMintReceipt.serials?.[0];
@@ -598,6 +648,7 @@ const CreateDigitalAsset: React.FC = () => {
               if (serialNumber) {
                 console.log(`✅ NFT minted successfully with serial number: ${serialNumber}`);
                 console.log(`🎉 Transaction ID: ${nftMintResponse.transactionId.toString()}`);
+                updateProgress('nft-mint', 'completed', `NFT minted! Serial: ${serialNumber}`);
                 
                 // Set the asset token ID to the NFT collection ID
                 assetTokenId = nftTokenId;
@@ -647,6 +698,7 @@ const CreateDigitalAsset: React.FC = () => {
                 };
                 
                 // Store NFT asset reference in localStorage for quick access
+                updateProgress('finalize', 'processing', 'Saving asset reference...');
                 console.log('🎯 COMPLETE NFT ASSET METADATA CAPTURED:');
                 console.log('📋 NFT Asset Reference:', JSON.stringify(nftAssetReference, null, 2));
                 console.log('🪙 NFT Collection ID:', assetTokenId);
@@ -663,10 +715,11 @@ const CreateDigitalAsset: React.FC = () => {
                 localStorage.setItem('assetReferences', JSON.stringify(existingReferences));
                 
                 console.log('✅ NFT asset reference stored with Collection ID:', assetTokenId, 'Serial:', serialNumber);
+                updateProgress('finalize', 'completed', 'Asset saved successfully!');
                 
                 console.log('🎉 REAL HTS NFT creation completed successfully!');
                 console.log('💡 This NFT can now be viewed, traded, or transferred');
-                
+
               } else {
                 throw new Error('No serial number in NFT minting receipt');
               }
@@ -676,6 +729,8 @@ const CreateDigitalAsset: React.FC = () => {
             
           } catch (mintError: any) {
             console.error(`❌ NFT minting failed: ${mintError.message}`);
+            updateProgress('nft-mint', 'error', mintError.message);
+            setProgressError(mintError.message);
             throw mintError;
           }
           
@@ -696,6 +751,9 @@ const CreateDigitalAsset: React.FC = () => {
         variant: 'default'
       });
 
+      // Wait a moment for localStorage to fully save, then navigate
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Navigate to Profile page and trigger refresh
       navigate('/dashboard/profile', { state: { refreshAssets: true, timestamp: Date.now() } });
     } catch (error) {
@@ -719,6 +777,12 @@ const CreateDigitalAsset: React.FC = () => {
           errorMessage = error.message;
         }
       }
+      
+      // Mark the current step as error
+      if (currentProgressStep) {
+        updateProgress(currentProgressStep, 'error', errorMessage);
+      }
+      setProgressError(errorMessage);
       
       toast({
         title: 'Error Creating Asset',
@@ -783,6 +847,22 @@ const CreateDigitalAsset: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black text-off-white p-4 sm:p-6 lg:p-8">
+      {/* Progress Modal */}
+      <ProgressModal
+        isOpen={isCreating}
+        title="Creating Digital Asset"
+        steps={progressSteps}
+        currentStepId={currentProgressStep}
+        error={progressError}
+        onClose={() => {
+          if (!progressSteps.some(s => s.status === 'processing')) {
+            setIsCreating(false);
+            setProgressSteps([]);
+            setProgressError(null);
+          }
+        }}
+      />
+      
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <motion.div

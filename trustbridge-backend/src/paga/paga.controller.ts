@@ -78,12 +78,42 @@ export class PagaController {
   @Post('webhook')
   async handleWebhook(@Body() body: any) {
     try {
-      // Handle Paga webhook for payment confirmations
       this.logger.log('Paga webhook received:', body);
+      
+      // Verify webhook signature (Paga signs webhooks with HMAC)
+      // In production, verify: body.signature === HMAC(JSON.stringify(body.data), SECRET_KEY)
+      
+      // Extract payment details
+      const { referenceNumber, amount, status, transactionReference } = body.data || body;
+      
+      if (!referenceNumber || !status) {
+        this.logger.warn('Invalid webhook data:', body);
+        return {
+          success: false,
+          message: 'Invalid webhook data',
+        };
+      }
+      
+      // Check payment status
+      const isPaid = status === 'SUCCESSFUL' || status === 'COMPLETED';
+      
+      if (isPaid) {
+        this.logger.log(`✅ Payment confirmed: ${referenceNumber}, Amount: ₦${amount}`);
+        
+        // TODO: Update user session with payment confirmation
+        // TODO: Trigger asset creation on Hedera
+        // TODO: Send SMS confirmation to user
+        
+        // For now, just log
+        this.logger.log('Payment verified - asset creation should proceed');
+      } else {
+        this.logger.warn(`❌ Payment failed: ${referenceNumber}, Status: ${status}`);
+      }
       
       return {
         success: true,
-        message: 'Webhook received',
+        message: 'Webhook processed',
+        paymentStatus: status,
       };
     } catch (error) {
       this.logger.error('Error handling webhook:', error);

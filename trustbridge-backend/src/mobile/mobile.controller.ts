@@ -41,19 +41,28 @@ export class MobileController {
     try {
       console.log('📱 USSD Request received:', body);
       
-      const { sessionId, phoneNumber, text } = body;
+      // Handle both JSON and form-urlencoded formats
+      const sessionId = body.sessionId || body.sessionId;
+      const phoneNumber = body.phoneNumber || body.phoneNumber;
+      const text = body.text || body.text || '';
+      
+      console.log(`📱 Processing USSD - Phone: ${phoneNumber}, Text: "${text}"`);
       
       // Process USSD request
       const response = await this.mobileService.processUSSDRequest(
         sessionId,
         phoneNumber,
-        text || ''
+        text
       );
       
-      // Return USSD response format
+      console.log(`📱 USSD Response: ${response.substring(0, 100)}...`);
+      
+      // Return USSD response format (plain text)
+      res.set('Content-Type', 'text/plain; charset=utf-8');
       return res.status(HttpStatus.OK).send(response);
     } catch (error) {
       console.error('❌ USSD Error:', error);
+      res.set('Content-Type', 'text/plain; charset=utf-8');
       return res.status(HttpStatus.OK).send('END Error processing request. Please try again.');
     }
   }

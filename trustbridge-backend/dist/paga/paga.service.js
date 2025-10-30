@@ -162,7 +162,31 @@ Available at any bank with USSD.
     }
     async verifyPayment(reference) {
         try {
-            this.logger.warn(`Payment verification for ${reference} not yet implemented`);
+            if (!this.publicKey || !this.secretKey) {
+                this.logger.warn('Paga credentials not configured - using simulated verification');
+                return {
+                    verified: true,
+                    amount: 500,
+                    timestamp: new Date(),
+                };
+            }
+            const response = await axios_1.default.get(`${this.apiUrl}/paymentRequest/${reference}`, {
+                headers: {
+                    Authorization: `Basic ${Buffer.from(`${this.publicKey}:${this.secretKey}`).toString('base64')}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (response.data.statusCode === '0') {
+                const paymentStatus = response.data.status;
+                const isPaid = paymentStatus === 'SUCCESSFUL' || paymentStatus === 'COMPLETED';
+                this.logger.log(`Payment verification for ${reference}: ${paymentStatus}`);
+                return {
+                    verified: isPaid,
+                    amount: response.data.amount,
+                    timestamp: response.data.timestamp ? new Date(response.data.timestamp) : new Date(),
+                };
+            }
+            this.logger.warn(`Payment verification failed for ${reference}: ${response.data.statusMessage}`);
             return {
                 verified: false,
             };

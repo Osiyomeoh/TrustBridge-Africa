@@ -65,9 +65,26 @@ let PagaController = PagaController_1 = class PagaController {
     async handleWebhook(body) {
         try {
             this.logger.log('Paga webhook received:', body);
+            const { referenceNumber, amount, status, transactionReference } = body.data || body;
+            if (!referenceNumber || !status) {
+                this.logger.warn('Invalid webhook data:', body);
+                return {
+                    success: false,
+                    message: 'Invalid webhook data',
+                };
+            }
+            const isPaid = status === 'SUCCESSFUL' || status === 'COMPLETED';
+            if (isPaid) {
+                this.logger.log(`✅ Payment confirmed: ${referenceNumber}, Amount: ₦${amount}`);
+                this.logger.log('Payment verified - asset creation should proceed');
+            }
+            else {
+                this.logger.warn(`❌ Payment failed: ${referenceNumber}, Status: ${status}`);
+            }
             return {
                 success: true,
-                message: 'Webhook received',
+                message: 'Webhook processed',
+                paymentStatus: status,
             };
         }
         catch (error) {

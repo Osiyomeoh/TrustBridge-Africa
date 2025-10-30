@@ -61,6 +61,7 @@ import GovernmentIdRequirements from './pages/help/GovernmentIdRequirements';
 import ProofOfAddressRequirements from './pages/help/ProofOfAddressRequirements';
 import ProfessionalLicenseRequirements from './pages/help/ProfessionalLicenseRequirements';
 import ResumeRequirements from './pages/help/ResumeRequirements';
+import USSDDemo from './pages/USSDDemo';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -122,6 +123,9 @@ const App: React.FC = () => {
                 <Routes>
                   {/* Landing Page - No Navigation */}
                   <Route path="/" element={<Landing />} />
+                  
+                  {/* USSD Demo - Public Demo Page */}
+                  <Route path="/ussd-demo" element={<USSDDemo />} />
                   
                   {/* Authentication Page */}
                   <Route path="/auth" element={
