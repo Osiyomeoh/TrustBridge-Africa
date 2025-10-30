@@ -37,6 +37,76 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   // Track if connector was successfully initialized (not just created)
   const isInitializedRef = useRef<boolean>(false);
 
+  // Clear all WalletConnect and IndexedDB data (mimics incognito mode)
+  const clearAllWalletData = async (): Promise<void> => {
+    console.log('🧹 Clearing all WalletConnect and IndexedDB data...');
+    
+    try {
+      // Clear all WalletConnect localStorage keys
+      const allKeys = Object.keys(localStorage);
+      const walletConnectKeys = allKeys.filter(key => 
+        key.startsWith('wc@') || 
+        key.startsWith('WALLETCONNECT') ||
+        key.startsWith('walletConnect') ||
+        key.includes('walletconnect')
+      );
+      
+      console.log(`🧹 Clearing ${walletConnectKeys.length} WalletConnect localStorage keys...`);
+      walletConnectKeys.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn(`Failed to remove ${key}:`, e);
+        }
+      });
+      
+      // Clear our own wallet keys
+      localStorage.removeItem('walletConnected');
+      localStorage.removeItem('walletAccountId');
+      localStorage.removeItem('walletType');
+      
+      // Try to delete all IndexedDB databases (WalletConnect uses IndexedDB)
+      if (window.indexedDB) {
+        try {
+          // Get all databases - we'll try to delete common WalletConnect database names
+          const databasesToDelete = [
+            'walletconnect',
+            'walletconnect-v2',
+            'WALLETCONNECT_V2',
+            'wc@2',
+            'wc-core',
+            'wc-client',
+            'wc-relayer',
+          ];
+          
+          for (const dbName of databasesToDelete) {
+            try {
+              const deleteRequest = indexedDB.deleteDatabase(dbName);
+              await new Promise((resolve, reject) => {
+                deleteRequest.onsuccess = () => resolve(undefined);
+                deleteRequest.onerror = () => reject(deleteRequest.error);
+                deleteRequest.onblocked = () => {
+                  console.warn(`IndexedDB database ${dbName} is blocked, will retry...`);
+                  resolve(undefined); // Don't fail if blocked
+                };
+                setTimeout(() => resolve(undefined), 2000); // Timeout after 2 seconds
+              });
+              console.log(`✅ Deleted IndexedDB database: ${dbName}`);
+            } catch (e) {
+              console.warn(`⚠️ Failed to delete IndexedDB database ${dbName}:`, e);
+            }
+          }
+        } catch (e) {
+          console.warn('⚠️ Failed to clear IndexedDB databases:', e);
+        }
+      }
+      
+      console.log('✅ All WalletConnect and IndexedDB data cleared');
+    } catch (error) {
+      console.error('❌ Error clearing wallet data:', error);
+    }
+  };
+
   // Check if IndexedDB is available (required for WalletConnect)
   const checkIndexedDBAvailability = async (): Promise<boolean> => {
     try {
@@ -256,12 +326,39 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                                    errorMessage.includes('UnknownError');
           
           if (isIndexedDBError) {
-            console.warn('⚠️ IndexedDB error detected, but setting connector anyway (will retry on connect)');
-            // Still set connector - it might work on retry or in different conditions
-            connectorRef.current = newConnector;
-            setConnector(newConnector);
-            isInitializedRef.current = false; // Mark as not initialized
-            setError('IndexedDB is blocked or unavailable. Please try: 1) Refreshing the page, 2) Using an incognito/private window, 3) Checking browser storage permissions, or 4) Trying a different browser.');
+            console.warn('⚠️ IndexedDB error detected - clearing all WalletConnect data and retrying...');
+            
+            // Clear all WalletConnect and IndexedDB data (mimics incognito mode)
+            await clearAllWalletData();
+            
+            // Wait a bit for IndexedDB to release locks
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Try to initialize again after clearing data
+            try {
+              console.log('🔄 Retrying initialization after clearing data...');
+              const retryInitPromise = newConnector.init();
+              const retryInitTimeout = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Retry init() timed out after 20 seconds')), 20000)
+              );
+              
+              await Promise.race([retryInitPromise, retryInitTimeout]);
+              console.log('✅ Retry initialization succeeded!');
+              
+              // Success - set connector and mark as initialized
+              connectorRef.current = newConnector;
+              setConnector(newConnector);
+              isInitializedRef.current = true;
+              setError(null); // Clear error
+              console.log('✅ Wallet connector initialized successfully after retry');
+            } catch (retryError) {
+              console.error('❌ Retry initialization also failed:', retryError);
+              // Still set connector - might work on manual connect
+              connectorRef.current = newConnector;
+              setConnector(newConnector);
+              isInitializedRef.current = false;
+              setError('IndexedDB is blocked or unavailable. Please try: 1) Refreshing the page, 2) Using an incognito/private window, 3) Checking browser storage permissions, or 4) Trying a different browser.');
+            }
           } else {
             console.warn('⚠️ Init failed but setting connector anyway (will retry on connect)');
             // Still set connector - might be a network/timing issue
@@ -415,9 +512,32 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                                    errorMessage.includes('UnknownError');
           
           if (isIndexedDBError) {
-            throw new Error('IndexedDB is blocked or unavailable. Please enable storage permissions in your browser settings or try refreshing the page.');
+            console.warn('⚠️ IndexedDB error during connect - clearing all WalletConnect data and retrying...');
+            
+            // Clear all WalletConnect and IndexedDB data (mimics incognito mode)
+            await clearAllWalletData();
+            
+            // Wait a bit for IndexedDB to release locks
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Try to initialize again after clearing data
+            try {
+              console.log('🔄 Retrying initialization after clearing data...');
+              const retryInitPromise = currentConnector.init();
+              const retryInitTimeout = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Retry init() timed out after 20 seconds')), 20000)
+              );
+              
+              await Promise.race([retryInitPromise, retryInitTimeout]);
+              isInitializedRef.current = true;
+              console.log('✅ Retry initialization succeeded!');
+            } catch (retryError) {
+              console.error('❌ Retry initialization also failed:', retryError);
+              throw new Error('IndexedDB is blocked or unavailable. Please try: 1) Refreshing the page, 2) Using an incognito/private window, 3) Checking browser storage permissions, or 4) Trying a different browser.');
+            }
+          } else {
+            throw new Error(`Failed to initialize wallet: ${errorMessage}. Please refresh the page or try again.`);
           }
-          throw new Error(`Failed to initialize wallet: ${errorMessage}. Please refresh the page or try again.`);
         }
       }
 
@@ -454,9 +574,34 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                                    errorMessage.includes('UnknownError');
           
           if (isIndexedDBError) {
-            throw new Error('IndexedDB is blocked or unavailable. Please enable storage permissions in your browser settings or try refreshing the page.');
+            console.warn('⚠️ IndexedDB error during modal open - clearing all WalletConnect data and retrying...');
+            
+            // Clear all WalletConnect and IndexedDB data (mimics incognito mode)
+            await clearAllWalletData();
+            
+            // Wait a bit for IndexedDB to release locks
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Try to initialize again after clearing data
+            try {
+              console.log('🔄 Retrying initialization after clearing data...');
+              const retryInitPromise = currentConnector.init();
+              const retryInitTimeout = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Retry init() timed out after 20 seconds')), 20000)
+              );
+              
+              await Promise.race([retryInitPromise, retryInitTimeout]);
+              isInitializedRef.current = true;
+              console.log('✅ Retry initialization succeeded, retrying modal...');
+              await currentConnector.openModal();
+              console.log('✅ Wallet modal opened successfully after retry');
+            } catch (retryError) {
+              console.error('❌ Retry initialization also failed:', retryError);
+              throw new Error('IndexedDB is blocked or unavailable. Please try: 1) Refreshing the page, 2) Using an incognito/private window, 3) Checking browser storage permissions, or 4) Trying a different browser.');
+            }
+          } else {
+            throw new Error(`Failed to open wallet connection modal: ${errorMessage}. Please try again or refresh the page.`);
           }
-          throw new Error(`Failed to open wallet connection modal: ${errorMessage}. Please try again or refresh the page.`);
         }
       }
       
