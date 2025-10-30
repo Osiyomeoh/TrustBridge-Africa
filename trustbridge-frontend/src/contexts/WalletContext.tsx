@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { Client, LedgerId } from '@hashgraph/sdk';
 import { DAppConnector, HederaJsonRpcMethod, HederaSessionEvent, HederaChainId } from '@hashgraph/hedera-wallet-connect';
 
@@ -32,6 +32,8 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [error, setError] = useState<string | null>(null);
   const [connector, setConnector] = useState<DAppConnector | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
+  // Use ref to track connector for immediate access (avoids state update race condition)
+  const connectorRef = useRef<DAppConnector | null>(null);
 
   // Fetch HBAR balance from Mirror Node
   const fetchBalance = async (accountId: string) => {
@@ -68,7 +70,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Initialize HashPack connection and restore previous session
   const initializeWallet = async () => {
-    if (isInitializing || connector) {
+    if (isInitializing || connectorRef.current) {
       console.log('Wallet already initialized or initializing, skipping...');
       return;
     }
@@ -100,6 +102,8 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         // Add a small delay to ensure WalletConnect is fully ready
         await new Promise(resolve => setTimeout(resolve, 500));
         
+        // Update both state and ref for immediate access
+        connectorRef.current = newConnector;
         setConnector(newConnector);
         console.log('✅ Wallet connector initialized successfully');
         
@@ -160,7 +164,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setError(`Wallet initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       } finally {
         setIsInitializing(false);
-        console.log('🔧 Wallet initialization completed, connector status:', !!connector);
+        console.log('🔧 Wallet initialization completed, connector status:', !!connectorRef.current);
       }
   };
 
@@ -171,32 +175,36 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const connectWallet = async () => {
     setLoading(true);
     setError(null);
-    console.log('🔌 Attempting to connect wallet, connector status:', !!connector);
+    console.log('🔌 Attempting to connect wallet, connector status:', !!connectorRef.current);
 
     try {
-      if (!connector) {
+      // Use ref for immediate access (avoids state update race condition)
+      let currentConnector = connectorRef.current;
+      
+      if (!currentConnector) {
         console.log('⚠️ Connector not ready, waiting for initialization...');
         
-        // Wait for initialization to complete
+        // Wait for initialization to complete (check both ref and state)
         let attempts = 0;
-        while (!connector && (isInitializing || attempts < 20)) {
+        while (!currentConnector && (isInitializing || attempts < 30)) {
           await new Promise(resolve => setTimeout(resolve, 100));
+          currentConnector = connectorRef.current; // Check ref on each iteration
           attempts++;
         }
         
-        if (!connector) {
+        if (!currentConnector) {
           throw new Error('Wallet initialization timed out - please refresh the page');
         }
       }
 
       // Open wallet modal for connection
       console.log('🔧 Opening wallet modal...');
-      await connector.openModal();
+      await currentConnector.openModal();
       console.log('✅ Wallet modal opened successfully');
       
       // Check if connection was established
-      if (connector.signers.length > 0) {
-        const signer = connector.signers[0];
+      if (currentConnector.signers.length > 0) {
+        const signer = currentConnector.signers[0];
         const accountId = await signer.getAccountId();
         
         console.log('🔍 Account ID from signer (connectWallet):', accountId);
@@ -250,8 +258,10 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setError(null);
 
     try {
-      if (connector) {
-        await connector.disconnectAll();
+      const currentConnector = connectorRef.current;
+      if (currentConnector) {
+        await currentConnector.disconnectAll();
+        connectorRef.current = null;
       }
 
       setIsConnected(false);
