@@ -100,7 +100,7 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
             <img 
               src="/images/tb4.png" 
               alt="TrustBridge Africa Logo" 
-              className="h-16 sm:h-20 w-auto"
+              className="h-20 sm:h-24 md:h-28 lg:h-32 w-auto"
             />
           </Link>
 
