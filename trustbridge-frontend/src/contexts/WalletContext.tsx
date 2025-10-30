@@ -96,11 +96,41 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         );
 
         console.log('🔧 DAppConnector created, calling init()...');
-        await newConnector.init();
+        
+        // Clear any stale WalletConnect session data before initializing (only if no active connection)
+        // This helps with production environments where cached session data might cause issues
+        try {
+          const hasStoredConnection = localStorage.getItem('walletConnected') === 'true';
+          if (!hasStoredConnection) {
+            // Only clear WalletConnect cache if we don't have a stored connection
+            // WalletConnect stores session data in localStorage with specific keys
+            const walletConnectKeys = Object.keys(localStorage).filter(key => 
+              key.startsWith('wc@') || key.startsWith('WALLETCONNECT')
+            );
+            if (walletConnectKeys.length > 0) {
+              console.log('🧹 Clearing stale WalletConnect session data (no active connection):', walletConnectKeys.length, 'keys');
+              walletConnectKeys.forEach(key => localStorage.removeItem(key));
+            }
+          } else {
+            console.log('🔒 Keeping WalletConnect session data (active connection found)');
+          }
+        } catch (e) {
+          console.warn('Failed to check/clear WalletConnect cache:', e);
+        }
+        
+        // Initialize with timeout to prevent hanging
+        const initPromise = newConnector.init();
+        const initTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('WalletConnect init() timed out after 10 seconds')), 10000)
+        );
+        
+        await Promise.race([initPromise, initTimeout]);
         console.log('🔧 DAppConnector.init() completed');
         
-        // Add a small delay to ensure WalletConnect is fully ready
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Add a delay to ensure WalletConnect is fully ready (longer in production)
+        const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
+        const initDelay = isProduction ? 1000 : 500; // 1 second in production, 500ms locally
+        await new Promise(resolve => setTimeout(resolve, initDelay));
         
         // Update both state and ref for immediate access
         connectorRef.current = newConnector;
@@ -183,18 +213,29 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       
       if (!currentConnector) {
         console.log('⚠️ Connector not ready, waiting for initialization...');
+        console.log('Initialization status:', { isInitializing, connectorRef: !!connectorRef.current });
         
-        // Wait for initialization to complete (check both ref and state)
+        // Wait for initialization to complete (longer timeout in production)
+        const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
+        const maxAttempts = isProduction ? 50 : 30; // 5 seconds in production, 3 seconds locally
+        
         let attempts = 0;
-        while (!currentConnector && (isInitializing || attempts < 30)) {
+        while (!currentConnector && (isInitializing || attempts < maxAttempts)) {
           await new Promise(resolve => setTimeout(resolve, 100));
           currentConnector = connectorRef.current; // Check ref on each iteration
           attempts++;
+          
+          if (attempts % 10 === 0) {
+            console.log(`⏳ Still waiting for connector... (${attempts}/${maxAttempts})`);
+          }
         }
         
         if (!currentConnector) {
+          console.error('❌ Wallet initialization timed out after', attempts, 'attempts');
           throw new Error('Wallet initialization timed out - please refresh the page');
         }
+        
+        console.log('✅ Connector ready after', attempts, 'attempts');
       }
 
       // Open wallet modal for connection
