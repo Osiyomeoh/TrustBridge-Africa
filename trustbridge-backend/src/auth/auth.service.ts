@@ -509,7 +509,7 @@ export class AuthService {
       walletAddress: walletAddress, // Store in original case
       role: 'INVESTOR',
       isActive: true,
-      kycStatus: 'PENDING',
+      kycStatus: KycStatus.NOT_STARTED,
     });
 
     await user.save();
