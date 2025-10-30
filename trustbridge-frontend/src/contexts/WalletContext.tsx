@@ -107,47 +107,6 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
-  // Check if IndexedDB is available (required for WalletConnect)
-  const checkIndexedDBAvailability = async (): Promise<boolean> => {
-    try {
-      if (!window.indexedDB) {
-        console.warn('⚠️ IndexedDB is not available in this browser');
-        return false;
-      }
-      
-      // Try to open a test database to verify IndexedDB works
-      return new Promise((resolve) => {
-        const testDBName = 'trustbridge-indexeddb-test';
-        const request = indexedDB.open(testDBName, 1);
-        
-        request.onsuccess = () => {
-          // Close and delete the test database
-          request.result.close();
-          indexedDB.deleteDatabase(testDBName);
-          resolve(true);
-        };
-        
-        request.onerror = () => {
-          console.warn('⚠️ IndexedDB test failed:', request.error);
-          resolve(false);
-        };
-        
-        request.onblocked = () => {
-          console.warn('⚠️ IndexedDB is blocked');
-          resolve(false);
-        };
-        
-        // Timeout after 2 seconds
-        setTimeout(() => {
-          resolve(false);
-        }, 2000);
-      });
-    } catch (error) {
-      console.warn('⚠️ Error checking IndexedDB availability:', error);
-      return false;
-    }
-  };
-
   // Fetch HBAR balance from Mirror Node
   const fetchBalance = async (accountId: string) => {
     try {
@@ -190,16 +149,19 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     
     setIsInitializing(true);
     try {
-        // Check IndexedDB availability first (non-blocking - just for logging)
-        // On Vercel/production, IndexedDB might be blocked but we should still try to initialize
-        console.log('🔍 Checking IndexedDB availability...');
-        const indexedDBAvailable = await checkIndexedDBAvailability();
+        // Check if there's an active connection
+        const hasStoredConnection = localStorage.getItem('walletConnected') === 'true';
         
-        if (!indexedDBAvailable) {
-          console.warn('⚠️ IndexedDB check failed, but proceeding with initialization anyway (may work in production)');
-          // Don't block - let init() handle the error
+        // If no active connection, proactively clear all WalletConnect data (mimics incognito mode)
+        // This helps with production environments where stale cached data causes IndexedDB errors
+        if (!hasStoredConnection) {
+          console.log('🧹 No active connection found - clearing all WalletConnect data proactively (mimics incognito mode)...');
+          await clearAllWalletData();
+          // Wait a bit for IndexedDB to release any locks
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          console.log('✅ Cleared all WalletConnect data, proceeding with initialization...');
         } else {
-          console.log('✅ IndexedDB is available');
+          console.log('🔒 Active connection found - keeping WalletConnect session data');
         }
         
         const metadata = {
@@ -221,27 +183,6 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         );
 
         console.log('🔧 DAppConnector created, calling init()...');
-        
-        // Clear any stale WalletConnect session data before initializing (only if no active connection)
-        // This helps with production environments where cached session data might cause issues
-        try {
-          const hasStoredConnection = localStorage.getItem('walletConnected') === 'true';
-          if (!hasStoredConnection) {
-            // Only clear WalletConnect cache if we don't have a stored connection
-            // WalletConnect stores session data in localStorage with specific keys
-            const walletConnectKeys = Object.keys(localStorage).filter(key => 
-              key.startsWith('wc@') || key.startsWith('WALLETCONNECT')
-            );
-            if (walletConnectKeys.length > 0) {
-              console.log('🧹 Clearing stale WalletConnect session data (no active connection):', walletConnectKeys.length, 'keys');
-              walletConnectKeys.forEach(key => localStorage.removeItem(key));
-            }
-          } else {
-            console.log('🔒 Keeping WalletConnect session data (active connection found)');
-          }
-        } catch (e) {
-          console.warn('Failed to check/clear WalletConnect cache:', e);
-        }
         
         // Initialize with timeout to prevent hanging
         // Also catch unhandled promise rejections from IndexedDB
