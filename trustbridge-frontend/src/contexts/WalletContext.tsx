@@ -34,6 +34,49 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [isInitializing, setIsInitializing] = useState(false);
   // Use ref to track connector for immediate access (avoids state update race condition)
   const connectorRef = useRef<DAppConnector | null>(null);
+  // Track if connector was successfully initialized (not just created)
+  const isInitializedRef = useRef<boolean>(false);
+
+  // Check if IndexedDB is available (required for WalletConnect)
+  const checkIndexedDBAvailability = async (): Promise<boolean> => {
+    try {
+      if (!window.indexedDB) {
+        console.warn('⚠️ IndexedDB is not available in this browser');
+        return false;
+      }
+      
+      // Try to open a test database to verify IndexedDB works
+      return new Promise((resolve) => {
+        const testDBName = 'trustbridge-indexeddb-test';
+        const request = indexedDB.open(testDBName, 1);
+        
+        request.onsuccess = () => {
+          // Close and delete the test database
+          request.result.close();
+          indexedDB.deleteDatabase(testDBName);
+          resolve(true);
+        };
+        
+        request.onerror = () => {
+          console.warn('⚠️ IndexedDB test failed:', request.error);
+          resolve(false);
+        };
+        
+        request.onblocked = () => {
+          console.warn('⚠️ IndexedDB is blocked');
+          resolve(false);
+        };
+        
+        // Timeout after 2 seconds
+        setTimeout(() => {
+          resolve(false);
+        }, 2000);
+      });
+    } catch (error) {
+      console.warn('⚠️ Error checking IndexedDB availability:', error);
+      return false;
+    }
+  };
 
   // Fetch HBAR balance from Mirror Node
   const fetchBalance = async (accountId: string) => {
@@ -70,13 +113,26 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   // Initialize HashPack connection and restore previous session
   const initializeWallet = async () => {
-    if (isInitializing || connectorRef.current) {
+    if (isInitializing || (connectorRef.current && isInitializedRef.current)) {
       console.log('Wallet already initialized or initializing, skipping...');
       return;
     }
     
     setIsInitializing(true);
     try {
+        // Check IndexedDB availability first (required for WalletConnect)
+        console.log('🔍 Checking IndexedDB availability...');
+        const indexedDBAvailable = await checkIndexedDBAvailability();
+        
+        if (!indexedDBAvailable) {
+          console.error('❌ IndexedDB is not available - WalletConnect cannot initialize');
+          setError('IndexedDB is not available in your browser. Please enable storage permissions or try a different browser.');
+          setIsInitializing(false);
+          return;
+        }
+        
+        console.log('✅ IndexedDB is available');
+        
         const metadata = {
           name: "TrustBridge Africa",
           description: "African RWA Tokenization Platform",
@@ -118,7 +174,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           console.warn('Failed to check/clear WalletConnect cache:', e);
         }
         
-        // Initialize with timeout to prevent hanging (non-blocking - allow app to continue)
+        // Initialize with timeout to prevent hanging
         try {
           const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
           const initTimeoutMs = isProduction ? 20000 : 10000; // 20 seconds in production, 10 seconds locally
@@ -129,32 +185,40 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           );
           
           await Promise.race([initPromise, initTimeout]);
-          console.log('🔧 DAppConnector.init() completed');
+          console.log('🔧 DAppConnector.init() completed successfully');
           
           // Add a delay to ensure WalletConnect is fully ready (longer in production)
           const initDelay = isProduction ? 1000 : 500; // 1 second in production, 500ms locally
           await new Promise(resolve => setTimeout(resolve, initDelay));
           
-          // Update both state and ref for immediate access
+          // Only set connector if init() succeeded
           connectorRef.current = newConnector;
           setConnector(newConnector);
+          isInitializedRef.current = true; // Mark as successfully initialized
           console.log('✅ Wallet connector initialized successfully');
         } catch (initError) {
-          // If init() fails, still set the connector - it might work for opening modal
-          // The init() might fail due to network issues but the connector can still be used
-          console.warn('⚠️ WalletConnect init() failed or timed out, but connector will still be available:', initError);
-          console.warn('⚠️ This is non-critical - connector will be initialized lazily when user connects');
+          // If init() fails, don't set the connector - it won't work without proper initialization
+          console.error('❌ WalletConnect init() failed:', initError);
           
-          // Set connector anyway - it might still work for opening the modal
-          connectorRef.current = newConnector;
-          setConnector(newConnector);
-          console.log('✅ Wallet connector set (init may have failed, but connector is available)');
+          // Check if it's an IndexedDB error
+          const errorMessage = initError instanceof Error ? initError.message : String(initError);
+          if (errorMessage.includes('indexedDB') || errorMessage.includes('IndexedDB') || errorMessage.includes('backing store')) {
+            setError('IndexedDB is blocked or unavailable. Please enable storage permissions in your browser settings.');
+          } else {
+            setError(`Wallet initialization failed: ${errorMessage}. Please refresh the page or try again.`);
+          }
+          
+          // Don't set connector if init failed - it won't work
+          connectorRef.current = null;
+          setConnector(null);
+          isInitializedRef.current = false;
+          console.error('❌ Connector not set due to initialization failure');
         }
         
-        // Check for existing connections and restore session
-        if (newConnector.signers.length > 0) {
+        // Check for existing connections and restore session (only if init succeeded)
+        if (isInitializedRef.current && connectorRef.current && connectorRef.current.signers.length > 0) {
           console.log('Found existing HashPack connection, restoring session...');
-          const signer = newConnector.signers[0];
+          const signer = connectorRef.current.signers[0];
           const accountId = await signer.getAccountId();
           const hederaClient = Client.forTestnet();
           // Set the operator to the connected account for queries
@@ -269,6 +333,38 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         console.log('✅ Connector ready');
       }
 
+      // Check if connector is actually initialized before trying to use it
+      if (!isInitializedRef.current) {
+        console.warn('⚠️ Connector exists but not initialized, attempting to initialize now...');
+        try {
+          // Check IndexedDB first
+          const indexedDBAvailable = await checkIndexedDBAvailability();
+          if (!indexedDBAvailable) {
+            throw new Error('IndexedDB is not available. Please enable storage permissions in your browser settings.');
+          }
+          
+          // Try to initialize
+          const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
+          const initTimeoutMs = isProduction ? 20000 : 10000;
+          
+          const initPromise = currentConnector.init();
+          const initTimeout = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error(`WalletConnect init() timed out after ${initTimeoutMs/1000} seconds`)), initTimeoutMs)
+          );
+          
+          await Promise.race([initPromise, initTimeout]);
+          isInitializedRef.current = true;
+          console.log('✅ Connector initialized successfully');
+        } catch (initError) {
+          console.error('❌ Failed to initialize connector:', initError);
+          const errorMessage = initError instanceof Error ? initError.message : String(initError);
+          if (errorMessage.includes('indexedDB') || errorMessage.includes('IndexedDB') || errorMessage.includes('backing store')) {
+            throw new Error('IndexedDB is blocked or unavailable. Please enable storage permissions in your browser settings.');
+          }
+          throw new Error(`Failed to initialize wallet: ${errorMessage}. Please refresh the page or try again.`);
+        }
+      }
+
       // Open wallet modal for connection
       console.log('🔧 Opening wallet modal...');
       try {
@@ -279,14 +375,25 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         // Try to initialize again and retry
         console.warn('⚠️ Failed to open modal, attempting to re-initialize connector:', modalError);
         try {
+          // Check IndexedDB first
+          const indexedDBAvailable = await checkIndexedDBAvailability();
+          if (!indexedDBAvailable) {
+            throw new Error('IndexedDB is not available. Please enable storage permissions in your browser settings.');
+          }
+          
           // Try to initialize the connector again
           await currentConnector.init();
+          isInitializedRef.current = true;
           console.log('✅ Connector re-initialized, retrying modal...');
           await currentConnector.openModal();
           console.log('✅ Wallet modal opened successfully after re-initialization');
         } catch (retryError) {
           console.error('❌ Failed to open modal even after re-initialization:', retryError);
-          throw new Error('Failed to open wallet connection modal. Please try again or refresh the page.');
+          const errorMessage = retryError instanceof Error ? retryError.message : String(retryError);
+          if (errorMessage.includes('indexedDB') || errorMessage.includes('IndexedDB') || errorMessage.includes('backing store')) {
+            throw new Error('IndexedDB is blocked or unavailable. Please enable storage permissions in your browser settings.');
+          }
+          throw new Error(`Failed to open wallet connection modal: ${errorMessage}. Please try again or refresh the page.`);
         }
       }
       
@@ -350,6 +457,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       if (currentConnector) {
         await currentConnector.disconnectAll();
         connectorRef.current = null;
+        isInitializedRef.current = false; // Reset initialization flag
       }
 
       setIsConnected(false);
