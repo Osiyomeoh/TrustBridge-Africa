@@ -36,18 +36,17 @@ export class GmailService {
         user: gmailUser,
         pass: gmailPassword, // Use App Password, not regular password
       },
+      // Add timeout settings to prevent hanging (works locally but may timeout on cloud platforms)
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
     };
 
     this.transporter = nodemailer.createTransport(gmailConfig);
 
-    // Verify connection configuration
-    this.transporter.verify((error, success) => {
-      if (error) {
-        this.logger.error('Gmail transporter verification failed:', error);
-      } else {
-        this.logger.log('Gmail transporter is ready to send emails');
-      }
-    });
+    // Skip blocking verification on startup - it causes timeouts on cloud platforms like Render
+    // Verification happens automatically on first email send
+    this.logger.log('Gmail transporter initialized (connection will be verified on first send)');
   }
 
   async sendVerificationEmail(to: string, verificationCode: string, userName: string): Promise<boolean> {
@@ -77,21 +76,29 @@ export class GmailService {
         text: this.getVerificationEmailText(userName, verificationUrl, verificationCode),
       };
 
-      // Add timeout to prevent hanging (5 seconds max)
+      // Add timeout wrapper to prevent hanging (especially on cloud platforms)
       const sendMailPromise = this.transporter.sendMail(mailOptions);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email sending timeout after 5 seconds')), 5000)
+        setTimeout(() => reject(new Error('Email sending timeout after 15 seconds - likely network/firewall issue on hosting platform')), 15000)
       );
 
-      try {
-        const result = await Promise.race([sendMailPromise, timeoutPromise]);
-        this.logger.log(`Verification email sent to ${to}: ${(result as any).messageId}`);
-        return true;
-      } catch (timeoutError) {
-        throw timeoutError; // Re-throw to be caught by outer catch
-      }
+      const result = await Promise.race([sendMailPromise, timeoutPromise]);
+      this.logger.log(`Verification email sent to ${to}: ${(result as any).messageId}`);
+      return true;
     } catch (error) {
-      this.logger.error('Failed to send verification email:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorCode = (error as any)?.code || 'UNKNOWN';
+      
+      this.logger.error(`Failed to send verification email to ${to}:`, errorMessage);
+      
+      // Provide helpful context for common issues
+      if (errorMessage.includes('timeout') || errorCode === 'ETIMEDOUT') {
+        this.logger.warn('⚠️  Gmail SMTP timeout detected - this is common on cloud platforms (Render, Heroku, etc.)');
+        this.logger.warn('   The connection works locally but may be blocked by platform firewalls.');
+        this.logger.warn('   The verification code will be logged below and the user flow will continue.');
+      } else if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND') {
+        this.logger.warn('⚠️  Gmail SMTP connection refused - check network/firewall settings');
+      }
       
       // Fallback: Log to console if email fails
       this.logger.warn('FALLBACK: Logging verification code to console due to email failure:');
