@@ -12,41 +12,77 @@ export class GmailService {
   }
 
   private initializeTransporter() {
+    // Priority: cPanel SMTP > Gmail > Console logging
+    
+    // Try cPanel SMTP first (recommended for Render/cloud platforms)
+    const cpanelHost = this.configService.get<string>('CPANEL_SMTP_HOST');
+    const cpanelPort = this.configService.get<string>('CPANEL_SMTP_PORT');
+    const cpanelUser = this.configService.get<string>('CPANEL_SMTP_USER');
+    const cpanelPassword = this.configService.get<string>('CPANEL_SMTP_PASSWORD');
+    const cpanelFromEmail = this.configService.get<string>('CPANEL_SMTP_FROM_EMAIL');
+    
+    if (cpanelHost && cpanelUser && cpanelPassword) {
+      const port = parseInt(cpanelPort || '587', 10);
+      const isSecure = port === 465;
+      
+      this.logger.log('Initializing cPanel SMTP transporter:', {
+        host: cpanelHost,
+        port: port,
+        secure: isSecure,
+        user: cpanelUser ? `${cpanelUser.substring(0, 3)}***` : 'NOT_SET',
+      });
+      
+      const cpanelConfig = {
+        host: cpanelHost,
+        port: port,
+        secure: isSecure, // true for 465, false for other ports
+        auth: {
+          user: cpanelUser,
+          pass: cpanelPassword,
+        },
+        tls: {
+          rejectUnauthorized: false, // Allow self-signed certificates
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
+      };
+      
+      this.transporter = nodemailer.createTransport(cpanelConfig);
+      this.logger.log('cPanel SMTP transporter initialized (connection will be verified on first send)');
+      return;
+    }
+    
+    // Fallback to Gmail SMTP (works locally, may timeout on Render)
     const gmailUser = this.configService.get<string>('GMAIL_USER');
     const gmailPassword = this.configService.get<string>('GMAIL_APP_PASSWORD');
     
-    // Debug: Log what credentials are being loaded
-    this.logger.log('Gmail credentials loaded:', {
-      user: gmailUser ? `${gmailUser.substring(0, 3)}***@gmail.com` : 'NOT_SET',
-      passwordLength: gmailPassword ? gmailPassword.length : 0,
-      hasUser: !!gmailUser,
-      hasPassword: !!gmailPassword
-    });
-    
-    // Check if Gmail credentials are configured
-    if (!gmailUser || !gmailPassword || gmailUser === 'your-gmail@gmail.com' || gmailPassword === 'your-16-character-app-password') {
-      this.logger.warn('Gmail credentials not configured, using console logging for email verification');
-      this.transporter = null;
+    if (gmailUser && gmailPassword && gmailUser !== 'your-gmail@gmail.com' && gmailPassword !== 'your-16-character-app-password') {
+      this.logger.log('Initializing Gmail SMTP transporter:', {
+        user: `${gmailUser.substring(0, 3)}***@gmail.com`,
+      });
+      
+      const gmailConfig = {
+        service: 'gmail',
+        auth: {
+          user: gmailUser,
+          pass: gmailPassword, // Use App Password, not regular password
+        },
+        // Add timeout settings to prevent hanging (works locally but may timeout on cloud platforms)
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
+      };
+
+      this.transporter = nodemailer.createTransport(gmailConfig);
+      this.logger.log('Gmail SMTP transporter initialized (connection will be verified on first send)');
       return;
     }
-
-    const gmailConfig = {
-      service: 'gmail',
-      auth: {
-        user: gmailUser,
-        pass: gmailPassword, // Use App Password, not regular password
-      },
-      // Add timeout settings to prevent hanging (works locally but may timeout on cloud platforms)
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
-    };
-
-    this.transporter = nodemailer.createTransport(gmailConfig);
-
-    // Skip blocking verification on startup - it causes timeouts on cloud platforms like Render
-    // Verification happens automatically on first email send
-    this.logger.log('Gmail transporter initialized (connection will be verified on first send)');
+    
+    // No SMTP configured - use console logging
+    this.logger.warn('No SMTP credentials configured (cPanel or Gmail). Using console logging for email verification.');
+    this.logger.warn('To enable email: Set CPANEL_SMTP_* or GMAIL_* environment variables');
+    this.transporter = null;
   }
 
   async sendVerificationEmail(to: string, verificationCode: string, userName: string): Promise<boolean> {
@@ -65,10 +101,15 @@ export class GmailService {
         return true; // Return true so the flow continues
       }
       
+      // Get from email address (prioritize cPanel, then Gmail, then default)
+      const cpanelFromEmail = this.configService.get<string>('CPANEL_SMTP_FROM_EMAIL');
+      const gmailUser = this.configService.get<string>('GMAIL_USER');
+      const fromEmail = cpanelFromEmail || gmailUser || 'noreply@trustbridge.africa';
+      
       const mailOptions = {
         from: {
           name: 'TrustBridge',
-          address: this.configService.get<string>('GMAIL_USER', 'noreply@trustbridge.africa'),
+          address: fromEmail,
         },
         to: to,
         subject: 'Verify Your TrustBridge Account - 6-Digit Code',
@@ -86,19 +127,7 @@ export class GmailService {
       this.logger.log(`Verification email sent to ${to}: ${(result as any).messageId}`);
       return true;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorCode = (error as any)?.code || 'UNKNOWN';
-      
-      this.logger.error(`Failed to send verification email to ${to}:`, errorMessage);
-      
-      // Provide helpful context for common issues
-      if (errorMessage.includes('timeout') || errorCode === 'ETIMEDOUT') {
-        this.logger.warn('⚠️  Gmail SMTP timeout detected - this is common on cloud platforms (Render, Heroku, etc.)');
-        this.logger.warn('   The connection works locally but may be blocked by platform firewalls.');
-        this.logger.warn('   The verification code will be logged below and the user flow will continue.');
-      } else if (errorCode === 'ECONNREFUSED' || errorCode === 'ENOTFOUND') {
-        this.logger.warn('⚠️  Gmail SMTP connection refused - check network/firewall settings');
-      }
+      this.logger.error('Failed to send verification email:', error);
       
       // Fallback: Log to console if email fails
       this.logger.warn('FALLBACK: Logging verification code to console due to email failure:');
@@ -117,10 +146,15 @@ export class GmailService {
     try {
       const recipients = Array.isArray(to) ? to : [to];
       
+      // Get from email address (prioritize cPanel, then Gmail, then default)
+      const cpanelFromEmail = this.configService.get<string>('CPANEL_SMTP_FROM_EMAIL');
+      const gmailUser = this.configService.get<string>('GMAIL_USER');
+      const fromEmail = cpanelFromEmail || gmailUser || 'noreply@trustbridge.africa';
+      
       const mailOptions = {
         from: {
           name: 'TrustBridge',
-          address: this.configService.get<string>('GMAIL_USER', 'noreply@trustbridge.africa'),
+          address: fromEmail,
         },
         to: recipients,
         subject: subject,
