@@ -118,24 +118,38 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           console.warn('Failed to check/clear WalletConnect cache:', e);
         }
         
-        // Initialize with timeout to prevent hanging
-        const initPromise = newConnector.init();
-        const initTimeout = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('WalletConnect init() timed out after 10 seconds')), 10000)
-        );
-        
-        await Promise.race([initPromise, initTimeout]);
-        console.log('🔧 DAppConnector.init() completed');
-        
-        // Add a delay to ensure WalletConnect is fully ready (longer in production)
-        const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
-        const initDelay = isProduction ? 1000 : 500; // 1 second in production, 500ms locally
-        await new Promise(resolve => setTimeout(resolve, initDelay));
-        
-        // Update both state and ref for immediate access
-        connectorRef.current = newConnector;
-        setConnector(newConnector);
-        console.log('✅ Wallet connector initialized successfully');
+        // Initialize with timeout to prevent hanging (non-blocking - allow app to continue)
+        try {
+          const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
+          const initTimeoutMs = isProduction ? 20000 : 10000; // 20 seconds in production, 10 seconds locally
+          
+          const initPromise = newConnector.init();
+          const initTimeout = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error(`WalletConnect init() timed out after ${initTimeoutMs/1000} seconds`)), initTimeoutMs)
+          );
+          
+          await Promise.race([initPromise, initTimeout]);
+          console.log('🔧 DAppConnector.init() completed');
+          
+          // Add a delay to ensure WalletConnect is fully ready (longer in production)
+          const initDelay = isProduction ? 1000 : 500; // 1 second in production, 500ms locally
+          await new Promise(resolve => setTimeout(resolve, initDelay));
+          
+          // Update both state and ref for immediate access
+          connectorRef.current = newConnector;
+          setConnector(newConnector);
+          console.log('✅ Wallet connector initialized successfully');
+        } catch (initError) {
+          // If init() fails, still set the connector - it might work for opening modal
+          // The init() might fail due to network issues but the connector can still be used
+          console.warn('⚠️ WalletConnect init() failed or timed out, but connector will still be available:', initError);
+          console.warn('⚠️ This is non-critical - connector will be initialized lazily when user connects');
+          
+          // Set connector anyway - it might still work for opening the modal
+          connectorRef.current = newConnector;
+          setConnector(newConnector);
+          console.log('✅ Wallet connector set (init may have failed, but connector is available)');
+        }
         
         // Check for existing connections and restore session
         if (newConnector.signers.length > 0) {
@@ -217,7 +231,7 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         
         // Wait for initialization to complete (longer timeout in production)
         const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
-        const maxAttempts = isProduction ? 50 : 30; // 5 seconds in production, 3 seconds locally
+        const maxAttempts = isProduction ? 30 : 20; // 3 seconds in production, 2 seconds locally
         
         let attempts = 0;
         while (!currentConnector && (isInitializing || attempts < maxAttempts)) {
@@ -231,17 +245,50 @@ export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
         
         if (!currentConnector) {
-          console.error('❌ Wallet initialization timed out after', attempts, 'attempts');
-          throw new Error('Wallet initialization timed out - please refresh the page');
+          // If connector still not ready, try to initialize it now (lazy initialization)
+          console.log('🔄 Connector not ready, attempting lazy initialization...');
+          try {
+            await initializeWallet();
+            currentConnector = connectorRef.current;
+            
+            if (!currentConnector) {
+              // Wait a bit more after lazy initialization
+              await new Promise(resolve => setTimeout(resolve, 500));
+              currentConnector = connectorRef.current;
+            }
+          } catch (lazyInitError) {
+            console.error('Lazy initialization failed:', lazyInitError);
+          }
         }
         
-        console.log('✅ Connector ready after', attempts, 'attempts');
+        if (!currentConnector) {
+          console.error('❌ Wallet initialization failed - connector not available');
+          throw new Error('Wallet initialization failed - please refresh the page or try again');
+        }
+        
+        console.log('✅ Connector ready');
       }
 
       // Open wallet modal for connection
       console.log('🔧 Opening wallet modal...');
-      await currentConnector.openModal();
-      console.log('✅ Wallet modal opened successfully');
+      try {
+        await currentConnector.openModal();
+        console.log('✅ Wallet modal opened successfully');
+      } catch (modalError) {
+        // If opening modal fails, it might be because init() didn't complete
+        // Try to initialize again and retry
+        console.warn('⚠️ Failed to open modal, attempting to re-initialize connector:', modalError);
+        try {
+          // Try to initialize the connector again
+          await currentConnector.init();
+          console.log('✅ Connector re-initialized, retrying modal...');
+          await currentConnector.openModal();
+          console.log('✅ Wallet modal opened successfully after re-initialization');
+        } catch (retryError) {
+          console.error('❌ Failed to open modal even after re-initialization:', retryError);
+          throw new Error('Failed to open wallet connection modal. Please try again or refresh the page.');
+        }
+      }
       
       // Check if connection was established
       if (currentConnector.signers.length > 0) {
