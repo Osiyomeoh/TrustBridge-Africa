@@ -120,6 +120,14 @@ class IPFSService {
   }
 
   /**
+   * Get file URL through backend proxy (to avoid CORS and rate limiting)
+   */
+  getProxyFileUrl(cid: string): string {
+    if (!this.serverUrl) return this.getFileUrl(cid);
+    return `${this.serverUrl}/api/ipfs/file/${cid}`;
+  }
+
+  /**
    * Pin a file to IPFS (server-side operation)
    */
   async pinFile(cid: string, metadata?: IPFSFileMetadata): Promise<boolean> {

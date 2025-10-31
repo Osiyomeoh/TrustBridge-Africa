@@ -1,6 +1,8 @@
 // Hedera-native asset service for digital assets
 // This service works with assets stored in localStorage and Hedera tokens
 
+import { ipfsService } from './ipfs';
+
 export interface HederaAsset {
   id: string;
   assetId: string; // Alias for id for backward compatibility
@@ -648,8 +650,8 @@ class HederaAssetService {
         if (ipfsHashFromMemo) {
           console.log(`✅ Found IPFS hash in token memo: ${ipfsHashFromMemo}`);
           
-          // Reconstruct the full IPFS URL using Pinata gateway
-          const reconstructedImageUrl = `https://indigo-recent-clam-436.mypinata.cloud/ipfs/${ipfsHashFromMemo}`;
+          // Reconstruct the full IPFS URL using backend proxy to avoid CORS and rate limiting
+          const reconstructedImageUrl = ipfsService.getProxyFileUrl(ipfsHashFromMemo);
           imageURI = reconstructedImageUrl;
           documentURI = reconstructedImageUrl; // Same URL for both image and document
           
