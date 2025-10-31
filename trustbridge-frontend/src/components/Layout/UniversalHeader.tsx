@@ -97,10 +97,11 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
         <div className="flex items-center justify-between h-14 sm:h-16">
           {/* Logo - TrustBridge Theme */}
           <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer">
-            <div className="w-8 h-8 bg-gradient-to-br from-neon-green to-emerald-500 rounded-lg flex items-center justify-center">
-              <span className="text-black font-bold text-sm">TB</span>
-            </div>
-            <span className="text-base sm:text-lg font-semibold text-off-white">TrustBridge</span>
+            <img 
+              src="/images/tb4.png" 
+              alt="TrustBridge Africa Logo" 
+              className="h-10 w-auto"
+            />
           </Link>
 
           {/* Search Bar - Only show on Discovery page */}

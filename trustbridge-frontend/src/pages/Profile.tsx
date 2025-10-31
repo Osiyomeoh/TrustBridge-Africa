@@ -33,6 +33,7 @@ import { useToast } from '../hooks/useToast';
 import { usePortfolio, useAssetByOwner } from '../hooks/useApi';
 import { contractService } from '../services/contractService';
 import { trustToUSD, formatUSD as formatUSDPrice } from '../utils/priceUtils';
+import { ipfsService } from '../services/ipfs';
 
 const Profile: React.FC = () => {
   const { user, authStep, isAuthenticated, startKYC, refreshUser } = useAuth();
@@ -348,12 +349,11 @@ const Profile: React.FC = () => {
                   
                   // Check if it's an IPFS CID or URL
                   if (metadataString.startsWith('baf') || metadataString.startsWith('Qm')) {
-                    // It's an IPFS CID, fetch the metadata
-                    const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${metadataString}`;
+                    // It's an IPFS CID, fetch the metadata via backend to avoid CORS
                     try {
-                      const ipfsResponse = await fetch(ipfsUrl);
-                      if (ipfsResponse.ok) {
-                        metadata = await ipfsResponse.json();
+                      const fetchedMetadata = await ipfsService.getFileMetadata(metadataString);
+                      if (fetchedMetadata) {
+                        metadata = fetchedMetadata;
                         name = metadata.name || metadata.assetName || name;
                         // Try multiple fields for price/value
                         const priceStr = metadata.price || metadata.totalValue || metadata.value || '100';

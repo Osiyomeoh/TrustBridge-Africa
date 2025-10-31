@@ -174,10 +174,11 @@ const DashboardNavigation: React.FC = () => {
           {/* Mobile Header */}
           <div className="flex items-center justify-between mb-6">
             <Link to="/" onClick={toggleMobileSidebar} className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-neon-green to-emerald-500 rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">TB</span>
-              </div>
-              <span className="text-lg font-semibold text-off-white">TrustBridge</span>
+              <img 
+                src="/images/tb4.png" 
+                alt="TrustBridge Africa" 
+                className="h-10 w-auto"
+              />
             </Link>
             <button
               onClick={toggleMobileSidebar}
@@ -326,12 +327,12 @@ const DashboardNavigation: React.FC = () => {
 
           {/* Logo */}
           <Link to="/" className="block mb-6 xl:mb-8">
-            <div className={`flex items-center transition-all duration-300 cursor-pointer group/logo ${isCollapsed ? 'justify-center group-hover:justify-start group-hover:gap-2 xl:group-hover:gap-3' : 'gap-2 xl:gap-3'}`}>
-              <div className={`bg-neon-green triangle floating ${isCollapsed ? 'w-8 h-8 group-hover:w-8 group-hover:h-8 xl:group-hover:w-10 xl:group-hover:h-10' : 'w-8 h-8 xl:w-10 xl:h-10'}`}></div>
-              <div className={`transition-all duration-300 overflow-hidden ${isCollapsed ? 'w-0 opacity-0 group-hover:w-auto group-hover:opacity-100' : 'w-auto opacity-100'}`}>
-                <h1 className="text-lg xl:text-xl font-bold text-neon-green group-hover/logo:text-electric-mint transition-colors">TrustBridge</h1>
-                <p className="text-xs text-electric-mint uppercase tracking-wider">Africa</p>
-              </div>
+            <div className={`flex items-center transition-all duration-300 cursor-pointer group/logo ${isCollapsed ? 'justify-center group-hover:justify-start' : ''}`}>
+              <img 
+                src="/images/tb4.png" 
+                alt="TrustBridge Africa" 
+                className={`transition-all duration-300 ${isCollapsed ? 'w-8 h-8 group-hover:w-auto group-hover:h-10' : 'h-10 w-auto'}`}
+              />
             </div>
           </Link>
 
