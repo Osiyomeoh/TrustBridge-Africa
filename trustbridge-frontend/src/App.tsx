@@ -62,6 +62,8 @@ import ProofOfAddressRequirements from './pages/help/ProofOfAddressRequirements'
 import ProfessionalLicenseRequirements from './pages/help/ProfessionalLicenseRequirements';
 import ResumeRequirements from './pages/help/ResumeRequirements';
 import USSDDemo from './pages/USSDDemo';
+import Exchange from './pages/Exchange';
+import Documentation from './pages/Documentation';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -187,6 +189,12 @@ const App: React.FC = () => {
                   
                   
                   {/* Help Pages - No Authentication Required */}
+                  <Route path="/documentation" element={
+                    <div className="min-h-screen bg-black text-off-white">
+                      <UniversalHeader />
+                      <Documentation />
+                    </div>
+                  } />
                   <Route path="/help/government-id-requirements" element={
                     <div className="min-h-screen bg-black text-off-white">
                       <UniversalHeader />
@@ -258,6 +266,7 @@ const App: React.FC = () => {
                         <Route path="/pool-token-portfolio" element={<PoolTokenPortfolio />} />
                         <Route path="/trading" element={<TradingInterface />} />
                         <Route path="/staking" element={<TrustTokenStaking />} />
+                        <Route path="/exchange" element={<Exchange />} />
                         <Route path="/get-test-tokens" element={<GetTestTokens />} />
                         <Route path="/spv" element={<SPVManagement />} />
                         <Route path="/governance" element={<DAOGovernance />} />

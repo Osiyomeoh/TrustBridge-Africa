@@ -2,17 +2,48 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/UI/Card';
 import Button from '../components/UI/Button';
-import { User, Bell, Shield, Wallet, Globe, Moon, Sun, LogOut, Save, Key, Eye, EyeOff, Coins } from 'lucide-react';
+import { User, Bell, Shield, Wallet, Globe, Moon, Sun, LogOut, Save, Key, Eye, EyeOff, Coins, Loader2 } from 'lucide-react';
 import { useWallet } from '../contexts/WalletContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useTrustTokenBalance } from '../hooks/useTrustTokenBalance';
+import { useToast } from '../hooks/useToast';
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'security' | 'wallet' | 'preferences'>('profile');
   const [showPrivateKey, setShowPrivateKey] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Wallet and token balances
-  const { balance: hbarBalance, address, isConnected } = useWallet();
+  const { balance: hbarBalance, address, isConnected, disconnectWallet } = useWallet();
+  const { logout, user, refreshUser, completeProfile } = useAuth();
   const { balance: trustBalance, loading: trustLoading } = useTrustTokenBalance();
+  const { toast } = useToast();
+  
+  // Profile form state
+  const [profileData, setProfileData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    bio: '',
+    phone: '',
+    country: ''
+  });
+  
+  // Load user data
+  React.useEffect(() => {
+    if (user) {
+      // Split name into first and last
+      const nameParts = user.name?.split(' ') || ['', ''];
+      setProfileData({
+        firstName: nameParts[0] || '',
+        lastName: nameParts.slice(1).join(' ') || '',
+        email: user.email || '',
+        bio: user.bio || '',
+        phone: user.phone || '',
+        country: user.country || ''
+      });
+    }
+  }, [user]);
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -21,6 +52,36 @@ const Settings: React.FC = () => {
     { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'preferences', label: 'Preferences', icon: Globe }
   ];
+  
+  // Handle profile save
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    try {
+      await completeProfile({
+        name: `${profileData.firstName} ${profileData.lastName}`.trim(),
+        email: profileData.email,
+        phone: profileData.phone,
+        country: profileData.country
+      });
+      
+      toast({
+        title: 'Profile Updated',
+        description: 'Your profile has been updated successfully!',
+        variant: 'default'
+      });
+      
+      await refreshUser();
+    } catch (error: any) {
+      console.error('Profile update failed:', error);
+      toast({
+        title: 'Update Failed',
+        description: error.message || 'Failed to update profile. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black text-off-white p-4 sm:p-6 lg:p-8">
@@ -42,8 +103,17 @@ const Settings: React.FC = () => {
               Manage your account settings, security preferences, and wallet configuration.
             </p>
           </div>
-          <Button variant="neon" className="floating">
-            <Save className="w-5 h-5 mr-2" />
+          <Button 
+            variant="neon" 
+            className="floating"
+            onClick={activeTab === 'profile' ? handleSaveProfile : undefined}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+            ) : (
+              <Save className="w-5 h-5 mr-2" />
+            )}
             Save Changes
           </Button>
         </div>
@@ -112,16 +182,20 @@ const Settings: React.FC = () => {
                     <label className="block text-sm font-medium text-off-white mb-2">First Name</label>
                     <input
                       type="text"
-                      defaultValue="John"
+                      value={profileData.firstName}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, firstName: e.target.value }))}
                       className="w-full px-4 py-3 bg-dark-gray border border-neon-green/30 rounded-lg text-off-white focus:border-neon-green focus:outline-none"
+                      placeholder="Enter your first name"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-off-white mb-2">Last Name</label>
                     <input
                       type="text"
-                      defaultValue="Doe"
+                      value={profileData.lastName}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, lastName: e.target.value }))}
                       className="w-full px-4 py-3 bg-dark-gray border border-neon-green/30 rounded-lg text-off-white focus:border-neon-green focus:outline-none"
+                      placeholder="Enter your last name"
                     />
                   </div>
                 </div>
@@ -130,8 +204,10 @@ const Settings: React.FC = () => {
                   <label className="block text-sm font-medium text-off-white mb-2">Email</label>
                   <input
                     type="email"
-                    defaultValue="john.doe@example.com"
+                    value={profileData.email}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
                     className="w-full px-4 py-3 bg-dark-gray border border-neon-green/30 rounded-lg text-off-white focus:border-neon-green focus:outline-none"
+                    placeholder="Enter your email"
                   />
                 </div>
 
@@ -139,9 +215,34 @@ const Settings: React.FC = () => {
                   <label className="block text-sm font-medium text-off-white mb-2">Bio</label>
                   <textarea
                     rows={4}
-                    defaultValue="Real estate investor focused on African markets..."
+                    value={profileData.bio}
+                    onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
                     className="w-full px-4 py-3 bg-dark-gray border border-neon-green/30 rounded-lg text-off-white focus:border-neon-green focus:outline-none resize-none"
+                    placeholder="Tell us about yourself..."
                   />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-off-white mb-2">Phone</label>
+                    <input
+                      type="tel"
+                      value={profileData.phone}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, phone: e.target.value }))}
+                      className="w-full px-4 py-3 bg-dark-gray border border-neon-green/30 rounded-lg text-off-white focus:border-neon-green focus:outline-none"
+                      placeholder="Enter your phone"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-off-white mb-2">Country</label>
+                    <input
+                      type="text"
+                      value={profileData.country}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, country: e.target.value }))}
+                      className="w-full px-4 py-3 bg-dark-gray border border-neon-green/30 rounded-lg text-off-white focus:border-neon-green focus:outline-none"
+                      placeholder="Enter your country"
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -239,7 +340,7 @@ const Settings: React.FC = () => {
               <CardContent className="space-y-6">
                 <div className="p-4 bg-dark-gray/30 rounded-lg">
                   <h3 className="font-semibold text-off-white mb-2">Connected Wallet</h3>
-                  <p className="text-sm text-off-white/70 mb-4">MetaMask Wallet</p>
+                  <p className="text-sm text-off-white/70 mb-4">HashPack Wallet</p>
                   <div className="flex items-center gap-2 mb-4">
                     <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-neon-green animate-pulse' : 'bg-red-500'}`}></div>
                     <span className={`text-sm ${isConnected ? 'text-neon-green' : 'text-red-500'}`}>
@@ -315,7 +416,28 @@ const Settings: React.FC = () => {
                 <div className="p-4 bg-warning/10 border border-warning/30 rounded-lg">
                   <h3 className="font-semibold text-warning mb-2">Danger Zone</h3>
                   <p className="text-sm text-off-white/70 mb-4">Disconnect your wallet from TrustBridge</p>
-                  <Button variant="destructive" size="sm">
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await logout();
+                        await disconnectWallet();
+                        toast({
+                          title: 'Disconnected',
+                          description: 'Wallet disconnected successfully',
+                          variant: 'default'
+                        });
+                      } catch (error) {
+                        console.error('Disconnect failed:', error);
+                        toast({
+                          title: 'Error',
+                          description: 'Failed to disconnect wallet',
+                          variant: 'destructive'
+                        });
+                      }
+                    }}
+                  >
                     <LogOut className="w-4 h-4 mr-2" />
                     Disconnect Wallet
                   </Button>

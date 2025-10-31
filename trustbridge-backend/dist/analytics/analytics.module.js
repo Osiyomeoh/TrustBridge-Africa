@@ -8,13 +8,26 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AnalyticsModule = void 0;
 const common_1 = require("@nestjs/common");
+const mongoose_1 = require("@nestjs/mongoose");
 const analytics_controller_1 = require("./analytics.controller");
 const analytics_service_1 = require("./analytics.service");
+const hedera_module_1 = require("../hedera/hedera.module");
+const asset_schema_1 = require("../schemas/asset.schema");
+const user_schema_1 = require("../schemas/user.schema");
+const amc_pool_schema_1 = require("../schemas/amc-pool.schema");
 let AnalyticsModule = class AnalyticsModule {
 };
 exports.AnalyticsModule = AnalyticsModule;
 exports.AnalyticsModule = AnalyticsModule = __decorate([
     (0, common_1.Module)({
+        imports: [
+            hedera_module_1.HederaModule,
+            mongoose_1.MongooseModule.forFeature([
+                { name: asset_schema_1.Asset.name, schema: asset_schema_1.AssetSchema },
+                { name: user_schema_1.User.name, schema: user_schema_1.UserSchema },
+                { name: amc_pool_schema_1.AMCPool.name, schema: amc_pool_schema_1.AMCPoolSchema }
+            ])
+        ],
         controllers: [analytics_controller_1.AnalyticsController],
         providers: [analytics_service_1.AnalyticsService],
     })

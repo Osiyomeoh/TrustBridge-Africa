@@ -84,6 +84,9 @@ const Landing: React.FC = () => {
             <a href="#communities" className="text-off-white hover:text-neon-green transition-colors text-sm xl:text-base">Communities</a>
             <a href="#features" className="text-off-white hover:text-neon-green transition-colors text-sm xl:text-base">Features</a>
             <a href="#how-it-works" className="text-off-white hover:text-neon-green transition-colors text-sm xl:text-base">How It Works</a>
+            <Link to="/documentation">
+              <span className="text-off-white hover:text-neon-green transition-colors text-sm xl:text-base cursor-pointer">Docs</span>
+            </Link>
             <ThemeToggle />
             <Link to="/ussd-demo">
               <Button variant="ghost" size="sm" className="flex items-center gap-2">
@@ -610,20 +613,68 @@ const Landing: React.FC = () => {
         {/* Footer */}
         <footer className="px-4 sm:px-6 lg:px-8 py-8 sm:py-12 border-t border-neon-green/20">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row items-center justify-between">
-              <div className="flex items-center gap-3 mb-4 md:mb-0">
-                <div className="w-8 h-8 bg-neon-green triangle floating"></div>
-                <div>
-                  <h3 className="text-lg font-bold text-neon-green">TrustBridge</h3>
-                  <p className="text-xs text-electric-mint uppercase tracking-wider">Africa</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+              <div className="flex flex-col">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 bg-neon-green triangle floating"></div>
+                  <div>
+                    <h3 className="text-lg font-bold text-neon-green">TrustBridge</h3>
+                    <p className="text-xs text-electric-mint uppercase tracking-wider">Africa</p>
+                  </div>
                 </div>
+                <p className="text-sm text-off-white/70">
+                  Tokenizing African assets on Hedera blockchain for global investment.
+                </p>
               </div>
-              <div className="flex items-center gap-6">
-                <span className="text-sm text-off-white/70">© 2025 TrustBridge Africa</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-neon-green rounded-full animate-pulse"></div>
-                  <span className="text-sm text-neon-green">Live on Hedera</span>
-                </div>
+
+              <div className="flex flex-col">
+                <h4 className="text-sm font-semibold text-electric-mint mb-4 uppercase tracking-wider">Resources</h4>
+                <ul className="space-y-2">
+                  <li>
+                    <Link to="/documentation" className="text-sm text-off-white/70 hover:text-neon-green transition-colors">
+                      Documentation
+                    </Link>
+                  </li>
+                  <li>
+                    <a href="https://hashscan.io/testnet" target="_blank" rel="noopener noreferrer" className="text-sm text-off-white/70 hover:text-neon-green transition-colors">
+                      Block Explorer
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://hedera.com" target="_blank" rel="noopener noreferrer" className="text-sm text-off-white/70 hover:text-neon-green transition-colors">
+                      About Hedera
+                    </a>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex flex-col">
+                <h4 className="text-sm font-semibold text-electric-mint mb-4 uppercase tracking-wider">Get Started</h4>
+                <ul className="space-y-2">
+                  <li>
+                    <Link to="/auth" className="text-sm text-off-white/70 hover:text-neon-green transition-colors">
+                      Connect Wallet
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/ussd-demo" className="text-sm text-off-white/70 hover:text-neon-green transition-colors">
+                      Try USSD Demo
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/exchange" className="text-sm text-off-white/70 hover:text-neon-green transition-colors">
+                      Get HBAR
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row items-center justify-between pt-6 border-t border-neon-green/20">
+              <span className="text-sm text-off-white/70 mb-2 md:mb-0">© 2025 TrustBridge Africa</span>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-neon-green rounded-full animate-pulse"></div>
+                <span className="text-sm text-neon-green">Live on Hedera</span>
               </div>
             </div>
           </div>

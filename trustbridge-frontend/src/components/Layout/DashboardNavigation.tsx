@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, BarChart3, Settings, X, Zap, User, LogOut, ChevronLeft, ChevronRight, ChevronDown, Shield, Coins, Vote, BarChart3 as BarChart, Activity, Building2, Crown, Coins as CoinsIcon, TreePine, Package, PieChart, Bot, Phone } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { TrendingUp, BarChart3, Settings, X, Zap, User, LogOut, ChevronLeft, ChevronRight, ChevronDown, Shield, Coins, Vote, BarChart3 as BarChart, Activity, Building2, Crown, TreePine, Package, PieChart, Bot, Phone, ArrowLeftRight } from 'lucide-react';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import ThemeToggle from '../UI/ThemeToggle';
 import { useSidebar } from '../../contexts/SidebarContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -94,7 +94,7 @@ const DashboardNavigation: React.FC = () => {
     { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/dashboard/analytics' },
     { id: 'ai-studio', label: 'AI Studio', icon: Bot, href: '/dashboard/ai-studio' },
     { id: 'ussd-demo', label: 'USSD Simulator', icon: Phone, href: '/ussd-demo' },
-    { id: 'get-test-tokens', label: 'Get Test Tokens', icon: CoinsIcon, href: '/dashboard/get-test-tokens' },
+    { id: 'exchange', label: 'Exchange', icon: ArrowLeftRight, href: '/dashboard/exchange' },
     { id: 'settings', label: 'Settings', icon: Settings, href: '/dashboard/settings' },
   ];
 
@@ -173,12 +173,12 @@ const DashboardNavigation: React.FC = () => {
         <div className="h-full flex flex-col w-full overflow-y-auto p-4">
           {/* Mobile Header */}
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
+            <Link to="/" onClick={toggleMobileSidebar} className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-to-br from-neon-green to-emerald-500 rounded-lg flex items-center justify-center">
                 <span className="text-black font-bold text-sm">TB</span>
               </div>
               <span className="text-lg font-semibold text-off-white">TrustBridge</span>
-            </div>
+            </Link>
             <button
               onClick={toggleMobileSidebar}
               className="p-2 rounded-lg bg-gray-800 text-gray-400 hover:text-off-white hover:bg-gray-700 transition-colors"
@@ -319,13 +319,15 @@ const DashboardNavigation: React.FC = () => {
           </div>
 
           {/* Logo */}
-          <div className={`flex items-center mb-6 xl:mb-8 transition-all duration-300 ${isCollapsed ? 'justify-center group-hover:justify-start group-hover:gap-2 xl:group-hover:gap-3' : 'gap-2 xl:gap-3'}`}>
-            <div className={`bg-neon-green triangle floating ${isCollapsed ? 'w-8 h-8 group-hover:w-8 group-hover:h-8 xl:group-hover:w-10 xl:group-hover:h-10' : 'w-8 h-8 xl:w-10 xl:h-10'}`}></div>
-            <div className={`transition-all duration-300 overflow-hidden ${isCollapsed ? 'w-0 opacity-0 group-hover:w-auto group-hover:opacity-100' : 'w-auto opacity-100'}`}>
-                <h1 className="text-lg xl:text-xl font-bold text-neon-green">TrustBridge</h1>
+          <Link to="/" className="block mb-6 xl:mb-8">
+            <div className={`flex items-center transition-all duration-300 cursor-pointer group/logo ${isCollapsed ? 'justify-center group-hover:justify-start group-hover:gap-2 xl:group-hover:gap-3' : 'gap-2 xl:gap-3'}`}>
+              <div className={`bg-neon-green triangle floating ${isCollapsed ? 'w-8 h-8 group-hover:w-8 group-hover:h-8 xl:group-hover:w-10 xl:group-hover:h-10' : 'w-8 h-8 xl:w-10 xl:h-10'}`}></div>
+              <div className={`transition-all duration-300 overflow-hidden ${isCollapsed ? 'w-0 opacity-0 group-hover:w-auto group-hover:opacity-100' : 'w-auto opacity-100'}`}>
+                <h1 className="text-lg xl:text-xl font-bold text-neon-green group-hover/logo:text-electric-mint transition-colors">TrustBridge</h1>
                 <p className="text-xs text-electric-mint uppercase tracking-wider">Africa</p>
               </div>
-          </div>
+            </div>
+          </Link>
 
           {/* Navigation Items */}
           <div className="flex flex-col gap-2 flex-1">

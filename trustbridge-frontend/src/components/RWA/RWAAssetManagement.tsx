@@ -127,7 +127,7 @@ const RWAAssetManagement: React.FC = () => {
       let dbAssetsWithEarnings: any[] = [];
       try {
         const apiUrl = import.meta.env.VITE_API_URL;
-        const assetsResponse = await fetch(`${apiUrl}/api/assets/owner/${accountId}`);
+        const assetsResponse = await fetch(`${apiUrl}/assets/owner/${accountId}`);
         if (assetsResponse.ok) {
           const assetsData = await assetsResponse.json();
           dbAssetsWithEarnings = assetsData.data || [];

@@ -94,7 +94,7 @@ const KYCCallback: React.FC = () => {
             console.log('🔄 Verification Session ID:', verificationSessionId);
             console.log('🔄 Status:', verificationStatus);
             
-            const callbackUrl = `${apiUrl}/api/auth/didit/callback?verificationSessionId=${verificationSessionId}&status=${verificationStatus}`;
+            const callbackUrl = `${apiUrl}/auth/didit/callback?verificationSessionId=${verificationSessionId}&status=${verificationStatus}`;
             console.log('🔄 Calling backend callback endpoint:', callbackUrl);
             
             console.log('🔄 Making fetch request to:', callbackUrl);
@@ -126,7 +126,7 @@ const KYCCallback: React.FC = () => {
               console.log('❌ Backend callback failed, status:', response.status);
               console.log('❌ Backend error response:', errorText);
             }
-          } catch (error) {
+          } catch (error: any) {
             console.log('❌ Backend not available, continuing with frontend-only update:', error);
             console.log('❌ Error details:', error.message);
           }

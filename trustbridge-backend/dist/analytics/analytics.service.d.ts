@@ -1,4 +1,14 @@
+import { HederaService } from '../hedera/hedera.service';
+import { Model } from 'mongoose';
+import { AssetDocument } from '../schemas/asset.schema';
+import { UserDocument } from '../schemas/user.schema';
+import { AMCPoolDocument } from '../schemas/amc-pool.schema';
 export declare class AnalyticsService {
+    private readonly hederaService;
+    private assetModel;
+    private userModel;
+    private amcPoolModel;
+    constructor(hederaService: HederaService, assetModel: Model<AssetDocument>, userModel: Model<UserDocument>, amcPoolModel: Model<AMCPoolDocument>);
     getOverview(): Promise<{
         success: boolean;
         data: {

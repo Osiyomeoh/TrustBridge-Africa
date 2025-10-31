@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Search, Wallet, LogOut, User, Menu, X, ChevronDown, UserPlus } from 'lucide-react';
 import Button from '../UI/Button';
 import Input from '../UI/Input';
@@ -96,12 +96,12 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
         <div className="flex items-center justify-between h-14 sm:h-16">
           {/* Logo - TrustBridge Theme */}
-          <div className="flex items-center space-x-3">
+          <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer">
             <div className="w-8 h-8 bg-gradient-to-br from-neon-green to-emerald-500 rounded-lg flex items-center justify-center">
               <span className="text-black font-bold text-sm">TB</span>
             </div>
             <span className="text-base sm:text-lg font-semibold text-off-white">TrustBridge</span>
-          </div>
+          </Link>
 
           {/* Search Bar - Only show on Discovery page */}
           {showSearch && isDashboardPage && location.pathname === '/dashboard/marketplace' && (

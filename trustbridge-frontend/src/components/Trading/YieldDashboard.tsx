@@ -41,7 +41,7 @@ export const YieldDashboard: React.FC<YieldDashboardProps> = ({
       const apiUrl = import.meta.env.VITE_API_URL;
       const token = localStorage.getItem('token');
       
-      const response = await fetch(`${apiUrl}/api/amc-pools/${poolId}`, {
+      const response = await fetch(`${apiUrl}/amc-pools/${poolId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

@@ -920,10 +920,6 @@ const AssetMarketplace: React.FC = () => {
                               if (currentSrc.includes('data:image/svg+xml')) {
                                 return;
                               }
-                              console.warn('⚠️ Image failed to load, using fallback:', {
-                                assetName: asset.name,
-                                originalSrc: asset.displayImage || asset.imageURI || asset.image
-                              });
                               e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Arial" font-size="24" fill="%2300ff88" text-anchor="middle" dy=".3em">NFT</text></svg>';
                             }}
                           />

@@ -3,19 +3,40 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import { BarChart3, TrendingUp, Globe, PieChart, Activity, Users, DollarSign, MapPin, Loader2, AlertCircle } from 'lucide-react';
-import { useMarketAnalytics, useAssets } from '../hooks/useApi';
-import { MarketAnalytics } from '../types/api';
+import { useMarketAnalytics } from '../hooks/useApi';
+
+interface AnalyticsData {
+  totalAssets: number;
+  totalValue: number;
+  totalUsers: number;
+  totalAttestors: number;
+  totalPools: number;
+  totalVolume: number;
+  activeVerifications: number;
+  completedVerifications: number;
+  averageAssetValue: number;
+  topCountries: string[];
+  assetCategories: {
+    agricultural: number;
+    realEstate: number;
+    vehicles: number;
+  };
+  monthlyGrowth: number;
+  successRate: number;
+}
 
 const Analytics: React.FC = () => {
   const [selectedMetric, setSelectedMetric] = useState<'tvl' | 'assets' | 'users' | 'geographic'>('tvl');
 
   // Fetch real data from backend
   const { data: analyticsData, loading: analyticsLoading, error: analyticsError } = useMarketAnalytics();
-  const { data: assetsData, loading: assetsLoading } = useAssets();
+
+  // Type guard to check if analyticsData is the expected type
+  const typedAnalyticsData = analyticsData as AnalyticsData | null;
 
   // Format market stats from real data
   const marketStats = useMemo(() => {
-    if (analyticsLoading || !analyticsData?.data) {
+    if (analyticsLoading || !typedAnalyticsData) {
       return {
         totalValueLocked: '...',
         totalAssets: '...',
@@ -26,48 +47,31 @@ const Analytics: React.FC = () => {
       };
     }
 
-    const data = analyticsData.data;
     return {
-      totalValueLocked: `$${(data.totalValueLocked / 1000000).toFixed(1)}M`,
-      totalAssets: data.totalAssets?.toString() || '0',
-      activeUsers: data.activeUsers?.toLocaleString() || '0',
-      countries: '8', // This would be calculated from unique countries in assets
-      avgReturn: `+${data.averageAPY?.toFixed(1) || '0'}%`,
-      verifiedAttestors: '23' // This would come from attestors data
+      totalValueLocked: `$${(typedAnalyticsData.totalValue / 1000000).toFixed(1)}M`,
+      totalAssets: typedAnalyticsData.totalAssets?.toString() || '0',
+      activeUsers: typedAnalyticsData.totalUsers?.toLocaleString() || '0',
+      countries: typedAnalyticsData.topCountries?.length?.toString() || '8',
+      avgReturn: `+${typedAnalyticsData.monthlyGrowth?.toFixed(1) || '0'}%`,
+      verifiedAttestors: typedAnalyticsData.totalAttestors?.toString() || '0'
     };
-  }, [analyticsData, analyticsLoading]);
+  }, [typedAnalyticsData, analyticsLoading]);
 
-  // Calculate geographic distribution from assets data
+  // Calculate geographic distribution from backend data
   const geographicData = useMemo(() => {
-    if (assetsLoading || !assetsData?.data) return [];
+    if (!typedAnalyticsData?.topCountries) return [];
     
-    const countryMap = new Map();
-    assetsData.data.forEach((asset: any) => {
-      const country = asset.location.country;
-      if (countryMap.has(country)) {
-        const existing = countryMap.get(country);
-        countryMap.set(country, {
-          country,
-          value: `$${((existing.value + asset.totalValue) / 1000000).toFixed(1)}M`,
-          assets: existing.assets + 1,
-          color: existing.color
-        });
-      } else {
-        const colors = ['bg-neon-green', 'bg-electric-mint', 'bg-blue-500', 'bg-purple-500', 'bg-yellow-500'];
-        countryMap.set(country, {
-          country,
-          value: `$${(asset.totalValue / 1000000).toFixed(1)}M`,
-          assets: 1,
-          color: colors[countryMap.size % colors.length]
-        });
-      }
-    });
-    
-    return Array.from(countryMap.values()).sort((a, b) => parseFloat(b.value) - parseFloat(a.value));
-  }, [assetsData, assetsLoading]);
+    const colors = ['bg-neon-green', 'bg-electric-mint', 'bg-blue-500', 'bg-purple-500', 'bg-yellow-500'];
+    return typedAnalyticsData.topCountries.map((country, index) => ({
+      country,
+      value: `$${(typedAnalyticsData.totalValue / typedAnalyticsData.topCountries.length / 1000000).toFixed(1)}M`,
+      assets: Math.floor(typedAnalyticsData.totalAssets / typedAnalyticsData.topCountries.length),
+      color: colors[index % colors.length]
+    }));
+  }, [typedAnalyticsData]);
 
   // Show loading state
-  if (analyticsLoading || assetsLoading) {
+  if (analyticsLoading) {
     return (
       <div className="min-h-screen bg-black text-off-white p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto flex items-center justify-center min-h-screen">
@@ -278,7 +282,7 @@ const Analytics: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {(selectedMetric === 'geographic' ? geographicData : sectorData).map((item, index) => (
+                {(selectedMetric === 'geographic' ? geographicData : sectorData).map((item: any, index) => (
                   <motion.div
                     key={item.country || item.sector}
                     className="flex items-center justify-between p-3 bg-dark-gray/30 rounded-lg"

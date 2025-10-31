@@ -1389,7 +1389,7 @@ const Profile: React.FC = () => {
       console.log('🔧 Current KYC status:', user?.kycStatus);
       
       const apiUrl = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${apiUrl}/api/auth/kyc/update-status`, {
+      const response = await fetch(`${apiUrl}/auth/kyc/update-status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1439,7 +1439,7 @@ const Profile: React.FC = () => {
       console.log('🔧 Direct KYC update for user:', user?.email);
       
       const apiUrl = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${apiUrl}/api/auth/update-kyc-direct`, {
+      const response = await fetch(`${apiUrl}/auth/update-kyc-direct`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1511,7 +1511,7 @@ const Profile: React.FC = () => {
       console.log('🔧 Fixing KYC inquiry ID for user:', user?.email);
       
       const apiUrl = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${apiUrl}/api/auth/update-kyc-inquiry`, {
+      const response = await fetch(`${apiUrl}/auth/update-kyc-inquiry`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1563,7 +1563,7 @@ const Profile: React.FC = () => {
       console.log('🧪 User object:', user);
       
       const apiUrl = import.meta.env.VITE_API_URL;
-      const callbackUrl = `${apiUrl}/api/auth/didit/callback?verificationSessionId=${user?.kycInquiryId}&status=Approved`;
+      const callbackUrl = `${apiUrl}/auth/didit/callback?verificationSessionId=${user?.kycInquiryId}&status=Approved`;
       
       console.log('🧪 Calling callback URL:', callbackUrl);
       

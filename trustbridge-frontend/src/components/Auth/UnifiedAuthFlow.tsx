@@ -9,7 +9,9 @@ import {
   X, 
   Loader2,
   UserCheck,
-  AlertCircle
+  AlertCircle,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import { useWallet } from '../../contexts/WalletContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -48,11 +50,28 @@ const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
     phone: '',
     country: ''
   });
+  const [hasHashpack, setHasHashpack] = useState(false);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
 
   // Use authStep from AuthContext instead of local state
   const currentStep = authStep;
   const [emailToken, setEmailToken] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check if HashPack is installed
+  useEffect(() => {
+    const checkHashpack = async () => {
+      try {
+        // Check if HashPack provider is available
+        const hashpack = (window as any).hashpack;
+        setHasHashpack(!!hashpack);
+      } catch (error) {
+        setHasHashpack(false);
+      }
+    };
+    
+    checkHashpack();
+  }, []);
 
   // Check auth status on mount and when modal opens
   useEffect(() => {
@@ -81,6 +100,12 @@ const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
     try {
       console.log('🔌 UnifiedAuthFlow: handleConnectWallet called');
       
+      // Check if HashPack is installed
+      if (!hasHashpack) {
+        setShowInstallPrompt(true);
+        return;
+      }
+      
       // Add a small delay to ensure wallet context is ready
       await new Promise(resolve => setTimeout(resolve, 100));
       
@@ -94,7 +119,7 @@ const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
       console.error('Wallet connection failed:', error);
       toast({
         title: 'Connection Failed',
-        description: 'Failed to connect HashPack wallet. Please try again.',
+        description: 'Failed to connect HashPack wallet. Please make sure HashPack is installed.',
         variant: 'destructive'
       });
     }
@@ -316,25 +341,93 @@ const UnifiedAuthFlow: React.FC<UnifiedAuthFlowProps> = ({
         {/* Step 1: Connect Wallet */}
         {currentStep === 'wallet' && (
           <div className="space-y-4">
-            <Button
-              onClick={handleConnectWallet}
-              disabled={walletLoading}
-              className="w-full"
-              variant="neon"
-            >
-              {walletLoading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Wallet className="w-4 h-4 mr-2" />
-              )}
-              Connect HashPack Wallet
-            </Button>
-            
-            <div className="text-center">
-              <p className="text-xs text-gray-500">
-                By connecting your wallet, you agree to our Terms of Service
-              </p>
-            </div>
+            {showInstallPrompt ? (
+              <div className="space-y-4">
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-yellow-400 mb-2">HashPack Wallet Required</h4>
+                      <p className="text-sm text-yellow-300/80">
+                        You need to install HashPack wallet to use TrustBridge. It's free and takes less than 2 minutes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => window.open('https://hashpack.app', '_blank')}
+                    className="w-full"
+                    variant="neon"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download HashPack
+                  </Button>
+                  
+                  <Button
+                    onClick={() => window.open('https://hashpack.app', '_blank')}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Visit hashpack.app
+                  </Button>
+                  
+                  <Button
+                    onClick={() => {
+                      setShowInstallPrompt(false);
+                      window.location.reload();
+                    }}
+                    variant="ghost"
+                    className="w-full text-xs"
+                  >
+                    I've Installed HashPack - Continue
+                  </Button>
+                </div>
+                
+                <div className="bg-gray-800/50 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-semibold text-gray-300">📱 Quick Setup:</p>
+                  <ol className="text-xs text-gray-400 space-y-1 ml-4">
+                    <li>1. Download HashPack from hashpack.app</li>
+                    <li>2. Create a new wallet or import existing</li>
+                    <li>3. Switch to <strong className="text-neon-green">Testnet</strong> mode</li>
+                    <li>4. Come back and click "Continue" above</li>
+                  </ol>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Button
+                  onClick={handleConnectWallet}
+                  disabled={walletLoading}
+                  className="w-full"
+                  variant="neon"
+                >
+                  {walletLoading ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Wallet className="w-4 h-4 mr-2" />
+                  )}
+                  Connect HashPack Wallet
+                </Button>
+                
+                {!hasHashpack && (
+                  <button
+                    onClick={() => setShowInstallPrompt(true)}
+                    className="w-full text-xs text-yellow-400 hover:text-yellow-300 underline"
+                  >
+                    Don't have HashPack? Install it here
+                  </button>
+                )}
+                
+                <div className="text-center">
+                  <p className="text-xs text-gray-500">
+                    By connecting your wallet, you agree to our Terms of Service
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
