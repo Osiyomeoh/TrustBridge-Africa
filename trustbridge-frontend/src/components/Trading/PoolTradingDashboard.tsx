@@ -91,7 +91,10 @@ const PoolTradingDashboard: React.FC = () => {
   const fetchPools = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4001/api/amc-pools/active', {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
+      
+      const response = await fetch(`${apiUrl}/amc-pools/active`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -114,7 +117,10 @@ const PoolTradingDashboard: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:4001/api/trading/stats/${selectedPool.poolId}`, {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
+      
+      const response = await fetch(`${apiUrl}/trading/stats/${selectedPool.poolId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -135,7 +141,10 @@ const PoolTradingDashboard: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:4001/api/trading/orders?poolId=${selectedPool.poolId}`, {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
+      
+      const response = await fetch(`${apiUrl}/trading/orders?poolId=${selectedPool.poolId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -154,7 +163,10 @@ const PoolTradingDashboard: React.FC = () => {
   const handleCancelOrder = async (orderId: string) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:4001/api/trading/orders/${orderId}/cancel`, {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
+      
+      const response = await fetch(`${apiUrl}/trading/orders/${orderId}/cancel`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -136,9 +136,11 @@ const DividendManagement: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
       
       // Fetch dividend distributions
-      const distributionsResponse = await fetch('http://localhost:4001/api/dividends/distributions', {
+      const distributionsResponse = await fetch(`${apiUrl}/dividends/distributions`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -146,7 +148,7 @@ const DividendManagement: React.FC = () => {
       });
       
       // Fetch dividend stats
-      const statsResponse = await fetch('http://localhost:4001/api/dividends/stats', {
+      const statsResponse = await fetch(`${apiUrl}/dividends/stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -154,7 +156,7 @@ const DividendManagement: React.FC = () => {
       });
       
       // Fetch pools
-      const poolsResponse = await fetch('http://localhost:4001/api/amc-pools/active', {
+      const poolsResponse = await fetch(`${apiUrl}/amc-pools/active`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -182,8 +184,10 @@ const DividendManagement: React.FC = () => {
   const handleCreateDividend = async () => {
     try {
       const token = localStorage.getItem('token');
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
       
-      const response = await fetch('http://localhost:4001/api/dividends/distributions', {
+      const response = await fetch(`${apiUrl}/dividends/distributions`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -207,8 +211,10 @@ const DividendManagement: React.FC = () => {
   const handleExecuteDividend = async (distributionId: string) => {
     try {
       const token = localStorage.getItem('token');
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
       
-      const response = await fetch(`http://localhost:4001/api/dividends/distributions/${distributionId}/execute`, {
+      const response = await fetch(`${apiUrl}/dividends/distributions/${distributionId}/execute`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -229,8 +235,10 @@ const DividendManagement: React.FC = () => {
   const handleCancelDividend = async (distributionId: string) => {
     try {
       const token = localStorage.getItem('token');
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
       
-      const response = await fetch(`http://localhost:4001/api/dividends/distributions/${distributionId}/cancel`, {
+      const response = await fetch(`${apiUrl}/dividends/distributions/${distributionId}/cancel`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

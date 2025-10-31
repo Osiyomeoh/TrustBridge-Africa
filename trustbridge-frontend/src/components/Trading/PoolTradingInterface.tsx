@@ -281,7 +281,10 @@ const PoolTradingInterface: React.FC = () => {
         return;
       }
       
-      const response = await fetch('http://localhost:4001/api/trading/orders', {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
+      
+      const response = await fetch(`${apiUrl}/trading/orders`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

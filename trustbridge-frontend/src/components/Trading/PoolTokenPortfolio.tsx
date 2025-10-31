@@ -138,8 +138,10 @@ const PoolTokenPortfolio: React.FC = () => {
   const handleClaimDividend = async (dividendId: string, poolId: string) => {
     try {
       const token = localStorage.getItem('token');
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
       
-      const response = await fetch('http://localhost:4001/api/pool-tokens/claim-dividends', {
+      const response = await fetch(`${apiUrl}/pool-tokens/claim-dividends`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -165,9 +167,11 @@ const PoolTokenPortfolio: React.FC = () => {
   const handleClaimAllDividends = async () => {
     try {
       const token = localStorage.getItem('token');
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
       
       for (const dividend of unclaimedDividends) {
-        await fetch('http://localhost:4001/api/pool-tokens/claim-dividends', {
+        await fetch(`${apiUrl}/pool-tokens/claim-dividends`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
