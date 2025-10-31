@@ -94,9 +94,6 @@ const Landing: React.FC = () => {
                 USSD Demo
               </Button>
             </Link>
-            <Link to="/get-test-tokens">
-              <Button variant="ghost" size="sm">Get Test Tokens</Button>
-            </Link>
             <Link to="/auth">
               <Button variant="neon" size="sm">Get Started</Button>
             </Link>
@@ -111,9 +108,6 @@ const Landing: React.FC = () => {
                 USSD
               </Button>
             </Link>
-            <Link to="/get-test-tokens">
-              <Button variant="ghost" size="sm">Get Test Tokens</Button>
-            </Link>
             <Link to="/auth">
               <Button variant="neon" size="sm">Get Started</Button>
             </Link>
@@ -127,8 +121,8 @@ const Landing: React.FC = () => {
                 <Phone className="w-4 h-4" />
               </Button>
             </Link>
-            <Link to="/get-test-tokens">
-              <Button variant="ghost" size="sm">Test Tokens</Button>
+            <Link to="/auth">
+              <Button variant="neon" size="sm">Start</Button>
             </Link>
           </div>
         </nav>

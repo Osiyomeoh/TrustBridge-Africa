@@ -110,7 +110,7 @@ const DashboardNavigation: React.FC = () => {
     { id: 'pools', label: 'Pool Marketplace', icon: BarChart, href: '/pools' },
     { id: 'pool-dashboard', label: 'Pool Management', icon: Building2, href: '/pool-dashboard' },
     { id: 'pool-token-portfolio', label: 'Token Portfolio', icon: PieChart, href: '/pool-token-portfolio' },
-    { id: 'spv', label: 'SPV Management', icon: Building2, href: '/dashboard/spv' },
+    { id: 'spv', label: 'SPV Management', icon: Building2, href: '/dashboard/spv', comingSoon: true },
     { id: 'staking', label: 'TRUST Staking', icon: Coins, href: '/dashboard/staking' },
   ];
 
@@ -234,13 +234,14 @@ const DashboardNavigation: React.FC = () => {
                           const ItemIcon = item.icon;
                           const isActive = location.pathname === item.href;
                           const isDisabled = (item as any).disabled;
+                          const isComingSoon = (item as any).comingSoon;
                           return (
                             <button
                               key={item.id}
                               onClick={() => isDisabled ? handleDisabledNavigation(item) : handleNavigation(item.href)}
-                              disabled={isDisabled}
+                              disabled={isDisabled || isComingSoon}
                               className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
-                                isDisabled
+                                isDisabled || isComingSoon
                                   ? 'text-gray-500 cursor-not-allowed opacity-50'
                                   : isActive
                                   ? 'bg-neon-green/10 text-neon-green'
@@ -251,6 +252,11 @@ const DashboardNavigation: React.FC = () => {
                               <span>{item.label}</span>
                               {isDisabled && (
                                 <Shield className="w-3 h-3 text-yellow-400 ml-auto" />
+                              )}
+                              {isComingSoon && (
+                                <span className="ml-auto text-xs bg-gradient-to-r from-electric-mint/20 to-neon-green/20 text-electric-mint px-2 py-0.5 rounded border border-electric-mint/30">
+                                  Soon
+                                </span>
                               )}
                             </button>
                           );
@@ -394,21 +400,22 @@ const DashboardNavigation: React.FC = () => {
                             const ItemIcon = item.icon;
                             const isActive = location.pathname === item.href;
                             const isDisabled = (item as any).disabled;
+                            const isComingSoon = (item as any).comingSoon;
                             
                             return (
                               <button
                       key={item.id}
                                 onClick={() => isDisabled ? handleDisabledNavigation(item) : handleNavigation(item.href)}
-                                disabled={isDisabled}
+                                disabled={isDisabled || isComingSoon}
                                 className={`group relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 w-full text-left ${
-                                  isDisabled
+                                  isDisabled || isComingSoon
                                     ? 'text-gray-500 cursor-not-allowed opacity-50'
                                     : isActive
                                     ? 'bg-gradient-to-r from-neon-green/20 to-electric-mint/10 border border-neon-green/40 text-neon-green shadow-lg shadow-neon-green/20 hover:scale-[1.02]' 
                                     : 'text-text-primary hover:bg-gradient-to-r hover:from-background-tertiary/30 hover:to-background-tertiary/10 hover:text-electric-mint hover:scale-[1.02]'
                       }`}
                     >
-                                <ItemIcon className={`w-4 h-4 transition-all duration-200 ${isDisabled ? 'text-gray-500' : isActive ? 'text-neon-green' : 'text-text-secondary group-hover:text-electric-mint group-hover:scale-110'}`} />
+                                <ItemIcon className={`w-4 h-4 transition-all duration-200 ${isDisabled || isComingSoon ? 'text-gray-500' : isActive ? 'text-neon-green' : 'text-text-secondary group-hover:text-electric-mint group-hover:scale-110'}`} />
                       <span className="font-medium transition-all duration-200">{item.label}</span>
                       
                       {/* KYC Required indicator */}
@@ -416,8 +423,15 @@ const DashboardNavigation: React.FC = () => {
                         <Shield className="w-3 h-3 text-yellow-400 ml-auto" />
                       )}
                       
+                      {/* Coming Soon indicator */}
+                      {isComingSoon && (
+                        <span className="ml-auto text-xs bg-gradient-to-r from-electric-mint/20 to-neon-green/20 text-electric-mint px-2 py-0.5 rounded border border-electric-mint/30 font-medium">
+                          Soon
+                        </span>
+                      )}
+                      
                       {/* Active indicator */}
-                      {isActive && !isDisabled && (
+                      {isActive && !isDisabled && !isComingSoon && (
                         <div className="absolute right-2 w-2 h-2 bg-neon-green rounded-full animate-pulse"></div>
                       )}
                               </button>
