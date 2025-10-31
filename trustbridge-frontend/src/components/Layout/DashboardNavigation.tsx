@@ -331,7 +331,7 @@ const DashboardNavigation: React.FC = () => {
               <img 
                 src="/images/tb4.png" 
                 alt="TrustBridge Africa" 
-                className={`transition-all duration-300 ${isCollapsed ? 'w-8 h-8 group-hover:w-auto group-hover:h-10' : 'h-10 w-auto'}`}
+                className={`transition-all duration-300 ${isCollapsed ? 'w-10 h-10 group-hover:w-auto group-hover:h-14' : 'h-14 w-auto'}`}
               />
             </div>
           </Link>

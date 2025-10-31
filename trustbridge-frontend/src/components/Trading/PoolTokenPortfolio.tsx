@@ -100,9 +100,11 @@ const PoolTokenPortfolio: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
       
       // Fetch portfolio summary
-      const summaryResponse = await fetch('http://localhost:4001/api/pool-tokens/portfolio/summary', {
+      const summaryResponse = await fetch(`${apiUrl}/pool-tokens/portfolio/summary`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -110,7 +112,7 @@ const PoolTokenPortfolio: React.FC = () => {
       });
       
       // Fetch unclaimed dividends
-      const dividendsResponse = await fetch('http://localhost:4001/api/pool-tokens/unclaimed-dividends', {
+      const dividendsResponse = await fetch(`${apiUrl}/pool-tokens/unclaimed-dividends`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

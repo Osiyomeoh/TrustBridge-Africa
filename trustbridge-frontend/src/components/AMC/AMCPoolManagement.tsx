@@ -141,7 +141,10 @@ const AMCPoolManagement: React.FC = () => {
   const fetchPools = async () => {
     try {
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch('http://localhost:4001/api/amc-pools', {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
+      
+      const response = await fetch(`${apiUrl}/amc-pools`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -267,7 +270,10 @@ const AMCPoolManagement: React.FC = () => {
       }
 
       console.log('Creating pool with form data:', createForm);
-      const response = await fetch('http://localhost:4001/api/amc-pools', {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
+      
+      const response = await fetch(`${apiUrl}/amc-pools`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -423,7 +429,10 @@ const AMCPoolManagement: React.FC = () => {
   const handleClosePool = async (poolId: string) => {
     try {
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`http://localhost:4001/api/amc-pools/${poolId}/close`, {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
+      
+      const response = await fetch(`${apiUrl}/amc-pools/${poolId}/close`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

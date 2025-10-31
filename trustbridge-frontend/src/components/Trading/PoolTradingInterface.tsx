@@ -87,15 +87,18 @@ const PoolTradingInterface: React.FC = () => {
       const walletAddress = localStorage.getItem('walletAddress');
       if (!walletAddress) return;
 
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
+
       // Fetch TRUST token balance
-      const trustResponse = await fetch(`http://localhost:4001/api/hedera/trust-token/balance/${walletAddress}`);
+      const trustResponse = await fetch(`${apiUrl}/hedera/trust-token/balance/${walletAddress}`);
       if (trustResponse.ok) {
         const trustData = await trustResponse.json();
         setTrustBalance(trustData.balance || 0);
       }
 
       // Fetch HBAR balance
-      const hbarResponse = await fetch(`http://localhost:4001/api/hedera/account/balance/${walletAddress}`);
+      const hbarResponse = await fetch(`${apiUrl}/hedera/account/balance/${walletAddress}`);
       if (hbarResponse.ok) {
         const hbarData = await hbarResponse.json();
         setHbarBalance(hbarData.balance || 0);
@@ -162,20 +165,23 @@ const PoolTradingInterface: React.FC = () => {
       }
 
       // Try to fetch real trading data
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
+      
       const [orderBookResponse, tradesResponse, statsResponse] = await Promise.all([
-        fetch(`http://localhost:4001/api/trading/orderbook/${selectedPool}`, {
+        fetch(`${apiUrl}/trading/orderbook/${selectedPool}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         }),
-        fetch(`http://localhost:4001/api/trading/trades/recent/${selectedPool}?limit=20`, {
+        fetch(`${apiUrl}/trading/trades/recent/${selectedPool}?limit=20`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         }),
-        fetch(`http://localhost:4001/api/trading/stats/${selectedPool}`, {
+        fetch(`${apiUrl}/trading/stats/${selectedPool}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

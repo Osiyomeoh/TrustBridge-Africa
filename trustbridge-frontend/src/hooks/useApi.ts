@@ -97,5 +97,10 @@ export function useAssetDiscovery(filters: {
 }
 
 export function useAssetByOwner(owner: string) {
-  return useApi(() => apiService.getAssetsByOwner(owner), [owner]);
+  // Skip API call if owner is empty to avoid 400 error
+  const shouldFetch = owner && owner.trim() !== '';
+  return useApi(
+    () => shouldFetch ? apiService.getAssetsByOwner(owner) : Promise.resolve({ success: true, data: [] }), 
+    [owner]
+  );
 }

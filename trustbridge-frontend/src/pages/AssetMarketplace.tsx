@@ -255,12 +255,15 @@ const AssetMarketplace: React.FC = () => {
           };
           
           try {
-            const stateResponse = await fetch(`http://localhost:4001/api/assets/blockchain-state/${tokenId}/${serialNumber}`);
-            if (stateResponse.ok) {
-              const stateData = await stateResponse.json();
-              if (stateData.success) {
-                blockchainState = stateData.data;
-                console.log(`✅ Verified blockchain state for ${tokenId}-${serialNumber}:`, blockchainState);
+            const apiUrl = import.meta.env.VITE_API_URL || '';
+            if (apiUrl) {
+              const stateResponse = await fetch(`${apiUrl}/assets/blockchain-state/${tokenId}/${serialNumber}`);
+              if (stateResponse.ok) {
+                const stateData = await stateResponse.json();
+                if (stateData.success) {
+                  blockchainState = stateData.data;
+                  console.log(`✅ Verified blockchain state for ${tokenId}-${serialNumber}:`, blockchainState);
+                }
               }
             }
           } catch (error) {
