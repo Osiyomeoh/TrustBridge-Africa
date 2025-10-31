@@ -23,6 +23,7 @@ import Button from '../components/UI/Button';
 import MarketplaceAssetModal from '../components/Assets/MarketplaceAssetModal';
 import ActivityFeed from '../components/Activity/ActivityFeed';
 import { getAllCollectionStats, CollectionStats } from '../utils/collectionUtils';
+import { ipfsService } from '../services/ipfs';
 
 // TrustBridge categories matching our contract flow
 const CATEGORIES = [
@@ -179,45 +180,36 @@ const AssetMarketplace: React.FC = () => {
               // If not JSON, check if it's an IPFS CID or URL
               let ipfsUrlToFetch = metadataString;
               
-              // If it's just a CID (starts with 'baf'), reconstruct the URL
-              if (metadataString.startsWith('baf') && !metadataString.includes('/')) {
-                ipfsUrlToFetch = `https://gateway.pinata.cloud/ipfs/${metadataString}`;
-                console.log(`📦 Detected IPFS CID - reconstructed URL: ${ipfsUrlToFetch}`);
-              } else if (metadataString.startsWith('http')) {
-                console.log(`📡 Detected IPFS URL: ${ipfsUrlToFetch}`);
-              }
-              
-              if (ipfsUrlToFetch.startsWith('http')) {
-                console.log(`📡 Fetching metadata from IPFS...`);
+              // If it's just a CID (starts with 'baf' or 'Qm'), use backend proxy to avoid CORS and rate limiting
+              if ((metadataString.startsWith('baf') || metadataString.startsWith('Qm')) && !metadataString.includes('/')) {
+                console.log(`📦 Detected IPFS CID: ${metadataString}`);
                 try {
-                  // Fetch the metadata JSON from IPFS
+                  const fetchedMetadata = await ipfsService.getFileMetadata(metadataString);
+                  if (fetchedMetadata) {
+                    metadata = fetchedMetadata;
+                    imageUrl = metadata.image || metadata.imageURI || metadata.imageUrl || '';
+                    console.log(`✅ Fetched metadata from IPFS via proxy - Image URL:`, imageUrl);
+                  }
+                } catch (fetchError) {
+                  console.warn(`⚠️ Error fetching IPFS metadata:`, fetchError);
+                }
+              } else if (metadataString.startsWith('http')) {
+                console.log(`📡 Detected IPFS URL: ${metadataString}`);
+                try {
+                  // Use backend proxy for IPFS URLs too
                   const metadataResponse = await fetch(ipfsUrlToFetch);
                   if (metadataResponse.ok) {
                     const fetchedMetadata = await metadataResponse.json();
                     metadata = fetchedMetadata;
                     imageUrl = metadata.image || metadata.imageURI || metadata.imageUrl || '';
                     console.log(`✅ Fetched metadata from IPFS - Image URL:`, imageUrl);
-                  } else {
-                    // If it fails, assume it's a direct image URL (for old truncated URLs)
-                    imageUrl = metadataString;
-                    metadata = { 
-                      imageURI: metadataString,
-                      image: metadataString,
-                      name: `NFT ${tokenId.slice(-6)}`
-                    };
-                    console.log(`⚠️ IPFS fetch failed (${metadataResponse.status}), using as direct image URL`);
                   }
                 } catch (fetchError) {
                   console.warn(`⚠️ Error fetching IPFS metadata:`, fetchError);
-                  // Fallback: treat as direct image URL
-                  imageUrl = metadataString;
-                  metadata = { 
-                    imageURI: metadataString,
-                    image: metadataString,
-                    name: `NFT ${tokenId.slice(-6)}`
-                  };
                 }
-              } else {
+              }
+              
+              if (!metadata.name) {
                 // Try to extract minimal info (NFT:priceT or NFT:name format)
                 const priceMatch = metadataString.match(/NFT:(\d+)T/);
                 const nameMatch = metadataString.match(/NFT:(.+)/);
@@ -233,13 +225,17 @@ const AssetMarketplace: React.FC = () => {
             }
           }
           
-          // Normalize IPFS URLs to use the public gateway (do this BEFORE setting placeholders)
-          if (imageUrl && imageUrl.includes('indigo-recent-clam-436.mypinata.cloud')) {
-            imageUrl = imageUrl.replace('indigo-recent-clam-436.mypinata.cloud', 'gateway.pinata.cloud');
-            console.log(`🔄 Normalized old IPFS URL to: ${imageUrl}`);
+          // Convert any direct Pinata gateway URLs to use backend proxy to avoid CORS and rate limiting
+          if (imageUrl && (imageUrl.includes('gateway.pinata.cloud') || imageUrl.includes('mypinata.cloud'))) {
+            // Extract CID from URL if it's a Pinata URL
+            const cidMatch = imageUrl.match(/\/([bafQm][a-zA-Z0-9]{44,})/);
+            if (cidMatch && cidMatch[1]) {
+              imageUrl = ipfsService.getProxyFileUrl(cidMatch[1]);
+              console.log(`🔄 Converted Pinata URL to proxy URL: ${imageUrl}`);
+            }
           }
           
-          // Use simple SVG placeholder if no valid image (AFTER normalization)
+          // Use simple SVG placeholder if no valid image
           if (!imageUrl) {
             const placeholderText = metadata.name || 'NFT';
             imageUrl = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="%231a1a1a"/><text x="50%" y="50%" font-family="Arial" font-size="24" fill="%2300ff88" text-anchor="middle" dy=".3em">${encodeURIComponent(placeholderText)}</text></svg>`;
