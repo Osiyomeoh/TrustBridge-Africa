@@ -8,7 +8,7 @@
 
 ## 🌟 The Vision
 
-TrustBridge enables **anyone with a basic mobile phone** to tokenize real-world assets (farms, real estate, commodities) and access global investment opportunities, **without requiring smartphones, internet, or crypto knowledge**.
+TrustBridge enables **anyone with a basic mobile phone** to tokenize real-world assets (farms, real estate, commodities) and access global investment opportunities, **without requiring smartphones, internet, traditional banks or crypto knowledge**.
 
 ### 🎯 Mission
 **Democratize $1T+ in African real-world assets** via:
@@ -16,6 +16,69 @@ TrustBridge enables **anyone with a basic mobile phone** to tokenize real-world 
 - **Hedera Native**: Full blockchain integration (HTS, HCS, Smart Contracts)
 - **Zero Crypto Knowledge**: Sponsor account covers gas fees
 - **Real Yields**: Actual ROI from tokenized assets
+
+---
+
+## 🌍 **The Problem: Africa's Untapped Wealth**
+
+### **The Challenge**
+Africa holds **$1 trillion+ in "dead capital"** - assets that cannot be used as collateral, invested, or accessed by global markets:
+
+1. **💔 No Banking Infrastructure**
+   - 65% of Africans are unbanked (400M+ people)
+   - No credit history → No access to capital
+   - Cash economy limits investment
+
+2. **🏠 Illiquid Assets**
+   - $350B in real estate owned but not tradeable
+   - $150B in agricultural land without deed registration
+   - Farmers can't prove ownership or asset value
+
+3. **🏛️ Traditional Banks Fail**
+   - Banks require credit history → excludes 65% of Africans
+   - High fees (5-15%) eat into small business margins
+   - Slow processing (days/weeks) prevents agility
+   - Geographic limitations (urban-focused branches)
+   - Bureaucratic lending processes
+
+4. **🌐 Digital Divide**
+   - 60% don't have internet access
+   - 70% use basic phones (not smartphones)
+   - No crypto knowledge or wallet infrastructure
+
+5. **💰 Limited Investment Access**
+   - Local investors can't diversify globally
+   - International investors can't access African assets
+   - Fragmented markets prevent liquidity
+
+### **The Solution: TrustBridge**
+
+TrustBridge **tokenizes** African assets on Hedera blockchain, making them **investable, tradeable, and accessible** to anyone with a basic mobile phone:
+
+#### **✅ For Asset Owners (Farmers, Landowners)**
+- **Tokenize** farmland, real estate, equipment on Hedera
+- **Access capital** by selling fractional ownership
+- **Earn ongoing yields** from asset-backed pool investments
+- **No bank account needed** - USSD (*384#) access
+- **No crypto knowledge** - cash payments via Paga agents
+
+#### **✅ For Investors (Local & Global)**
+- **Diversify** portfolio with African agriculture, real estate, commodities
+- **Fractional ownership** of high-value assets
+- **Real yields** from asset performance, not speculation
+- **Global liquidity** on Hedera blockchain
+- **Transparent ownership** via immutable HCS audit trail
+
+#### **✅ Trust Economy Benefits**
+- **TRUST token** powers platform transactions
+- **Deflationary** tokenomics via burning
+- **Governance** through DAO voting
+- **Staking rewards** for token holders
+- **Universal value** across African markets
+
+**📜 Hedera Hashgraph Certificate:** [View Certificate](https://drive.google.com/file/d/12yQTPXYd1MOn3cA_bj0A4LqV8Yw07-Z-/view?usp=sharing)
+
+**📊 Pitch Deck:** [Download Pitch Deck](https://drive.google.com/drive/folders/1Hj7bHAZ_lLLsEaoWJvY2wCQ2ZITRa1k-?usp=sharing) _(TrustBridge-Africa.pdf - 16.5 MB)_
 
 ---
 
@@ -217,16 +280,47 @@ Paga Payment → HTS Token Creation → Asset Saved
 
 ### 💱 **Trust Token Economy**
 
-#### **TRUST Token Management**
-- **Creation**: TokenCreateTransaction on Hedera
-- **Distribution**: Mint to users for platform participation
-- **Burning**: Deflationary mechanics on transactions
-- **Exchange**: Built-in HBAR ↔ TRUST swap
+The **TRUST token** is the native utility token powering the entire TrustBridge ecosystem, creating a self-sustaining economy for African asset tokenization.
 
-#### **Governance**
-- TRUST holders vote on proposals
-- DAO structure for platform decisions
-- Token-weighted voting mechanism
+#### **Tokenomics**
+- **Total Supply**: 1 Billion TRUST tokens
+- **Distribution**: 
+  - 40% Community (rewards, staking, referrals)
+  - 25% Team & Advisors (vested 4 years)
+  - 20% Investors (vested 3 years)
+  - 10% Ecosystem Fund (AMCs, partnerships)
+  - 5% Liquidity & Reserves
+- **Deflationary**: 2% burn on every transaction
+- **Exchange**: Built-in HBAR ↔ TRUST swap on Hedera
+
+#### **Use Cases**
+1. **Platform Fees**: Pay for asset creation, trading, AMC fees
+2. **Staking**: Lock TRUST for rewards and priority access
+3. **Governance**: Vote on DAO proposals and platform decisions
+4. **Liquidity**: Provide liquidity in pools for trading rewards
+5. **AI Services**: Access AI-powered analytics and insights
+6. **Premium Features**: Unlock advanced portfolio tools
+
+#### **Governance (DAO)**
+- **Proposal System**: Any holder can submit proposals
+- **Voting**: Weighted by TRUST holdings
+- **Execution**: Automated via smart contracts
+- **Proposals**: Fee changes, AMC additions, new features
+
+#### **Staking Rewards**
+- **Lock Periods**: 1, 3, 6, or 12 months
+- **APY**: 5-20% based on lock duration
+- **Bonus**: Higher rewards for longer locks
+- **Auto-Compounding**: Monthly reward distribution
+
+#### **Burning Mechanism**
+Every transaction burns 2% of TRUST tokens:
+- **Asset Tokenization**: Platform burns tokens on creation
+- **Pool Investments**: Burn on each investment
+- **Yield Distribution**: Burn on dividend payments
+- **Trading**: Burn on marketplace transactions
+
+**Result**: Supply decreases over time → **token appreciation** for holders
 
 ### 🤖 **AI-Powered Analytics**
 
