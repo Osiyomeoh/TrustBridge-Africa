@@ -94,13 +94,13 @@ const UniversalHeader: React.FC<UniversalHeaderProps> = ({
   return (
     <div className={`sticky top-0 z-50 bg-black/95 backdrop-blur-md border-b border-gray-800 ${className}`}>
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20">
+        <div className="flex items-center justify-between h-20 sm:h-24">
           {/* Logo - TrustBridge Theme */}
           <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity cursor-pointer">
             <img 
               src="/images/tb4.png" 
               alt="TrustBridge Africa Logo" 
-              className="h-12 sm:h-14 w-auto"
+              className="h-16 sm:h-20 w-auto"
             />
           </Link>
 
