@@ -181,6 +181,8 @@ let IPFSController = class IPFSController {
 exports.IPFSController = IPFSController;
 __decorate([
     (0, common_1.Post)('presigned-url'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Generate presigned URL for file upload' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Presigned URL generated successfully' }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Invalid request' }),
@@ -191,6 +193,8 @@ __decorate([
 ], IPFSController.prototype, "generatePresignedUrl", null);
 __decorate([
     (0, common_1.Post)('upload'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Upload file to IPFS' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'File uploaded successfully' }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Upload failed' }),
@@ -205,6 +209,8 @@ __decorate([
 ], IPFSController.prototype, "uploadFile", null);
 __decorate([
     (0, common_1.Post)('pin'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Pin file to IPFS' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'File pinned successfully' }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Pin failed' }),
@@ -215,6 +221,8 @@ __decorate([
 ], IPFSController.prototype, "pinFile", null);
 __decorate([
     (0, common_1.Delete)('unpin/:cid'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Unpin file from IPFS' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'File unpinned successfully' }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Unpin failed' }),
@@ -246,6 +254,8 @@ __decorate([
 ], IPFSController.prototype, "getFileMetadata", null);
 __decorate([
     (0, common_1.Get)('list'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'List all pinned files' }),
     (0, swagger_1.ApiResponse)({ status: 200, description: 'Files listed successfully' }),
     (0, swagger_1.ApiResponse)({ status: 400, description: 'Failed to list files' }),
@@ -265,8 +275,6 @@ __decorate([
 exports.IPFSController = IPFSController = __decorate([
     (0, swagger_1.ApiTags)('IPFS'),
     (0, common_1.Controller)('ipfs'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    (0, swagger_1.ApiBearerAuth)(),
     __metadata("design:paramtypes", [ipfs_service_1.IPFSService])
 ], IPFSController);
 //# sourceMappingURL=ipfs.controller.js.map

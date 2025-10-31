@@ -19,12 +19,12 @@ export class PinFileRequestDto {
 
 @ApiTags('IPFS')
 @Controller('ipfs')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
 export class IPFSController {
   constructor(private readonly ipfsService: IPFSService) {}
 
   @Post('presigned-url')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Generate presigned URL for file upload' })
   @ApiResponse({ status: 200, description: 'Presigned URL generated successfully' })
   @ApiResponse({ status: 400, description: 'Invalid request' })
@@ -51,6 +51,8 @@ export class IPFSController {
   }
 
   @Post('upload')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Upload file to IPFS' })
   @ApiResponse({ status: 200, description: 'File uploaded successfully' })
   @ApiResponse({ status: 400, description: 'Upload failed' })
@@ -102,6 +104,8 @@ export class IPFSController {
   }
 
   @Post('pin')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Pin file to IPFS' })
   @ApiResponse({ status: 200, description: 'File pinned successfully' })
   @ApiResponse({ status: 400, description: 'Pin failed' })
@@ -124,6 +128,8 @@ export class IPFSController {
   }
 
   @Delete('unpin/:cid')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Unpin file from IPFS' })
   @ApiResponse({ status: 200, description: 'File unpinned successfully' })
   @ApiResponse({ status: 400, description: 'Unpin failed' })
@@ -189,6 +195,8 @@ export class IPFSController {
   }
 
   @Get('list')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'List all pinned files' })
   @ApiResponse({ status: 200, description: 'Files listed successfully' })
   @ApiResponse({ status: 400, description: 'Failed to list files' })
