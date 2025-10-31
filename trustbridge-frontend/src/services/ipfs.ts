@@ -20,7 +20,7 @@ class IPFSService {
   private serverUrl: string;
 
   constructor() {
-    this.serverUrl = (import.meta as any).env.VITE_SERVER_URL || 'http://localhost:4001';
+    this.serverUrl = (import.meta as any).env.VITE_SERVER_URL;
   }
 
   /**

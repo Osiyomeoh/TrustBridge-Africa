@@ -222,7 +222,7 @@ const CreateAsset: React.FC = () => {
 
       // Submit to TrustBridge HCS endpoint
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4001'}/api/hedera/rwa/create-with-hcs`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/hedera/rwa/create-with-hcs`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

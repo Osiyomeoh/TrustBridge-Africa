@@ -7,7 +7,7 @@ export const IPFS_CONFIG = {
   JWT_TOKEN: import.meta.env.VITE_PINATA_JWT || '',
   
   // Server URL for presigned URLs
-  SERVER_URL: import.meta.env.VITE_SERVER_URL || 'http://localhost:4001',
+  SERVER_URL: import.meta.env.VITE_SERVER_URL,
   
   // File upload limits
   MAX_FILE_SIZE: 50 * 1024 * 1024, // 50MB

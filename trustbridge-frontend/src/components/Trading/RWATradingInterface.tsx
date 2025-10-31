@@ -86,7 +86,7 @@ const RWATradingInterface: React.FC = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4001'}/api/assets?status=ACTIVE`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/assets?status=ACTIVE`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -179,7 +179,7 @@ const RWATradingInterface: React.FC = () => {
         total: parseFloat(orderAmount) * parseFloat(orderPrice)
       };
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4001'}/api/trading/order`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/trading/order`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

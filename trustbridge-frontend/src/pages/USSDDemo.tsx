@@ -21,8 +21,8 @@ export const USSDDemo: React.FC = () => {
   const [inPinFlow, setInPinFlow] = useState(false);
   
   // Calculate API URL
-  const baseUrl = import.meta.env.VITE_API_URL || '';
-  const cleanBaseUrl = baseUrl.replace(/\/api$/, '');
+  const baseUrl = import.meta.env.VITE_API_URL;
+  const cleanBaseUrl = baseUrl ? baseUrl.replace(/\/api$/, '') : '';
   const apiUrl = cleanBaseUrl ? `${cleanBaseUrl}/api/mobile/ussd` : '';
 
   // Initialize with welcome message - only once on mount

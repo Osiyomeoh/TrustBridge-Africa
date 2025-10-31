@@ -77,7 +77,7 @@ const AdminAssets: React.FC = () => {
 
       // Fetch TrustBridge RWA assets from HCS topic
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4001'}/api/hedera/rwa/trustbridge-assets`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/hedera/rwa/trustbridge-assets`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -213,7 +213,7 @@ const AdminAssets: React.FC = () => {
       console.log('Approving asset:', assetId);
 
       // Update asset status in HCS topic
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4001'}/api/hedera/rwa/update-status`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/hedera/rwa/update-status`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -255,7 +255,7 @@ const AdminAssets: React.FC = () => {
       console.log('Rejecting asset:', assetId);
 
       // Update asset status in HCS topic
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4001'}/api/hedera/rwa/update-status`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/hedera/rwa/update-status`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

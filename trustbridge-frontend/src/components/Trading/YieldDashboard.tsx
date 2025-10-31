@@ -38,7 +38,7 @@ export const YieldDashboard: React.FC<YieldDashboardProps> = ({
     setIsLoading(true);
     try {
       // Fetch real pool data from backend
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+      const apiUrl = import.meta.env.VITE_API_URL;
       const token = localStorage.getItem('token');
       
       const response = await fetch(`${apiUrl}/api/amc-pools/${poolId}`, {

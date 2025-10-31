@@ -540,7 +540,7 @@ const Profile: React.FC = () => {
         // First, get RWA assets from HCS topic to get approval status
         let hcsAssets = [];
         try {
-          const hcsResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4001'}/api/hedera/rwa/trustbridge-assets`);
+          const hcsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/hedera/rwa/trustbridge-assets`);
           if (hcsResponse.ok) {
             const hcsData = await hcsResponse.json();
             hcsAssets = hcsData.data?.assets || [];
@@ -1388,7 +1388,7 @@ const Profile: React.FC = () => {
       console.log('🔧 User ID:', user?._id);
       console.log('🔧 Current KYC status:', user?.kycStatus);
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+      const apiUrl = import.meta.env.VITE_API_URL;
       const response = await fetch(`${apiUrl}/api/auth/kyc/update-status`, {
         method: 'POST',
         headers: {
@@ -1438,7 +1438,7 @@ const Profile: React.FC = () => {
     try {
       console.log('🔧 Direct KYC update for user:', user?.email);
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+      const apiUrl = import.meta.env.VITE_API_URL;
       const response = await fetch(`${apiUrl}/api/auth/update-kyc-direct`, {
         method: 'POST',
         headers: {
@@ -1510,7 +1510,7 @@ const Profile: React.FC = () => {
     try {
       console.log('🔧 Fixing KYC inquiry ID for user:', user?.email);
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+      const apiUrl = import.meta.env.VITE_API_URL;
       const response = await fetch(`${apiUrl}/api/auth/update-kyc-inquiry`, {
         method: 'POST',
         headers: {
@@ -1562,7 +1562,7 @@ const Profile: React.FC = () => {
       console.log('🧪 User kycInquiryId:', user?.kycInquiryId);
       console.log('🧪 User object:', user);
       
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+      const apiUrl = import.meta.env.VITE_API_URL;
       const callbackUrl = `${apiUrl}/api/auth/didit/callback?verificationSessionId=${user?.kycInquiryId}&status=Approved`;
       
       console.log('🧪 Calling callback URL:', callbackUrl);

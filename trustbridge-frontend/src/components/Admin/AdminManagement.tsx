@@ -48,7 +48,7 @@ const AdminManagement: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/admin/users`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/users`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -71,7 +71,7 @@ const AdminManagement: React.FC = () => {
   const fetchAdminStats = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/admin/stats`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -98,7 +98,7 @@ const AdminManagement: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/admin/assign-role`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/assign-role`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -134,7 +134,7 @@ const AdminManagement: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/admin/remove-role`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/remove-role`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

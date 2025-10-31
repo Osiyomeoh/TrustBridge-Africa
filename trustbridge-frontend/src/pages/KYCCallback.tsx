@@ -87,9 +87,7 @@ const KYCCallback: React.FC = () => {
           // Try to call the backend callback endpoint to update database
           let databaseUpdated = false;
           try {
-            // Try different backend ports if VITE_API_URL is not set
-            const possiblePorts = ['4001', '3000', '8000', '5000'];
-            let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+            let apiUrl = import.meta.env.VITE_API_URL;
             
             console.log('🔄 API URL from env:', import.meta.env.VITE_API_URL);
             console.log('🔄 Using API URL:', apiUrl);
