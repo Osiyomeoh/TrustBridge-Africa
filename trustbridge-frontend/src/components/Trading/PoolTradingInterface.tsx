@@ -111,7 +111,7 @@ const PoolTradingInterface: React.FC = () => {
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/amc-pools`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/amc-pools`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

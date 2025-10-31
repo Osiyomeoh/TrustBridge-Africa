@@ -109,7 +109,7 @@ export const AdminProvider: React.FC<AdminProviderProps> = ({ children }) => {
         setLoading(false);
         return; // Don't throw error, just return and wait
       }
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/status`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/status`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

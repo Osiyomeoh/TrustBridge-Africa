@@ -21,7 +21,7 @@ const DiditCallback: React.FC = () => {
   const checkSessionStatus = async (sessionId: string) => {
     try {
       // Check session status with backend
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/didit/session/${sessionId}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/didit/session/${sessionId}`);
       
       if (!response.ok) {
         throw new Error('Failed to check session status');

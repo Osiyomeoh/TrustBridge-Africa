@@ -540,7 +540,7 @@ const Profile: React.FC = () => {
         // First, get RWA assets from HCS topic to get approval status
         let hcsAssets = [];
         try {
-          const hcsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/hedera/rwa/trustbridge-assets`);
+          const hcsResponse = await fetch(`${import.meta.env.VITE_API_URL}/hedera/rwa/trustbridge-assets`);
           if (hcsResponse.ok) {
             const hcsData = await hcsResponse.json();
             hcsAssets = hcsData.data?.assets || [];

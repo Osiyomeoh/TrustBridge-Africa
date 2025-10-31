@@ -458,7 +458,7 @@ const CreateRWAAsset: React.FC = () => {
         });
         
         // Submit to backend RWA endpoint (backend will handle HCS automatically)
-        const backendResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/hedera/rwa/create-with-hcs`, {
+        const backendResponse = await fetch(`${import.meta.env.VITE_API_URL}/hedera/rwa/create-with-hcs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

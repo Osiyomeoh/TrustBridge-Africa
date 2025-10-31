@@ -37,7 +37,7 @@ class DiditService {
   async createSession(vendorData?: string, workflowId?: string): Promise<DiditSession> {
     try {
       // Use our backend proxy instead of calling Didit API directly
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/didit/session`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/didit/session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +76,7 @@ class DiditService {
   async getSessionStatus(sessionId: string): Promise<DiditVerificationResult> {
     try {
       // Use our backend proxy instead of calling Didit API directly
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/didit/session/${sessionId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/didit/session/${sessionId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

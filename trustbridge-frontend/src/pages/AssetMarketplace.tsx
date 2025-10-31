@@ -87,7 +87,7 @@ const AssetMarketplace: React.FC = () => {
       }
 
       console.log('🔍 Fetching AMC pools from API...');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/amc-pools`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/amc-pools`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -309,7 +309,7 @@ const AssetMarketplace: React.FC = () => {
       // Fetch RWA assets from HCS topic
       try {
         console.log('🏛️ Fetching RWA assets from HCS topic...');
-        const rwaResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/hedera/rwa/trustbridge-assets`);
+        const rwaResponse = await fetch(`${import.meta.env.VITE_API_URL}/hedera/rwa/trustbridge-assets`);
         if (rwaResponse.ok) {
           const rwaData = await rwaResponse.json();
           if (rwaData.success && rwaData.data?.assets) {

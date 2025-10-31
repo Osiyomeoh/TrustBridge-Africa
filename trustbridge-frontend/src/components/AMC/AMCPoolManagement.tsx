@@ -107,7 +107,7 @@ const AMCPoolManagement: React.FC = () => {
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/amc-pools`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/amc-pools`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -167,13 +167,13 @@ const AMCPoolManagement: React.FC = () => {
       
       // Fetch both RWA assets and existing pools in parallel
       const [assetsResponse, poolsResponse] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_URL}/api/hedera/rwa/trustbridge-assets`, {
+        fetch(`${import.meta.env.VITE_API_URL}/hedera/rwa/trustbridge-assets`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         }),
-        fetch(`${import.meta.env.VITE_API_URL}/api/amc-pools`, {
+        fetch(`${import.meta.env.VITE_API_URL}/amc-pools`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -357,7 +357,7 @@ const AMCPoolManagement: React.FC = () => {
         variant: "default"
       });
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/amc-pools/${poolId}/launch`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/amc-pools/${poolId}/launch`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
