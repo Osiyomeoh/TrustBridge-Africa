@@ -95,7 +95,9 @@ export default function AssetApproval() {
 
       // Update backend (in production)
       try {
-        const response = await fetch(`http://localhost:4001/api/assets/rwa/${asset.id}/update`, {
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        if (!apiUrl) return;
+        const response = await fetch(`${apiUrl}/assets/rwa/${asset.id}/update`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -286,7 +288,7 @@ export default function AssetApproval() {
                   </p>
                 </div>
 
-                <Separator />
+                <div className="h-px bg-border my-4"></div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="space-y-2">

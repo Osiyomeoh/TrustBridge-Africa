@@ -96,7 +96,9 @@ const RWATradingInterface: React.FC = () => {
   const fetchChainlinkData = async (assetId: string) => {
     try {
       setIsLoadingChainlink(true);
-      const response = await fetch(`http://localhost:4001/api/assets/rwa/${assetId}/chainlink-data`);
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
+      const response = await fetch(`${apiUrl}/assets/rwa/${assetId}/chainlink-data`);
       if (response.ok) {
         const data = await response.json();
         setChainlinkData(data.chainlinkData);

@@ -294,8 +294,10 @@ const AMCDashboard: React.FC = () => {
   const assignAMCWithChainlinkVRF = async (assetId: string) => {
     try {
       setIsAssigningAMC(true);
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
       
-      const response = await fetch(`http://localhost:4001/api/assets/rwa/${assetId}/assign-amc-vrf`, {
+      const response = await fetch(`${apiUrl}/assets/rwa/${assetId}/assign-amc-vrf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

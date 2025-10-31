@@ -73,7 +73,10 @@ const PoolMarketplace: React.FC = () => {
   const fetchActivePools = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4001/api/amc-pools/active', {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
+      
+      const response = await fetch(`${apiUrl}/amc-pools/active`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -141,7 +144,10 @@ const PoolMarketplace: React.FC = () => {
   const handleInvest = async (investmentData: { poolId: string; amount: number; investorAddress: string }) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:4001/api/amc-pools/${investmentData.poolId}/invest`, {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      if (!apiUrl) return;
+      
+      const response = await fetch(`${apiUrl}/amc-pools/${investmentData.poolId}/invest`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

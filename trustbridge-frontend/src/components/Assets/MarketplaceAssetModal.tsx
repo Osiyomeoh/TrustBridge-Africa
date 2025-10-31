@@ -89,7 +89,9 @@ const MarketplaceAssetModal: React.FC<MarketplaceAssetModalProps> = ({
         setMarketplaceListingStatus(prev => ({ ...prev, isLoading: true }));
         
         // Query backend for verified blockchain state
-        const response = await fetch(`http://localhost:4001/api/assets/blockchain-state/${asset.tokenId}/${asset.serialNumber || '1'}`);
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        if (!apiUrl) return;
+        const response = await fetch(`${apiUrl}/assets/blockchain-state/${asset.tokenId}/${asset.serialNumber || '1'}`);
         if (!response.ok) {
           throw new Error('Failed to fetch blockchain state');
         }
