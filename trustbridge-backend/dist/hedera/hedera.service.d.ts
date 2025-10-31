@@ -104,12 +104,16 @@ export declare class HederaService {
     private client;
     private operatorId;
     private operatorKey;
+    private originalOperatorKey;
+    private payerAccountId;
     private network;
     private readonly contracts;
     private isValidHederaEntityId;
     constructor(configService: ConfigService, userModel: Model<User>);
     private initializeClient;
+    getOperatorId(): string;
     getNetworkStatus(): Promise<any>;
+    transferHbar(toAccountId: string, amountHbar: number): Promise<string>;
     createAssetToken(request: TokenizationRequest): Promise<{
         tokenId: string;
         transactionId: string;
@@ -357,6 +361,11 @@ export declare class HederaService {
         privateKey: string;
         publicKey: string;
         accountInfo: any;
+    }>;
+    createUserAccount(userMemo?: string): Promise<{
+        accountId: string;
+        publicKey: string;
+        privateKey: string;
     }>;
     transferHbarToAdmin(adminAccountId: string, amount: number): Promise<string>;
     isHederaAdminAccount(accountId: string): Promise<boolean>;

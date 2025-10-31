@@ -8,9 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { yieldDistributionService, YieldHistory, UserYieldPosition } from '../../services/YieldDistributionService';
 import { useWallet } from '../../contexts/WalletContext';
 import { useToast } from '../../hooks/useToast';
-import { TrendingUp, Calendar, DollarSign, Users, Clock, CheckCircle } from 'lucide-react';
-import { TransferTransaction, TokenId, AccountId, Hbar, Long } from '@hashgraph/sdk';
-import { apiService } from '../../services/api';
+import { TrendingUp, Calendar, DollarSign, Users, CheckCircle } from 'lucide-react';
 
 interface YieldDashboardProps {
   poolId: string;
@@ -27,7 +25,8 @@ export const YieldDashboard: React.FC<YieldDashboardProps> = ({
   const [yieldHistory, setYieldHistory] = useState<YieldHistory | null>(null);
   const [userPosition, setUserPosition] = useState<UserYieldPosition | null>(null);
   const [yieldMetrics, setYieldMetrics] = useState<any>(null);
-  const [isClaiming, setIsClaiming] = useState(false);
+  const [poolData, setPoolData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (poolId) {
@@ -35,7 +34,126 @@ export const YieldDashboard: React.FC<YieldDashboardProps> = ({
     }
   }, [poolId, accountId]);
 
-  const loadYieldData = () => {
+  const loadYieldData = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch real pool data from backend
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`${apiUrl}/api/amc-pools/${poolId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const pool = await response.json();
+        setPoolData(pool);
+
+        // Calculate metrics from real pool data
+        const dividends = pool.dividends || [];
+        const investments = pool.investments || [];
+        const activeInvestments = investments.filter((inv: any) => inv.isActive);
+        
+        const totalDividendsDistributed = pool.totalDividendsDistributed || dividends.reduce((sum: number, d: any) => sum + (d.amount || 0), 0);
+        const totalActiveTokens = activeInvestments.reduce((sum: number, inv: any) => sum + (inv.tokens || 0), 0);
+        
+        // Calculate yield per token from the most recent dividend or average
+        const yieldPerToken = dividends.length > 0 
+          ? dividends[dividends.length - 1].perToken || (totalActiveTokens > 0 ? totalDividendsDistributed / totalActiveTokens : 0)
+          : 0;
+        const averageYieldRate = pool.expectedAPY || 0;
+        const totalHolders = activeInvestments.length;
+
+        setYieldMetrics({
+          totalYieldDistributed: totalDividendsDistributed,
+          averageYieldRate: averageYieldRate,
+          totalHolders: totalHolders,
+          yieldPerToken: yieldPerToken,
+          nextDistributionDate: null // Can be calculated if needed
+        });
+
+        // Find user's position
+        if (accountId) {
+          const userInvestment = activeInvestments.find((inv: any) => 
+            inv.investorAddress?.toLowerCase() === accountId.toLowerCase()
+          );
+
+          if (userInvestment) {
+            const userTokens = userInvestment.tokens || 0;
+            const dividendsReceived = userInvestment.dividendsReceived || 0;
+            // Dividends are auto-distributed as HBAR, so no pending yield to claim
+            const pendingYield = 0;
+
+            // Find last dividend date from dividends array
+            const userDividendHistory = dividends
+              .filter((d: any) => d.transactionHash)
+              .sort((a: any, b: any) => new Date(b.distributedAt).getTime() - new Date(a.distributedAt).getTime());
+            
+            const lastYieldClaimed = userDividendHistory.length > 0 
+              ? new Date(userDividendHistory[0].distributedAt) 
+              : null;
+
+            setUserPosition({
+              userId: accountId,
+              poolId: poolId,
+              tokenBalance: userTokens,
+              totalYieldEarned: dividendsReceived,
+              pendingYield: pendingYield, // Always 0 since dividends are auto-distributed
+              lastYieldClaimed: lastYieldClaimed || undefined,
+              yieldHistory: []
+            });
+          } else {
+            setUserPosition(null);
+          }
+        }
+
+        // Build yield history from dividends
+        if (dividends.length > 0) {
+          const distributions = dividends.map((d: any, index: number) => ({
+            id: `div-${index}`,
+            poolId: poolId,
+            amount: d.amount || 0,
+            currency: 'HBAR',
+            distributionDate: new Date(d.distributedAt || d.createdAt),
+            recordDate: new Date(d.distributedAt || d.createdAt),
+            exDividendDate: new Date(d.distributedAt || d.createdAt),
+            status: d.transactionHash ? 'DISTRIBUTED' : 'PENDING' as 'PENDING' | 'DISTRIBUTED' | 'FAILED',
+            totalHolders: totalHolders,
+            totalTokens: totalActiveTokens,
+            yieldRate: averageYieldRate,
+            transactionId: d.transactionHash || undefined
+          }));
+
+          const lastDistribution = distributions.sort((a: any, b: any) => 
+            b.distributionDate.getTime() - a.distributionDate.getTime()
+          )[0];
+
+          setYieldHistory({
+            poolId: poolId,
+            distributions: distributions,
+            totalYieldDistributed: totalDividendsDistributed,
+            averageYieldRate: averageYieldRate,
+            lastDistributionDate: lastDistribution?.distributionDate,
+            nextDistributionDate: undefined
+          });
+        }
+      } else {
+        console.warn('Failed to fetch pool data, using mock data');
+        // Fallback to mock data
+        loadMockData();
+      }
+    } catch (error) {
+      console.error('Error loading yield data:', error);
+      loadMockData();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadMockData = () => {
     const history = yieldDistributionService.getYieldHistory(poolId);
     setYieldHistory(history);
 
@@ -49,82 +167,8 @@ export const YieldDashboard: React.FC<YieldDashboardProps> = ({
     setYieldMetrics(metrics);
   };
 
-  const handleClaimYield = async () => {
-    if (!accountId || !userPosition || !signer) return;
-
-    setIsClaiming(true);
-    try {
-      console.log('🔧 Yield Dashboard: Claiming yield with REAL user signing...');
-      console.log('🔧 Claim amount:', userPosition.pendingYield);
-
-      // Real Hedera transaction for yield claiming
-      const trustTokenId = TokenId.fromString(process.env.REACT_APP_TRUST_TOKEN_ID || '0.0.6935064');
-      const treasuryAccountId = AccountId.fromString(process.env.REACT_APP_TREASURY_ACCOUNT_ID || '0.0.6916959');
-      const userAccountId = AccountId.fromString(accountId);
-
-      const claimTransaction = new TransferTransaction()
-        .addTokenTransfer(trustTokenId, treasuryAccountId, -Math.floor(userPosition.pendingYield))
-        .addTokenTransfer(trustTokenId, userAccountId, Math.floor(userPosition.pendingYield))
-        .setTransactionMemo(`Yield claim for pool: ${poolId}`)
-        .setMaxTransactionFee(new Hbar(5));
-
-      console.log('🔧 Freezing yield claim transaction with signer...');
-      const frozenTx = await claimTransaction.freezeWithSigner(signer);
-      
-      console.log('🔧 Requesting signature for yield claim...');
-      const signedTx = await signer.signTransaction(frozenTx);
-      
-      console.log('🔧 Executing yield claim transaction...');
-      const response = await signedTx.execute(hederaClient);
-      
-      console.log('🔧 Getting yield claim receipt...');
-      const receipt = await response.getReceipt(hederaClient);
-      
-      console.log('✅ Yield claim successful:', receipt.transactionId.toString());
-
-      // Record yield claim on HCS for audit trail
-      try {
-        await apiService.post('/hedera/hcs/marketplace/event', {
-          type: 'yield_claimed',
-          poolId,
-          amount: userPosition.pendingYield,
-          userId: accountId,
-          transactionId: receipt.transactionId.toString(),
-          timestamp: new Date().toISOString()
-        });
-        console.log('✅ Yield claim recorded on HCS');
-      } catch (hcsError) {
-        console.warn('⚠️ Failed to record yield claim on HCS (non-critical):', hcsError);
-      }
-
-      // Update local yield position
-      const result = await yieldDistributionService.claimYield(accountId, poolId);
-      
-      if (result.success) {
-        toast({
-          title: 'Yield Claimed Successfully!',
-          description: `Claimed ${result.amount.toFixed(2)} TRUST tokens. Transaction: ${receipt.transactionId.toString()}`,
-          variant: 'default'
-        });
-        loadYieldData(); // Refresh data
-      } else {
-        toast({
-          title: 'Claim Failed',
-          description: result.error || 'Failed to claim yield',
-          variant: 'destructive'
-        });
-      }
-    } catch (error) {
-      console.error('❌ Yield claim failed:', error);
-      toast({
-        title: 'Claim Failed',
-        description: `Failed to claim yield: ${error.message || 'Unknown error'}`,
-        variant: 'destructive'
-      });
-    } finally {
-      setIsClaiming(false);
-    }
-  };
+  // Note: Dividends are automatically distributed as HBAR transfers on-chain
+  // There's nothing to "claim" - dividends are sent directly to investor wallets
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -134,11 +178,10 @@ export const YieldDashboard: React.FC<YieldDashboardProps> = ({
     }).format(date);
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatHbar = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 8
     }).format(amount);
   };
 
@@ -152,8 +195,12 @@ export const YieldDashboard: React.FC<YieldDashboardProps> = ({
         </div>
       </div>
 
-      {/* Yield Metrics Overview */}
-      {yieldMetrics && (
+      {isLoading ? (
+        <div className="text-center py-8 text-gray-400">Loading yield data...</div>
+      ) : (
+        <>
+          {/* Yield Metrics Overview */}
+          {yieldMetrics && (
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-gray-800 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
@@ -161,7 +208,7 @@ export const YieldDashboard: React.FC<YieldDashboardProps> = ({
               <span className="text-gray-400 text-sm">Total Distributed</span>
             </div>
             <div className="text-white text-lg font-semibold">
-              {formatCurrency(yieldMetrics.totalYieldDistributed)}
+              {formatHbar(yieldMetrics.totalYieldDistributed)} HBAR
             </div>
           </div>
           
@@ -191,7 +238,7 @@ export const YieldDashboard: React.FC<YieldDashboardProps> = ({
               <span className="text-gray-400 text-sm">Yield Per Token</span>
             </div>
             <div className="text-white text-lg font-semibold">
-              {formatCurrency(yieldMetrics.yieldPerToken)}
+              {formatHbar(yieldMetrics.yieldPerToken)} HBAR
             </div>
           </div>
         </div>
@@ -211,27 +258,27 @@ export const YieldDashboard: React.FC<YieldDashboardProps> = ({
             <div>
               <div className="text-gray-400 text-sm">Total Yield Earned</div>
               <div className="text-green-400 text-lg font-semibold">
-                {formatCurrency(userPosition.totalYieldEarned)}
+                {formatHbar(userPosition.totalYieldEarned)} HBAR
               </div>
             </div>
             
             <div>
-              <div className="text-gray-400 text-sm">Pending Yield</div>
-              <div className="text-yellow-400 text-lg font-semibold">
-                {formatCurrency(userPosition.pendingYield)}
+              <div className="text-gray-400 text-sm">Dividends Received</div>
+              <div className="text-blue-400 text-lg font-semibold">
+                {poolData?.dividends?.length || 0} distributions
               </div>
             </div>
           </div>
 
-          {userPosition.pendingYield > 0 && (
-            <button
-              onClick={handleClaimYield}
-              disabled={isClaiming}
-              className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isClaiming ? 'Claiming...' : `Claim ${formatCurrency(userPosition.pendingYield)}`}
-            </button>
-          )}
+          <div className="mt-4 p-3 bg-green-900/20 border border-green-700/30 rounded-lg">
+            <div className="flex items-center gap-2 text-green-400 text-sm">
+              <CheckCircle className="w-4 h-4" />
+              <span>Dividends are automatically distributed as HBAR transfers to your wallet.</span>
+            </div>
+            <div className="text-gray-400 text-xs mt-1">
+              Check your Hedera wallet for received HBAR from dividend distributions.
+            </div>
+          </div>
 
           {userPosition.lastYieldClaimed && (
             <div className="mt-4 text-sm text-gray-400">
@@ -261,7 +308,7 @@ export const YieldDashboard: React.FC<YieldDashboardProps> = ({
                     
                     <div>
                       <div className="text-white font-semibold">
-                        {formatCurrency(distribution.amount)} TRUST
+                        {formatHbar(distribution.amount)} HBAR
                       </div>
                       <div className="text-gray-400 text-sm">
                         {formatDate(distribution.distributionDate)}
@@ -301,6 +348,9 @@ export const YieldDashboard: React.FC<YieldDashboardProps> = ({
           </div>
         </div>
       )}
+        </>
+      )}
     </div>
   );
 };
+

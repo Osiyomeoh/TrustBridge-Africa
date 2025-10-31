@@ -11,7 +11,7 @@ export declare class AssetsController {
     }>;
     getAssetsByOwner(owner: string): Promise<{
         success: boolean;
-        message: string;
+        data: any[];
     }>;
     getAssetById(id: string): Promise<{
         success: boolean;

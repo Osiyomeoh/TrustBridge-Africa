@@ -9,10 +9,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminModule = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
+const mongoose_1 = require("@nestjs/mongoose");
 const admin_service_1 = require("./admin.service");
 const admin_controller_1 = require("./admin.controller");
 const hedera_module_1 = require("../hedera/hedera.module");
 const auth_module_1 = require("../auth/auth.module");
+const asset_schema_1 = require("../schemas/asset.schema");
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
@@ -22,6 +24,9 @@ exports.AdminModule = AdminModule = __decorate([
             hedera_module_1.HederaModule,
             auth_module_1.AuthModule,
             jwt_1.JwtModule.register({}),
+            mongoose_1.MongooseModule.forFeature([
+                { name: asset_schema_1.Asset.name, schema: asset_schema_1.AssetSchema },
+            ]),
         ],
         providers: [admin_service_1.AdminService],
         controllers: [admin_controller_1.AdminController],

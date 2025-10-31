@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { AMCPool, AMCPoolDocument, PoolStatus, PoolType } from '../schemas/amc-pool.schema';
+import { Asset, AssetDocument } from '../schemas/asset.schema';
 import { HederaService } from '../hedera/hedera.service';
 import { AdminService } from '../admin/admin.service';
 
@@ -38,8 +39,9 @@ export interface CreateAMCPoolDto {
 
 export interface InvestInPoolDto {
   poolId: string;
-  amount: number;
+  amount: number; // Amount in HBAR
   investorAddress: string;
+  hbarTransactionId?: string; // Optional: if HBAR already sent on-chain
 }
 
 export interface DistributeDividendDto {
@@ -54,6 +56,7 @@ export class AMCPoolsService {
 
   constructor(
     @InjectModel(AMCPool.name) private amcPoolModel: Model<AMCPoolDocument>,
+    @InjectModel(Asset.name) private assetModel: Model<AssetDocument>,
     private hederaService: HederaService,
     private adminService: AdminService,
     private configService: ConfigService,
@@ -147,33 +150,25 @@ export class AMCPoolsService {
 
       // Create Hedera token for the pool
       // Use the configured Hedera operator credentials for token creation
+      const operatorAccountId = this.hederaService.getOperatorId();
       this.logger.log(`Creating Hedera token for pool: ${pool.name} (${pool.poolId})`);
-      this.logger.log(`Treasury account: ${adminWallet}`);
+      this.logger.log(`Treasury account: ${operatorAccountId}`);
       this.logger.log(`Token supply: ${pool.tokenSupply}`);
       
-      let hederaTokenId: string;
+      const hederaTokenId = await this.hederaService.createPoolToken({
+        name: pool.name,
+        symbol: `POOL_${pool.poolId.substring(5, 10)}`,
+        decimals: 0,
+        initialSupply: pool.tokenSupply,
+        maxSupply: pool.tokenSupply,
+        treasury: operatorAccountId, // Use operator account as treasury for backend control
+        adminKey: this.configService.get<string>('HEDERA_PRIVATE_KEY'), // Use operator key
+        supplyKey: this.configService.get<string>('HEDERA_PRIVATE_KEY'), // Use operator key
+        freezeKey: this.configService.get<string>('HEDERA_PRIVATE_KEY'), // Use operator key
+        wipeKey: this.configService.get<string>('HEDERA_PRIVATE_KEY') // Use operator key
+      });
       
-      try {
-        hederaTokenId = await this.hederaService.createPoolToken({
-          name: pool.name,
-          symbol: `POOL_${pool.poolId.substring(5, 10)}`,
-          decimals: 0,
-          initialSupply: pool.tokenSupply,
-          maxSupply: pool.tokenSupply,
-          treasury: adminWallet, // Use admin wallet as treasury
-          adminKey: this.configService.get<string>('HEDERA_PRIVATE_KEY'), // Use operator key
-          supplyKey: this.configService.get<string>('HEDERA_PRIVATE_KEY'), // Use operator key
-          freezeKey: this.configService.get<string>('HEDERA_PRIVATE_KEY'), // Use operator key
-          wipeKey: this.configService.get<string>('HEDERA_PRIVATE_KEY') // Use operator key
-        });
-        
-        this.logger.log(`Successfully created Hedera token: ${hederaTokenId}`);
-      } catch (hederaError) {
-        this.logger.warn('Hedera token creation failed, using mock token ID for testing:', hederaError.message);
-        // For testing purposes, generate a mock token ID
-        hederaTokenId = `0.0.${Math.floor(Math.random() * 1000000)}`;
-        this.logger.log(`Using mock Hedera token ID: ${hederaTokenId}`);
-      }
+      this.logger.log(`Successfully created Hedera token: ${hederaTokenId}`);
 
       // Update pool status and Hedera token ID
       pool.status = PoolStatus.ACTIVE;
@@ -296,8 +291,33 @@ export class AMCPoolsService {
       pool.totalInvestors = pool.investments.filter(inv => inv.isActive).length;
       pool.operations.push(`Investment of ${investDto.amount} by ${investDto.investorAddress}`);
 
+      // Transfer pool tokens from treasury to investor ON-CHAIN
+      try {
+        if (pool.hederaTokenId && pool.hederaTokenId !== '') {
+          this.logger.log(`Transferring ${tokens} pool tokens to investor ${investDto.investorAddress}`);
+          
+          // Transfer tokens from operator treasury to investor
+          const treasuryAccount = this.hederaService.getOperatorId();
+          const txId = await this.hederaService.transferTokens(
+            pool.hederaTokenId,
+            treasuryAccount, // Operator account (pool treasury)
+            investDto.investorAddress, // Investor
+            tokens
+          );
+          
+          this.logger.log(`Successfully transferred ${tokens} tokens: ${txId}`);
+          pool.operations.push(`Hedera transfer: ${txId}`);
+        }
+      } catch (hederaError) {
+        this.logger.error('Failed to transfer pool tokens on Hedera:', hederaError);
+        // Don't throw - DB update succeeded, Hedera transfer is secondary
+      }
+
       const updatedPool = await pool.save();
       this.logger.log(`Investment in pool ${investDto.poolId}: ${investDto.amount}`);
+
+      // Update earnings for asset owners
+      await this.updateAssetOwnersEarnings(pool, investDto.amount);
 
       return updatedPool;
     } catch (error) {
@@ -357,6 +377,32 @@ export class AMCPoolsService {
       // Update pool totals
       pool.totalDividendsDistributed += dividendDto.amount;
       pool.operations.push(`Dividend distributed: ${dividendDto.amount} by ${adminWallet}`);
+
+      // Distribute HBAR dividends ON-CHAIN
+      try {
+        let txIds: string[] = [];
+        for (const investment of pool.investments) {
+          if (investment.isActive) {
+            const investorDividend = investment.tokens * dividendPerToken;
+            
+            // Transfer HBAR from pool treasury to investor
+            const txId = await this.hederaService.transferHbar(
+              investment.investorAddress,
+              investorDividend
+            );
+            txIds.push(txId);
+            
+            this.logger.log(`Distributed ${investorDividend} HBAR to ${investment.investorAddress}: ${txId}`);
+          }
+        }
+        
+        // Update transaction hashes
+        pool.dividends[pool.dividends.length - 1].transactionHash = txIds.join(',');
+        this.logger.log(`Distributed ${txIds.length} dividends on-chain`);
+      } catch (hederaError) {
+        this.logger.error('Failed to distribute dividends on Hedera:', hederaError);
+        // Don't throw - DB update succeeded, Hedera transfer is secondary
+      }
 
       const updatedPool = await pool.save();
       this.logger.log(`Dividend distributed for pool ${dividendDto.poolId}: ${dividendDto.amount}`);
@@ -508,5 +554,30 @@ export class AMCPoolsService {
     }
 
     this.logger.log(`Validated ${assets.length} assets for pool creation`);
+  }
+
+  /**
+   * Update earnings for asset owners when investment is made
+   */
+  private async updateAssetOwnersEarnings(pool: AMCPool, investmentAmount: number): Promise<void> {
+    try {
+      // Distribute earnings proportionally to each asset in the pool
+      for (const poolAsset of pool.assets) {
+        // Calculate this asset's share of the earnings
+        const assetPercentage = poolAsset.percentage / 100;
+        const earningsForAsset = investmentAmount * assetPercentage;
+
+        // Find the asset and update owner's earnings
+        const asset = await this.assetModel.findOne({ assetId: poolAsset.assetId });
+        if (asset) {
+          asset.earnings = (asset.earnings || 0) + earningsForAsset;
+          await asset.save();
+          this.logger.log(`Updated earnings for asset ${poolAsset.assetId}: +${earningsForAsset}`);
+        }
+      }
+    } catch (error) {
+      this.logger.error('Failed to update asset owner earnings:', error);
+      // Don't throw - investment should still succeed even if earnings update fails
+    }
   }
 }

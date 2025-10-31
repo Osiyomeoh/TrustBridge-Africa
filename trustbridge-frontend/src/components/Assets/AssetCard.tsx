@@ -120,7 +120,11 @@ const AssetCard: React.FC<AssetCardProps> = ({
           {asset.location && (
             <div className="flex items-center gap-2 text-gray-300">
               <MapPin className="w-4 h-4 text-blue-400" />
-              <span className="truncate">{asset.location}</span>
+              <span className="truncate">
+                {typeof asset.location === 'string' 
+                  ? asset.location 
+                  : asset.location?.address || `${asset.location?.region || ''}, ${asset.location?.country || ''}`.trim() || 'N/A'}
+              </span>
             </div>
           )}
 

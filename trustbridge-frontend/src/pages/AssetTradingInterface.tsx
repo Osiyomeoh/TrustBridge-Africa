@@ -570,7 +570,11 @@ const AssetTradingInterface: React.FC = () => {
                         <MapPin className="w-5 h-5 text-neon-green" />
                         <div>
                           <div className="text-sm text-off-white/60">Location</div>
-                          <div className="font-medium text-off-white">{assetData.location}</div>
+                          <div className="font-medium text-off-white">
+                            {typeof assetData.location === 'string' 
+                              ? assetData.location 
+                              : assetData.location?.address || `${assetData.location?.region || ''}, ${assetData.location?.country || ''}`.trim() || 'N/A'}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">

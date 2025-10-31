@@ -1,10 +1,43 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
@@ -15,6 +48,7 @@ var MobileService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.MobileService = void 0;
 const common_1 = require("@nestjs/common");
+const crypto = __importStar(require("crypto"));
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const asset_schema_1 = require("../schemas/asset.schema");
@@ -432,15 +466,32 @@ let MobileService = MobileService_1 = class MobileService {
                 return this.handleRegistrationFlow(session, input);
             case 'tokenize':
                 return this.handleTokenizeFlow(session, input);
+            case 'set_pin':
+                return this.handleSetPinFlow(session, input);
+            case 'verify_pin':
+                return this.handleVerifyPinFlow(session, input);
+            case 'change_pin':
+                return this.handleChangePinFlow(session, input);
+            case 'forgot_pin':
+                return this.handleForgotPinFlow(session, input);
             case 'payment':
                 return this.handleTokenizeFlow(session, input);
+            case 'portfolio':
+                return this.handlePortfolio(session, input);
+            case 'why_tokenize':
+                return this.handleWhyTokenize(session, input);
             default:
                 return this.showMainMenu(session, input);
         }
     }
     async showMainMenu(session, input) {
         if (input.length === 0) {
-            const user = await this.userModel.findOne({ phoneNumber: session.phoneNumber });
+            const user = await this.userModel.findOne({
+                $or: [
+                    { phone: session.phoneNumber },
+                    { walletAddress: session.phoneNumber.toLowerCase() }
+                ]
+            });
             if (!user) {
                 return 'CON Welcome to TrustBridge Africa\n' +
                     'Tokenize Your Real-World Assets\n\n' +
@@ -453,11 +504,18 @@ let MobileService = MobileService_1 = class MobileService {
                 'Tokenize Your Assets\n\n' +
                 '1. Tokenize My Asset\n' +
                 '2. My Portfolio\n' +
-                '3. Why Tokenize?\n' +
+                '3. Change PIN\n' +
+                '4. Forgot PIN\n' +
+                '5. Why Tokenize?\n' +
                 '0. Exit';
         }
         const choice = input[0];
-        const user = await this.userModel.findOne({ phoneNumber: session.phoneNumber });
+        const user = await this.userModel.findOne({
+            $or: [
+                { phone: session.phoneNumber },
+                { walletAddress: session.phoneNumber.toLowerCase() }
+            ]
+        });
         if (!user) {
             if (choice === '1') {
                 session.step = 'register';
@@ -482,12 +540,24 @@ let MobileService = MobileService_1 = class MobileService {
         }
         switch (choice) {
             case '1':
+                if (user?.pinHash) {
+                    session.step = 'verify_pin';
+                    return await this.handleVerifyPinFlow(session, input.slice(1));
+                }
                 session.step = 'tokenize';
                 return await this.handleTokenizeFlow(session, input.slice(1));
             case '2':
-                return await this.handlePortfolio(session.phoneNumber);
+                session.step = 'portfolio';
+                return await this.handlePortfolio(session, []);
             case '3':
-                return 'END WHY TOKENIZE?\n\n' +
+                session.step = 'change_pin';
+                return await this.handleChangePinFlow(session, input.slice(1));
+            case '4':
+                session.step = 'forgot_pin';
+                return await this.handleForgotPinFlow(session, input.slice(1));
+            case '5':
+                session.step = 'why_tokenize';
+                return 'CON WHY TOKENIZE?\n\n' +
                     '💰 Unlock the value of your land\n' +
                     '👥 Find investors worldwide\n' +
                     '🏦 No bank loans needed\n' +
@@ -495,7 +565,11 @@ let MobileService = MobileService_1 = class MobileService {
                     '🔒 Keep your land ownership\n\n' +
                     'COST: ₦500 fee\n' +
                     'AMC APPROVAL: 48 hours\n\n' +
-                    'Visit tbafrica.xyz';
+                    'Visit tbafrica.xyz\n\n' +
+                    'What would you like to do?\n\n' +
+                    '1. Back to Main Menu\n' +
+                    '2. Start Tokenization\n' +
+                    '0. Exit';
             case '0':
                 return 'END Thank you for using TrustBridge Africa!';
             default:
@@ -527,25 +601,191 @@ let MobileService = MobileService_1 = class MobileService {
                     return 'END You are already registered!\nUse other menu options.';
                 }
                 const newUser = new this.userModel({
-                    phoneNumber,
-                    fullName: data.fullName,
-                    state: data.state,
-                    town: data.town,
-                    role: 'asset_owner',
-                    isVerified: false,
-                    createdAt: new Date()
+                    walletAddress: phoneNumber.toLowerCase(),
+                    phone: phoneNumber,
+                    name: data.fullName,
+                    country: 'NG',
+                    role: user_schema_1.UserRole.ASSET_OWNER,
                 });
                 await newUser.save();
-                this.ussdSessions.delete(session.sessionId);
-                return 'END ✅ Registration Complete!\n\n' +
+                try {
+                    const { accountId, publicKey, privateKey } = await this.hederaService.createUserAccount(`${data.fullName || ''} / ${phoneNumber}`);
+                    await this.userModel.updateOne({ phone: phoneNumber }, { $set: { hederaAccountId: accountId, hederaPublicKey: publicKey, hederaPrivateKey: privateKey } });
+                    const drip = process.env.HEDERA_USSD_DRIP_HBAR ? parseFloat(process.env.HEDERA_USSD_DRIP_HBAR) : 0;
+                    if (drip && drip > 0) {
+                        try {
+                            await this.hederaService.transferHbar(accountId, drip);
+                            this.logger.log(`[USSD] Dripped ${drip} HBAR to ${accountId}`);
+                        }
+                        catch (e) {
+                            this.logger.warn(`[USSD] Drip failed for ${accountId}: ${e?.message || e}`);
+                        }
+                    }
+                }
+                catch (err) {
+                    this.logger.warn(`[USSD] Hedera account creation failed for ${phoneNumber}:` + (err?.message || err));
+                }
+                session.step = 'set_pin';
+                session.data = { ...session.data, userPhone: phoneNumber };
+                return 'CON ✅ Registration Complete!\n\n' +
                     `Welcome ${data.fullName}!\n\n` +
-                    'You can now tokenize your assets.\n' +
-                    'Dial *384# and select 1 to start!';
+                    'Set a 4-digit PIN to secure your USSD actions.\n\n' +
+                    'Enter 4-digit PIN:';
             }
             catch (error) {
                 this.logger.error('Registration error:', error);
-                return 'END Registration failed. Please try again.';
+                const errMsg = error?.message || 'unknown error';
+                return `END Registration failed: ${errMsg}`;
             }
+        }
+        return 'END Invalid input.';
+    }
+    async handleSetPinFlow(session, input) {
+        const { data, phoneNumber } = session;
+        if (input.length === 0) {
+            return 'CON Enter 4-digit PIN:';
+        }
+        if (input.length === 1) {
+            const pin = input[0] || '';
+            if (!/^\d{4}$/.test(pin)) {
+                return 'CON Invalid PIN. Enter 4 digits:';
+            }
+            data.tempPin = pin;
+            return 'CON Confirm PIN (re-enter 4 digits):';
+        }
+        if (input.length === 2) {
+            const confirmPin = input[1] || '';
+            if (confirmPin !== data.tempPin) {
+                delete data.tempPin;
+                return 'CON PINs do not match. Enter 4-digit PIN:';
+            }
+            const pinHash = crypto.createHash('sha256').update(confirmPin).digest('hex');
+            try {
+                await this.userModel.updateOne({ phone: phoneNumber }, { $set: { pinHash } });
+                session.step = 'tokenize';
+                delete data.tempPin;
+                return 'CON ✅ PIN set successfully!\n\n' +
+                    'Choose Asset Type:\n\n' +
+                    '1. Farmland\n' +
+                    '2. Real Estate\n' +
+                    '3. Business\n' +
+                    '4. Commodities\n' +
+                    '99. Back';
+            }
+            catch (error) {
+                this.logger.error('PIN save error:', error);
+                return 'END Failed to set PIN. Please try again later.';
+            }
+        }
+        return 'END Invalid input.';
+    }
+    async handleVerifyPinFlow(session, input) {
+        const user = await this.userModel.findOne({ phone: session.phoneNumber });
+        if (!user)
+            return 'END User not found.';
+        if (user.pinLockedUntil && user.pinLockedUntil > new Date()) {
+            const until = user.pinLockedUntil.toLocaleTimeString();
+            return `END PIN locked. Try again at ${until}`;
+        }
+        if (input.length === 0) {
+            return 'CON Enter your 4-digit PIN:';
+        }
+        if (input.length === 1) {
+            const pin = input[0] || '';
+            const submittedHash = crypto.createHash('sha256').update(pin).digest('hex');
+            if (submittedHash !== user.pinHash) {
+                const attempts = (user.pinAttempts || 0) + 1;
+                const update = { pinAttempts: attempts };
+                if (attempts >= 3) {
+                    update.pinLockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+                    update.pinAttempts = 0;
+                }
+                await this.userModel.updateOne({ _id: user._id }, { $set: update });
+                if (attempts >= 3) {
+                    return 'END Too many attempts. PIN locked for 15 minutes.';
+                }
+                return `CON Incorrect PIN. Attempts: ${attempts}/3\n\nEnter 4-digit PIN:`;
+            }
+            await this.userModel.updateOne({ _id: user._id }, { $set: { pinAttempts: 0, pinLockedUntil: null } });
+            session.step = 'tokenize';
+            return await this.handleTokenizeFlow(session, []);
+        }
+        return 'END Invalid input.';
+    }
+    async handleChangePinFlow(session, input) {
+        const user = await this.userModel.findOne({ phone: session.phoneNumber });
+        if (!user)
+            return 'END User not found.';
+        if (input.length === 0) {
+            return 'CON Enter current 4-digit PIN:';
+        }
+        if (input.length === 1) {
+            const pin = input[0] || '';
+            const submittedHash = crypto.createHash('sha256').update(pin).digest('hex');
+            if (submittedHash !== user.pinHash) {
+                return 'END Incorrect PIN.';
+            }
+            return 'CON Enter new 4-digit PIN:';
+        }
+        if (input.length === 2) {
+            const newPin = input[1] || '';
+            if (!/^\d{4}$/.test(newPin))
+                return 'CON Invalid PIN. Enter new 4 digits:';
+            return 'CON Confirm new 4-digit PIN:';
+        }
+        if (input.length === 3) {
+            const newPin = input[1] || '';
+            const confirmPin = input[2] || '';
+            if (newPin !== confirmPin)
+                return 'CON PINs do not match. Enter new 4-digit PIN:';
+            const pinHash = crypto.createHash('sha256').update(newPin).digest('hex');
+            await this.userModel.updateOne({ _id: user._id }, { $set: { pinHash, lastPinSetAt: new Date() } });
+            return 'END ✅ PIN changed successfully.';
+        }
+        return 'END Invalid input.';
+    }
+    async handleForgotPinFlow(session, input) {
+        const user = await this.userModel.findOne({ phone: session.phoneNumber });
+        if (!user)
+            return 'END User not found.';
+        if (input.length === 0) {
+            const otp = (Math.floor(100000 + Math.random() * 900000)).toString();
+            const expires = new Date(Date.now() + 5 * 60 * 1000);
+            await this.userModel.updateOne({ _id: user._id }, { $set: { otpCode: otp, otpExpiresAt: expires, otpAttempts: 0 } });
+            this.logger.log(`SMS OTP to ${user.phone}: ${otp}`);
+            return 'CON Enter the 6-digit OTP sent to your phone:';
+        }
+        if (input.length === 1) {
+            const otp = input[0] || '';
+            if (!/^\d{6}$/.test(otp))
+                return 'CON Invalid OTP. Enter 6 digits:';
+            const fresh = await this.userModel.findOne({ _id: user._id });
+            if (!fresh?.otpCode || !fresh.otpExpiresAt || fresh.otpExpiresAt < new Date()) {
+                return 'END OTP expired. Please try again.';
+            }
+            if (fresh.otpAttempts && fresh.otpAttempts >= 3) {
+                return 'END Too many OTP attempts. Try again later.';
+            }
+            if (fresh.otpCode !== otp) {
+                await this.userModel.updateOne({ _id: user._id }, { $inc: { otpAttempts: 1 } });
+                return 'CON Incorrect OTP. Try again:';
+            }
+            return 'CON Enter new 4-digit PIN:';
+        }
+        if (input.length === 2) {
+            const newPin = input[1] || '';
+            if (!/^\d{4}$/.test(newPin))
+                return 'CON Invalid PIN. Enter new 4 digits:';
+            return 'CON Confirm new 4-digit PIN:';
+        }
+        if (input.length === 3) {
+            const newPin = input[1] || '';
+            const confirmPin = input[2] || '';
+            if (newPin !== confirmPin)
+                return 'CON PINs do not match. Enter new 4-digit PIN:';
+            const pinHash = crypto.createHash('sha256').update(newPin).digest('hex');
+            await this.userModel.updateOne({ _id: user._id }, { $set: { pinHash, lastPinSetAt: new Date(), pinAttempts: 0, pinLockedUntil: null }, $unset: { otpCode: '', otpExpiresAt: '', otpAttempts: '' } });
+            return 'END ✅ PIN reset successfully.';
         }
         return 'END Invalid input.';
     }
@@ -561,6 +801,10 @@ let MobileService = MobileService_1 = class MobileService {
                 '99. Back';
         }
         if (input.length === 1) {
+            if (input[0] === '99') {
+                session.step = 'main';
+                return await this.showMainMenu(session, []);
+            }
             data.assetType = input[0];
             return 'CON Enter Land Size (acres):\n\n' +
                 'Reply with number only\n' +
@@ -597,13 +841,11 @@ let MobileService = MobileService_1 = class MobileService {
                 data.paymentMethod = 'paga';
                 await this.pagaService.sendPaymentInstructions(session.phoneNumber, paymentRequest.paymentCode, 500);
                 return `CON Paga Agent Payment\n\n` +
-                    `Visit any Paga agent\n\n` +
                     `Payment Code: ${paymentRequest.paymentCode}\n` +
                     `Amount: ₦500\n\n` +
-                    `Instructions:\n` +
-                    `1. Go to nearest Paga agent\n` +
-                    `2. Provide code: ${paymentRequest.paymentCode}\n` +
-                    `3. Pay ₦500\n\n` +
+                    `Go to nearest Paga agent\n` +
+                    `Provide code above\n` +
+                    `Pay ₦500 at agent\n\n` +
                     `Find agent: paga.com/agents\n\n` +
                     `1. I have paid\n` +
                     `2. Cancel`;
@@ -613,81 +855,190 @@ let MobileService = MobileService_1 = class MobileService {
                 return 'END Error creating payment. Please try again.';
             }
         }
+        if (input.length === 5 && input[4] === '99') {
+            return 'END Payment cancelled. Thank you for using TrustBridge!';
+        }
         if (input.length === 5 && input[4] === '2') {
             data.paymentBank = '737';
             data.paymentMethod = 'gtb';
             return 'CON Payment via Guaranty Trust Bank\n\n' +
-                'Dial *737# to pay ₦500\n\n' +
-                'Instructions:\n' +
-                '1. Dial *737# on your phone\n' +
-                '2. Enter amount: 500\n' +
-                '3. Enter PIN to confirm\n\n' +
-                'After payment:\n' +
-                'You\'ll receive SMS with payment confirmation\n\n' +
+                'Dial *737# on your phone\n' +
+                'Enter amount: 500\n' +
+                'Enter PIN to confirm\n\n' +
+                'You\'ll receive SMS confirmation\n\n' +
                 '1. I have paid\n' +
                 '2. Cancel';
         }
+        if (input.length === 5 && input[4] === '3') {
+            data.paymentBank = '901';
+            data.paymentMethod = 'access';
+            return 'CON Payment via Access Bank\n\n' +
+                'Dial *901# on your phone\n' +
+                'Enter amount: 500\n' +
+                'Enter PIN to confirm\n\n' +
+                'You\'ll receive SMS confirmation\n\n' +
+                '1. I have paid\n' +
+                '2. Cancel';
+        }
+        if (input.length === 6 && input[5] === '2') {
+            return 'END Payment cancelled. Thank you for using TrustBridge!';
+        }
         if (input.length === 6 && input[5] === '1') {
             try {
-                const user = await this.userModel.findOne({ phoneNumber: session.phoneNumber });
+                const user = await this.userModel.findOne({ $or: [{ phone: session.phoneNumber }, { walletAddress: session.phoneNumber.toLowerCase() }] });
                 if (!user) {
                     return 'END User not found. Please register first.';
                 }
-                let paymentVerified = false;
-                if (data.paymentMethod === 'paga') {
-                    paymentVerified = true;
+                const assetTypeStr = data.assetType === '1' ? 'Farmland' : data.assetType === '2' ? 'Real Estate' : data.assetType === '3' ? 'Business' : 'Commodities';
+                const assetName = `${assetTypeStr} in ${data.location}`;
+                const symbol = (assetTypeStr.charAt(0) + assetTypeStr.charAt(1) + (data.location || '').substring(0, 2)).replace(/[^A-Z]/ig, '').toUpperCase().slice(0, 5);
+                const initialSupply = 1;
+                const ussdAssetId = `USSD-${Date.now()}`;
+                const tokenResult = await this.hederaService.createAssetToken({
+                    assetId: ussdAssetId,
+                    owner: user.hederaAccountId,
+                    totalSupply: initialSupply,
+                    tokenName: assetName,
+                    tokenSymbol: symbol,
+                    enableKyc: false,
+                    enableFreeze: false,
+                    metadata: { assetType: assetTypeStr, size: data.size, value: data.value, location: data.location, phone: session.phoneNumber }
+                });
+                try {
+                    await this.assetModel.create({
+                        assetId: ussdAssetId,
+                        owner: user._id.toString(),
+                        type: data.assetType === '1' ? 'AGRICULTURAL' : data.assetType === '2' ? 'REAL_ESTATE' : data.assetType === '3' ? 'EQUIPMENT' : 'COMMODITY',
+                        name: assetName,
+                        description: `${assetTypeStr} of ${data.size} acres located in ${data.location}`,
+                        location: {
+                            country: 'NG',
+                            region: data.location
+                        },
+                        totalValue: parseFloat(data.value) || 0,
+                        tokenSupply: initialSupply,
+                        tokenizedAmount: 0,
+                        maturityDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+                        expectedAPY: 15,
+                        verificationScore: 0,
+                        status: 'PENDING',
+                        tokenContract: tokenResult.tokenId,
+                        transactionHash: tokenResult.transactionId,
+                        investments: [],
+                        operations: []
+                    });
                 }
-                else if (data.paymentMethod === 'gtb' || data.paymentBank) {
-                    paymentVerified = true;
+                catch (assetSaveErr) {
+                    this.logger.warn(`Asset DB save failed (token still created on Hedera):`, assetSaveErr);
                 }
-                if (!paymentVerified) {
-                    return 'END Payment not confirmed. Please try again.';
-                }
-                const assetData = {
-                    category: data.assetType === '1' ? 0 : data.assetType === '2' ? 1 : data.assetType === '3' ? 2 : 3,
-                    assetType: data.assetType === '1' ? 'Farmland' : data.assetType === '2' ? 'Real Estate' : data.assetType === '3' ? 'Business' : 'Commodities',
-                    name: `${data.assetType === '1' ? 'Farmland' : data.assetType === '2' ? 'Real Estate' : data.assetType === '3' ? 'Business' : 'Commodities'} in ${data.location}`,
-                    location: data.location,
-                    totalValue: data.value,
-                    maturityDate: Date.now() + (365 * 24 * 60 * 60 * 1000),
-                    evidenceHashes: [],
-                    documentTypes: [],
-                    imageURI: '',
-                    documentURI: '',
-                    description: `${data.assetType === '1' ? 'Farmland' : data.assetType === '2' ? 'Real Estate' : data.assetType === '3' ? 'Business' : 'Commodities'} in ${data.location}, ${data.size} acres`
-                };
-                const asset = await this.hederaService.createRWAAsset(assetData);
-                this.ussdSessions.delete(session.sessionId);
-                const paymentMethod = data.paymentMethod === 'paga' ? 'Paga Agent' : 'Bank Transfer';
-                return `END ✅ Asset Submitted!\n\n` +
-                    `Asset ID: ${asset.assetId}\n` +
-                    `Fee Paid: ₦500 (${paymentMethod})\n` +
-                    `Status: Pending AMC Review\n\n` +
-                    `AMC will review within 48h\n` +
-                    `You'll receive SMS: "Asset approved!"\n\n` +
-                    `Visit tbafrica.xyz for updates`;
+                return `CON ✅ Asset Token Created on Hedera!\n\n` +
+                    `Name: ${assetName}\n` +
+                    `Symbol: ${symbol}\n` +
+                    `Token ID: ${tokenResult.tokenId}\n` +
+                    `Owner: ${user.name || session.phoneNumber}\n\n` +
+                    `View your portfolio?\n` +
+                    `1. Yes, show my assets\n` +
+                    `99. No, go to main menu\n` +
+                    `0. Exit`;
             }
             catch (error) {
                 this.logger.error('Asset creation error:', error);
-                return 'END Error creating asset. Please try again.';
+                const msg = error?.message || String(error);
+                return `END Error creating asset: ${msg}`;
+            }
+        }
+        if (input.length === 7) {
+            if (input[6] === '1') {
+                session.step = 'portfolio';
+                const portfolio = await this.handlePortfolio(session, []);
+                return portfolio;
+            }
+            else if (input[6] === '99') {
+                session.step = 'main';
+                session.data = {};
+                return this.showMainMenu(session, []);
+            }
+            else if (input[6] === '0') {
+                this.ussdSessions.delete(session.sessionId);
+                return 'END Thank you for using TrustBridge!';
             }
         }
         return 'END Invalid input.';
     }
-    async handlePortfolio(phoneNumber) {
+    async handlePortfolio(session, input) {
         try {
-            const user = await this.userModel.findOne({ phoneNumber });
-            if (!user) {
-                return 'END User not found.';
+            const { phoneNumber } = session;
+            if (input.length === 0) {
+                const user = await this.userModel.findOne({
+                    $or: [
+                        { phone: phoneNumber },
+                        { walletAddress: phoneNumber.toLowerCase() }
+                    ]
+                });
+                if (!user) {
+                    return 'END User not found.';
+                }
+                const assets = await this.assetModel.find({ owner: user._id.toString() });
+                const totalValue = assets.reduce((sum, a) => sum + ((typeof a.totalValue === 'number' ? a.totalValue : parseFloat(a.totalValue || '0')) || 0), 0);
+                const totalEarnings = assets.reduce((sum, a) => sum + ((typeof a.earnings === 'number' ? a.earnings : parseFloat(a.earnings || '0')) || 0), 0);
+                return 'CON My RWA Portfolio\n\n' +
+                    `Owned Assets: ${assets.length}\n` +
+                    `Total Value: ${totalValue.toLocaleString('en-NG')} NGN\n` +
+                    `Earned Returns: ${totalEarnings.toFixed(2)} NGN\n` +
+                    `Status: ${assets.filter(a => a.status === 'ACTIVE').length} Active\n\n` +
+                    'What would you like to do?\n\n' +
+                    '1. Back to Main Menu\n' +
+                    '2. View Asset Details\n' +
+                    '0. Exit';
             }
-            const assets = await this.assetModel.find({ owner: user._id });
-            return 'END My RWA Portfolio\n\n' +
-                `Owned Assets: ${assets.length}\n` +
-                `Total Value: ${assets.reduce((sum, a) => sum + (parseFloat(a.totalValue || '0') || 0), 0)} NGN\n` +
-                `Earned Returns: 0 NGN`;
+            const choice = input[0];
+            switch (choice) {
+                case '1':
+                    session.step = 'main';
+                    session.data = {};
+                    return await this.showMainMenu(session, []);
+                case '2':
+                    return 'END View Asset Details\n\nFeature coming soon!';
+                case '0':
+                    this.ussdSessions.delete(session.sessionId);
+                    return 'END Thank you for using TrustBridge!';
+                default:
+                    return 'END Invalid selection.';
+            }
         }
         catch (error) {
+            this.logger.error('Error loading portfolio:', error);
             return 'END Error loading portfolio. Please try again.';
+        }
+    }
+    async handleWhyTokenize(session, input) {
+        if (input.length === 0) {
+            return 'END Invalid state.';
+        }
+        const choice = input[0];
+        switch (choice) {
+            case '1':
+                session.step = 'main';
+                session.data = {};
+                return await this.showMainMenu(session, []);
+            case '2':
+                const user = await this.userModel.findOne({
+                    $or: [
+                        { phone: session.phoneNumber },
+                        { walletAddress: session.phoneNumber.toLowerCase() }
+                    ]
+                });
+                if (user?.pinHash) {
+                    session.step = 'verify_pin';
+                    return await this.handleVerifyPinFlow(session, []);
+                }
+                session.step = 'tokenize';
+                return await this.handleTokenizeFlow(session, []);
+            case '0':
+                this.ussdSessions.delete(session.sessionId);
+                return 'END Thank you for using TrustBridge!';
+            default:
+                return 'END Invalid selection.';
         }
     }
 };

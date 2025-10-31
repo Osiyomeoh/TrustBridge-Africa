@@ -41,6 +41,7 @@ interface RWAPortfolio {
   totalTokens: number;
   monthlyIncome: number;
   yearlyProjectedIncome: number;
+  totalEarnings: number; // Total earnings from assets
 }
 
 interface RWAAsset {
@@ -48,7 +49,7 @@ interface RWAAsset {
   name: string;
   type: string;
   category: string;
-  location: string;
+  location: string | { country?: string; region?: string; address?: string; city?: string; state?: string; coordinates?: any };
   totalValue: number;
   tokenPrice: number;
   tokensOwned: number;
@@ -58,6 +59,7 @@ interface RWAAsset {
   status: 'ACTIVE' | 'MATURED' | 'SUSPENDED';
   amcName: string;
   amcRating: number;
+  earnings?: number; // Total earnings/ROI received
   performance: {
     currentValue: number;
     valueChange: number;
@@ -78,6 +80,9 @@ interface RWAAsset {
     quarterly: string;
     yearly: string;
   };
+  nftTokenId?: string; // Hedera NFT token ID
+  nftSerialNumber?: string; // Hedera NFT serial number
+  memo?: string; // Hedera NFT memo/metadata
 }
 
 interface PerformanceMetric {
@@ -89,7 +94,7 @@ interface PerformanceMetric {
 
 const RWAAssetManagement: React.FC = () => {
   const { toast } = useToast();
-  const { accountId, isConnected } = useWallet();
+  const { accountId, isConnected, hederaClient, signer } = useWallet();
   const [portfolio, setPortfolio] = useState<RWAPortfolio | null>(null);
   const [assets, setAssets] = useState<RWAAsset[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<RWAAsset | null>(null);
@@ -117,6 +122,20 @@ const RWAAssetManagement: React.FC = () => {
       console.log('🔍 Account ID length:', accountId ? accountId.length : 'undefined');
       console.log('🔍 Hedera client:', hederaClient);
       console.log('🔍 Signer:', signer);
+      
+      // Fetch real asset earnings from database FIRST
+      let dbAssetsWithEarnings: any[] = [];
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+        const assetsResponse = await fetch(`${apiUrl}/api/assets/owner/${accountId}`);
+        if (assetsResponse.ok) {
+          const assetsData = await assetsResponse.json();
+          dbAssetsWithEarnings = assetsData.data || [];
+          console.log('📊 DB assets with earnings:', dbAssetsWithEarnings);
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch assets from database:', error);
+      }
       
       // Create RWA NFT service instance
       const rwaNFTService = new RWANFTService(hederaClient, signer);
@@ -193,6 +212,7 @@ const RWAAssetManagement: React.FC = () => {
       let totalValue = 0;
       let totalInvested = 0;
       let totalReturn = 0;
+      let totalEarnings = 0;
       
       for (const nft of rwaNFTs) {
         try {
@@ -209,14 +229,22 @@ const RWAAssetManagement: React.FC = () => {
           });
           
           if (isRWA) {
+            // Find matching asset in database for earnings
+            const dbAsset = dbAssetsWithEarnings.find(
+              (db: any) => db.assetId === nft.token_id || db._id === nft.token_id
+            );
+            const realEarnings = dbAsset?.earnings || 0;
+            
+            console.log(`💰 Earnings for ${nft.token_id}: ${realEarnings}`, dbAsset);
+            
             // Parse basic info from memo or use defaults
             const asset: RWAAsset = {
               id: `${nft.token_id}-${nft.serial_number}`,
-              name: `RWA Asset ${nft.serial_number}`,
+              name: dbAsset?.name || `RWA Asset ${nft.serial_number}`,
               type: 'Real World Asset',
               category: 'RWA',
-              location: 'Location TBD',
-              totalValue: 100000,
+              location: dbAsset?.location || 'Location TBD',
+              totalValue: dbAsset?.totalValue || 100000,
               tokenPrice: 100,
               tokensOwned: 1000,
               valueOwned: 100000,
@@ -225,6 +253,7 @@ const RWAAssetManagement: React.FC = () => {
               status: 'ACTIVE',
               amcName: 'TrustBridge AMC',
               amcRating: 4.8,
+              earnings: realEarnings, // Real earnings from database
               performance: {
                 currentValue: 110000,
                 valueChange: 10000,
@@ -254,6 +283,7 @@ const RWAAssetManagement: React.FC = () => {
             totalValue += asset.totalValue;
             totalInvested += asset.valueOwned;
             totalReturn += asset.performance.totalReturn;
+            totalEarnings += realEarnings; // Add real earnings to total
           }
         } catch (error) {
           console.error('Error processing NFT:', nft, error);
@@ -263,6 +293,7 @@ const RWAAssetManagement: React.FC = () => {
       console.log('✅ Processing complete!');
       console.log('📊 Processed assets:', processedAssets.length);
       console.log('📊 Assets array:', processedAssets);
+      console.log('💰 Total earnings:', totalEarnings);
       
       setAssets(processedAssets);
       
@@ -275,19 +306,20 @@ const RWAAssetManagement: React.FC = () => {
         activeAssets: processedAssets.length,
         totalTokens: processedAssets.reduce((sum, asset) => sum + asset.tokensOwned, 0),
         monthlyIncome: processedAssets.reduce((sum, asset) => sum + asset.performance.monthlyReturn, 0),
-        yearlyProjectedIncome: processedAssets.reduce((sum, asset) => sum + asset.performance.yearlyReturn, 0)
+        yearlyProjectedIncome: processedAssets.reduce((sum, asset) => sum + asset.performance.yearlyReturn, 0),
+        totalEarnings: totalEarnings // Total earnings from all assets
       };
       
       setPortfolio(portfolio);
       
       // Mock performance data for now
       const mockPerformanceData: PerformanceMetric[] = [
-        { month: 'Jan', value: 100000, return: 5.2 },
-        { month: 'Feb', value: 105000, return: 5.0 },
-        { month: 'Mar', value: 110000, return: 4.8 },
-        { month: 'Apr', value: 115000, return: 4.5 },
-        { month: 'May', value: 120000, return: 4.3 },
-        { month: 'Jun', value: 125000, return: 4.2 }
+        { period: 'Jan', value: 100000, return: 5.2, returnPercent: 5.2 },
+        { period: 'Feb', value: 105000, return: 5.0, returnPercent: 5.0 },
+        { period: 'Mar', value: 110000, return: 4.8, returnPercent: 4.8 },
+        { period: 'Apr', value: 115000, return: 4.5, returnPercent: 4.5 },
+        { period: 'May', value: 120000, return: 4.3, returnPercent: 4.3 },
+        { period: 'Jun', value: 125000, return: 4.2, returnPercent: 4.2 }
       ];
       
       setPerformanceData(mockPerformanceData);
@@ -386,7 +418,7 @@ const RWAAssetManagement: React.FC = () => {
         </div>
 
         {/* Portfolio Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card className="bg-gray-900 border-gray-700">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -443,6 +475,21 @@ const RWAAssetManagement: React.FC = () => {
               </div>
               <div className="mt-2">
                 <span className="text-sm text-neon-green">+{portfolio.totalReturnPercent.toFixed(1)}%</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-900 border-gray-700 border-2 border-electric-mint">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Total Earnings</p>
+                  <p className="text-2xl font-bold text-electric-mint">₦{portfolio.totalEarnings.toLocaleString()}</p>
+                </div>
+                <Zap className="w-8 h-8 text-electric-mint" />
+              </div>
+              <div className="mt-2">
+                <span className="text-xs text-gray-400">From investments</span>
               </div>
             </CardContent>
           </Card>
@@ -503,14 +550,24 @@ const RWAAssetManagement: React.FC = () => {
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-400">Location</span>
-                          <span className="text-sm text-gray-300">{asset.location}</span>
+                          <span className="text-sm text-gray-300">
+                            {typeof asset.location === 'string' 
+                              ? asset.location 
+                              : asset.location?.address || `${asset.location?.region || ''}, ${asset.location?.country || ''}`.trim() || 'N/A'}
+                          </span>
                         </div>
+                        {asset.earnings !== undefined && asset.earnings > 0 && (
+                          <div className="flex justify-between border-t border-electric-mint/30 pt-2 mt-2">
+                            <span className="text-sm text-gray-400">💰 Earnings</span>
+                            <span className="text-sm font-bold text-electric-mint">₦{asset.earnings.toLocaleString()}</span>
+                          </div>
+                        )}
                       </div>
                       
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-700">
                         <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm text-gray-400">{asset.location}</span>
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          <span className="text-xs text-gray-400">Created {new Date(asset.maturityDate).toLocaleDateString()}</span>
                         </div>
                         <Eye className="w-4 h-4 text-electric-mint" />
                       </div>

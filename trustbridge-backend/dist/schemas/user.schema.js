@@ -146,6 +146,46 @@ __decorate([
     (0, mongoose_1.Prop)({ type: Object }),
     __metadata("design:type", Object)
 ], User.prototype, "profile", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], User.prototype, "pinHash", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: 0 }),
+    __metadata("design:type", Number)
+], User.prototype, "pinAttempts", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", Date)
+], User.prototype, "pinLockedUntil", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", Date)
+], User.prototype, "lastPinSetAt", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], User.prototype, "otpCode", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", Date)
+], User.prototype, "otpExpiresAt", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: 0 }),
+    __metadata("design:type", Number)
+], User.prototype, "otpAttempts", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], User.prototype, "hederaAccountId", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], User.prototype, "hederaPublicKey", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], User.prototype, "hederaPrivateKey", void 0);
 exports.User = User = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], User);

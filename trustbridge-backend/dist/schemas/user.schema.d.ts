@@ -62,6 +62,16 @@ export declare class User {
             github?: string;
         };
     };
+    pinHash?: string;
+    pinAttempts?: number;
+    pinLockedUntil?: Date;
+    lastPinSetAt?: Date;
+    otpCode?: string;
+    otpExpiresAt?: Date;
+    otpAttempts?: number;
+    hederaAccountId?: string;
+    hederaPublicKey?: string;
+    hederaPrivateKey?: string;
 }
 export declare const UserSchema: import("mongoose").Schema<User, import("mongoose").Model<User, any, any, any, Document<unknown, any, User, any, {}> & User & {
     _id: import("mongoose").Types.ObjectId;

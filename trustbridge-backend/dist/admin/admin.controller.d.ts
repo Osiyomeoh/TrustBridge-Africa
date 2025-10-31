@@ -79,6 +79,7 @@ export declare class AdminController {
     }): Promise<{
         success: boolean;
         message: string;
+        asset?: any;
     }>;
     rejectAsset(req: any, body: {
         assetId: string;
@@ -87,5 +88,6 @@ export declare class AdminController {
     }): Promise<{
         success: boolean;
         message: string;
+        asset?: any;
     }>;
 }

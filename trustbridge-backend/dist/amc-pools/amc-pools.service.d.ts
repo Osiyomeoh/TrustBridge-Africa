@@ -1,6 +1,7 @@
 import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { AMCPool, AMCPoolDocument, PoolType } from '../schemas/amc-pool.schema';
+import { AssetDocument } from '../schemas/asset.schema';
 import { HederaService } from '../hedera/hedera.service';
 import { AdminService } from '../admin/admin.service';
 export interface CreateAMCPoolDto {
@@ -38,6 +39,7 @@ export interface InvestInPoolDto {
     poolId: string;
     amount: number;
     investorAddress: string;
+    hbarTransactionId?: string;
 }
 export interface DistributeDividendDto {
     poolId: string;
@@ -46,11 +48,12 @@ export interface DistributeDividendDto {
 }
 export declare class AMCPoolsService {
     private amcPoolModel;
+    private assetModel;
     private hederaService;
     private adminService;
     private configService;
     private readonly logger;
-    constructor(amcPoolModel: Model<AMCPoolDocument>, hederaService: HederaService, adminService: AdminService, configService: ConfigService);
+    constructor(amcPoolModel: Model<AMCPoolDocument>, assetModel: Model<AssetDocument>, hederaService: HederaService, adminService: AdminService, configService: ConfigService);
     createPool(createPoolDto: CreateAMCPoolDto, adminWallet: string): Promise<AMCPool>;
     launchPool(poolId: string, adminWallet: string): Promise<AMCPool>;
     getAllPools(): Promise<AMCPool[]>;
@@ -62,4 +65,5 @@ export declare class AMCPoolsService {
     closePool(poolId: string, adminWallet: string): Promise<AMCPool>;
     getPoolStats(poolId: string): Promise<any>;
     private validatePoolAssets;
+    private updateAssetOwnersEarnings;
 }

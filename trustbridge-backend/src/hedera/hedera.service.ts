@@ -166,6 +166,8 @@ export class HederaService {
   private client: Client;
   private operatorId: AccountId;
   private operatorKey: PrivateKey;
+  private originalOperatorKey: PrivateKey; // Original HEDERA_PRIVATE_KEY for HCS submissions
+  private payerAccountId: AccountId; // operator or sponsor
   private network: string;
 
   // Contract addresses (from actual deployments on Hedera testnet)
@@ -204,35 +206,61 @@ export class HederaService {
 
   private initializeClient(): void {
     try {
-      const accountId = this.configService.get<string>('HEDERA_ACCOUNT_ID');
-      const privateKey = this.configService.get<string>('HEDERA_PRIVATE_KEY');
+      const accountId = this.configService.get<string>('HEDERA_ACCOUNT_ID') || process.env.HEDERA_ACCOUNT_ID;
+      const privateKey = this.configService.get<string>('HEDERA_PRIVATE_KEY') || process.env.HEDERA_PRIVATE_KEY;
+      // Optional sponsor payer
+      const sponsorId = this.configService.get<string>('HEDERA_SPONSOR_ACCOUNT_ID') || process.env.HEDERA_SPONSOR_ACCOUNT_ID;
+      const sponsorKeyRaw = this.configService.get<string>('HEDERA_SPONSOR_PRIVATE_KEY') || process.env.HEDERA_SPONSOR_PRIVATE_KEY;
       const network = this.configService.get<string>('HEDERA_NETWORK', 'testnet');
 
       if (!accountId || !privateKey) {
         throw new Error('Hedera credentials are required for production. Please configure HEDERA_ACCOUNT_ID and HEDERA_PRIVATE_KEY in your .env file');
       }
 
+      // Parse private key flexibly (ECDSA/DER/ED25519)
+      // Match the working script's logic: try ECDSA first if it looks like hex
+      const parseKey = (k: string): PrivateKey => {
+        if (!k) throw new Error('Empty private key');
+        const hex = k.startsWith('0x') ? k.slice(2) : k;
+        // If looks like hex-only, try ECDSA raw first (matches working script)
+        if (/^[0-9a-fA-F]+$/.test(hex)) {
+          try { return PrivateKey.fromStringECDSA(hex); } catch {}
+        }
+        try { return PrivateKey.fromString(k); } catch {}
+        try { return PrivateKey.fromStringDer(k); } catch {}
+        try { return PrivateKey.fromStringECDSA(k); } catch {}
+        try { return PrivateKey.fromStringED25519(k); } catch {}
+        throw new Error('Unsupported Hedera private key format');
+      };
+
+      // Default operator (no sponsor)
       this.operatorId = AccountId.fromString(accountId);
-      
-      // Try ECDSA first, fallback to regular parsing
-      try {
-        this.operatorKey = PrivateKey.fromStringECDSA(privateKey);
-        this.logger.log('Using ECDSA key format');
-      } catch (ecdsaError) {
-        this.logger.warn('ECDSA parsing failed, trying regular format:', ecdsaError.message);
-        this.operatorKey = PrivateKey.fromString(privateKey);
-        this.logger.log('Using regular key format');
-      }
+      this.operatorKey = parseKey(privateKey);
+      this.originalOperatorKey = this.operatorKey; // Store original key for HCS submissions
       
       this.network = network;
 
       this.client = Client.forName(network);
-      this.client.setOperator(this.operatorId, this.operatorKey);
-
-      this.logger.log(`Hedera client initialized for ${network} with account ${accountId}`);
+      if (sponsorId && sponsorKeyRaw) {
+        const sponsorKey = parseKey(sponsorKeyRaw);
+        // Make sponsor both payer AND operator so treasury/admin keys align
+        this.operatorId = AccountId.fromString(sponsorId);
+        this.operatorKey = sponsorKey;
+        this.client.setOperator(this.operatorId, this.operatorKey);
+        this.payerAccountId = this.operatorId;
+        this.logger.log(`Hedera client initialized for ${network} with SPONSOR as operator/payer ${sponsorId}`);
+      } else {
+        this.client.setOperator(this.operatorId, this.operatorKey);
+        this.payerAccountId = this.operatorId;
+        this.logger.log(`Hedera client initialized for ${network} with account ${accountId}`);
+      }
     } catch (error) {
       this.logger.error('Failed to initialize Hedera client:', error);
     }
+  }
+
+  getOperatorId(): string {
+    return this.operatorId?.toString() || '';
   }
 
   async getNetworkStatus(): Promise<any> {
@@ -269,6 +297,24 @@ export class HederaService {
     }
   }
 
+  /**
+   * Transfer HBAR from current payer (operator/sponsor) to a target account
+   */
+  async transferHbar(toAccountId: string, amountHbar: number): Promise<string> {
+    if (!this.client) throw new Error('Hedera client not initialized');
+    try {
+      const tx = new TransferTransaction()
+        .addHbarTransfer(AccountId.fromString(toAccountId), new Hbar(amountHbar))
+        .addHbarTransfer(this.payerAccountId, new Hbar(-amountHbar));
+      const resp = await tx.execute(this.client);
+      const receipt = await resp.getReceipt(this.client);
+      return receipt.status.toString();
+    } catch (e) {
+      this.logger.error('Failed to transfer HBAR:', e);
+      throw e;
+    }
+  }
+
   async createAssetToken(request: TokenizationRequest): Promise<{ tokenId: string; transactionId: string }> {
     if (!this.client) {
       throw new Error('Hedera client not initialized. Please check your credentials.');
@@ -300,7 +346,10 @@ export class HederaService {
         this.logger.log(`Freeze enabled for token ${request.tokenName}`);
       }
 
-      const tokenCreateResponse = await tokenCreateTx.execute(this.client);
+      // Explicitly freeze and sign with operator/sponsor key to avoid INVALID_SIGNATURE
+      const frozen = await tokenCreateTx.freezeWith(this.client);
+      const signedTx = await frozen.sign(this.operatorKey);
+      const tokenCreateResponse = await signedTx.execute(this.client);
       const tokenCreateReceipt = await tokenCreateResponse.getReceipt(this.client);
       const tokenId = tokenCreateReceipt.tokenId;
 
@@ -2740,6 +2789,41 @@ export class HederaService {
     }
   }
 
+    /**
+   * Create a new Hedera account for an end user (USSD/web onboarding)
+   * @returns { accountId, publicKey, privateKey } (privateKey: for demo only!)
+   */
+    async createUserAccount(userMemo = 'USSD User'): Promise<{
+      accountId: string;
+      publicKey: string;
+      privateKey: string;
+    }> {
+      try {
+        this.logger.log(`[Hedera] Creating user account: ${userMemo}`);
+  
+        const newKey = PrivateKey.generate();
+        const publicKey = newKey.publicKey;
+  
+        const accountCreateTx = new AccountCreateTransaction()
+          .setKey(publicKey)
+          .setInitialBalance(new Hbar(1)) // For demo/testnet, min HBAR
+          .setAccountMemo(userMemo)
+          .setMaxTransactionFee(new Hbar(2));
+  
+        const response = await accountCreateTx.execute(this.client);
+        const receipt = await response.getReceipt(this.client);
+        const accountId = receipt.accountId!.toString();
+        this.logger.log(`[Hedera] ✅ User account created: ${accountId}`);
+        return {
+          accountId,
+          publicKey: publicKey.toString(),
+          privateKey: newKey.toString(), // WARNING: Secure/encrypt for PROD!!!
+        };
+      } catch (error) {
+        this.logger.error('[Hedera] Failed to create user account:', error);
+        throw new Error('User account creation failed: ' + error.message);
+      }
+    }
 
   /**
    * Transfer HBAR to an admin account
@@ -2982,6 +3066,11 @@ export class HederaService {
       const messageSubmitTx = new TopicMessageSubmitTransaction()
         .setTopicId(TopicId.fromString(topicId))
         .setMessage(JSON.stringify(message));
+
+      // Sign with original operator key (not sponsor) to match topic's submit key
+      messageSubmitTx.freezeWith(this.client);
+      const signature = await this.originalOperatorKey.signTransaction(messageSubmitTx);
+      messageSubmitTx.addSignature(this.originalOperatorKey.publicKey, signature);
 
       const messageSubmitResponse = await messageSubmitTx.execute(this.client);
       const messageSubmitReceipt = await messageSubmitResponse.getReceipt(this.client);

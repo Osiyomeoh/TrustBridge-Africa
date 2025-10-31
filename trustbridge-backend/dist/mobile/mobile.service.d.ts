@@ -85,6 +85,11 @@ export declare class MobileService {
     private handleUSSDMenu;
     private showMainMenu;
     private handleRegistrationFlow;
+    private handleSetPinFlow;
+    private handleVerifyPinFlow;
+    private handleChangePinFlow;
+    private handleForgotPinFlow;
     private handleTokenizeFlow;
     private handlePortfolio;
+    private handleWhyTokenize;
 }

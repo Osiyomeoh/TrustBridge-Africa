@@ -31,9 +31,10 @@ let AssetsController = class AssetsController {
         if (!owner || owner.trim() === '') {
             throw new common_1.BadRequestException('Owner parameter is required');
         }
+        const assets = await this.assetsService.getAssetsByOwner(owner);
         return {
             success: true,
-            message: `Assets for owner ${owner} are fetched from Hedera network`
+            data: assets
         };
     }
     async getAssetById(id) {
@@ -167,8 +168,8 @@ __decorate([
 ], AssetsController.prototype, "getAssets", null);
 __decorate([
     (0, common_1.Get)('owner/:owner'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get assets by owner from blockchain' }),
-    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of assets owned by user from Hedera network' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Get assets by owner from database' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'List of assets owned by user with earnings information' }),
     __param(0, (0, common_1.Param)('owner')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),

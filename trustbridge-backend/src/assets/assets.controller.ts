@@ -22,17 +22,18 @@ export class AssetsController {
   }
 
   @Get('owner/:owner')
-  @ApiOperation({ summary: 'Get assets by owner from blockchain' })
-  @ApiResponse({ status: 200, description: 'List of assets owned by user from Hedera network' })
-  async getAssetsByOwner(@Param('owner') owner: string): Promise<{ success: boolean; message: string }> {
+  @ApiOperation({ summary: 'Get assets by owner from database' })
+  @ApiResponse({ status: 200, description: 'List of assets owned by user with earnings information' })
+  async getAssetsByOwner(@Param('owner') owner: string): Promise<{ success: boolean; data: any[] }> {
     if (!owner || owner.trim() === '') {
       throw new BadRequestException('Owner parameter is required');
     }
     
-    // In a fully blockchain-native system, assets are fetched from Hedera network
+    // Get assets from database with earnings
+    const assets = await this.assetsService.getAssetsByOwner(owner);
     return {
       success: true,
-      message: `Assets for owner ${owner} are fetched from Hedera network`
+      data: assets
     };
   }
 

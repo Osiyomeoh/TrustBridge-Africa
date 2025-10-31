@@ -1026,7 +1026,9 @@ const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ isOpen, onClose, as
                           <span className="text-xs text-gray-400">Location</span>
                         </div>
                         <span className="text-xs text-off-white">
-                          {asset.location}
+                          {typeof asset.location === 'string' 
+                            ? asset.location 
+                            : asset.location.address || `${asset.location.region || ''}, ${asset.location.country || ''}`.trim() || 'N/A'}
                         </span>
                       </div>
                     )}

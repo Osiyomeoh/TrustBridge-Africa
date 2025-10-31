@@ -12,6 +12,7 @@ const mongoose_1 = require("@nestjs/mongoose");
 const amc_pools_controller_1 = require("./amc-pools.controller");
 const amc_pools_service_1 = require("./amc-pools.service");
 const amc_pool_schema_1 = require("../schemas/amc-pool.schema");
+const asset_schema_1 = require("../schemas/asset.schema");
 const hedera_module_1 = require("../hedera/hedera.module");
 const admin_module_1 = require("../admin/admin.module");
 const auth_module_1 = require("../auth/auth.module");
@@ -21,7 +22,10 @@ exports.AMCPoolsModule = AMCPoolsModule;
 exports.AMCPoolsModule = AMCPoolsModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            mongoose_1.MongooseModule.forFeature([{ name: amc_pool_schema_1.AMCPool.name, schema: amc_pool_schema_1.AMCPoolSchema }]),
+            mongoose_1.MongooseModule.forFeature([
+                { name: amc_pool_schema_1.AMCPool.name, schema: amc_pool_schema_1.AMCPoolSchema },
+                { name: asset_schema_1.Asset.name, schema: asset_schema_1.AssetSchema }
+            ]),
             hedera_module_1.HederaModule,
             auth_module_1.AuthModule,
             admin_module_1.AdminModule

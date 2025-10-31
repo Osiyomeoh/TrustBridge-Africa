@@ -82,7 +82,7 @@ const AssetMarketplace: React.FC = () => {
       console.log('🔑 Token for AMC pools:', token ? 'Found' : 'Not found');
       
       if (!token) {
-        console.warn('⚠️ No authentication token found for AMC pools');
+        // Silently skip AMC pools fetch if no token - user might not be logged in
         return;
       }
 
@@ -344,11 +344,18 @@ const AssetMarketplace: React.FC = () => {
         console.warn('⚠️ Failed to fetch RWA assets:', rwaError);
       }
       
+      // Deduplicate assets by ID to prevent React key warnings
+      const uniqueAssets = marketplaceAssets.filter((asset, index, self) => {
+        if (!asset || !asset.id) return false;
+        return index === self.findIndex((a) => a && a.id === asset.id);
+      });
+      
       console.log('📊 Total marketplace assets (Digital + RWA):', marketplaceAssets.length);
-      setAssets(marketplaceAssets);
+      console.log('📊 Unique assets after deduplication:', uniqueAssets.length);
+      setAssets(uniqueAssets);
       
       // Calculate collection stats
-      const collectionStats = getAllCollectionStats(marketplaceAssets);
+      const collectionStats = getAllCollectionStats(uniqueAssets);
       setCollections(collectionStats);
       console.log('📦 Collections calculated:', collectionStats.length);
     } catch (err) {
@@ -891,7 +898,7 @@ const AssetMarketplace: React.FC = () => {
               ) : (
                 filteredAssets.map((asset, index) => (
                   <motion.div
-                    key={asset.listingId || asset.id || `asset-${index}`}
+                    key={asset.id || asset.listingId || `asset-${index}`}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}

@@ -45,6 +45,7 @@ export declare class Asset {
     maturityDate: Date;
     expectedAPY: number;
     verificationScore: number;
+    earnings: number;
     status: AssetStatus;
     tokenContract?: string;
     transactionHash?: string;

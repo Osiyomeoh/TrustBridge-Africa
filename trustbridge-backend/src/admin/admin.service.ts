@@ -1,6 +1,9 @@
 import { Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { HederaService } from '../hedera/hedera.service';
+import { Asset, AssetDocument, AssetStatus } from '../schemas/asset.schema';
 
 export interface AdminRole {
   isAdmin: boolean;
@@ -29,6 +32,7 @@ export class AdminService {
   constructor(
     private configService: ConfigService,
     private hederaService: HederaService,
+    @InjectModel(Asset.name) private assetModel: Model<AssetDocument>,
   ) {
     // Load admin configuration from environment
     this.adminWallets = this.configService
@@ -559,7 +563,7 @@ export class AdminService {
     approved: boolean,
     comments?: string,
     verificationScore?: number
-  ): Promise<{ success: boolean; message: string }> {
+  ): Promise<{ success: boolean; message: string; asset?: any }> {
     try {
       // Check if admin has permission
       const adminStatus = await this.checkAdminStatus(adminWallet);
@@ -567,13 +571,33 @@ export class AdminService {
         throw new UnauthorizedException('Insufficient permissions to approve assets');
       }
 
-      // In a fully blockchain-native system, asset approval is handled through Hedera
-      // This would typically involve updating Hedera token metadata or smart contract state
+      // Find the asset by tokenContract (Hedera Token ID)
+      const asset = await this.assetModel.findOne({ tokenContract: assetId });
+      if (!asset) {
+        throw new BadRequestException('Asset not found');
+      }
+
+      // Update asset status
+      if (approved) {
+        asset.status = AssetStatus.ACTIVE;
+        asset.verificationScore = verificationScore || 85;
+      } else {
+        asset.status = AssetStatus.PENDING;
+      }
+
+      await asset.save();
+
       this.logger.log(`Asset ${assetId} ${approved ? 'approved' : 'rejected'} by admin ${adminWallet}`);
 
       return {
         success: true,
-        message: `Asset ${approved ? 'approved' : 'rejected'} successfully`
+        message: `Asset ${approved ? 'approved' : 'rejected'} successfully`,
+        asset: {
+          assetId: asset.assetId,
+          tokenId: asset.tokenContract,
+          status: asset.status,
+          verificationScore: asset.verificationScore
+        }
       };
     } catch (error) {
       console.error('Error approving asset:', error);

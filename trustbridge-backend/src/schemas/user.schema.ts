@@ -122,6 +122,42 @@ export class User {
       github?: string;
     };
   };
+
+  // USSD security PIN (hashed)
+  @Prop()
+  pinHash?: string;
+
+  // PIN security controls
+  @Prop({ default: 0 })
+  pinAttempts?: number;
+
+  @Prop()
+  pinLockedUntil?: Date;
+
+  @Prop()
+  lastPinSetAt?: Date;
+
+  // OTP fields for forgot PIN
+  @Prop()
+  otpCode?: string;
+
+  @Prop()
+  otpExpiresAt?: Date;
+
+  @Prop({ default: 0 })
+  otpAttempts?: number;
+
+  @Prop()
+  hederaAccountId?: string;
+
+  @Prop()
+  hederaPublicKey?: string;
+
+  /**
+   * WARNING: For demo/hackathon only. In production encrypt or never store at all!
+   */
+  @Prop()
+  hederaPrivateKey?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

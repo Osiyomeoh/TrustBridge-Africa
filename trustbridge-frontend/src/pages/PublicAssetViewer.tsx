@@ -391,7 +391,7 @@ const PublicAssetViewer: React.FC = () => {
       console.log('Sharing URL:', url);
       
       // Check if Web Share API is supported
-      if (navigator.share && navigator.canShare) {
+      if (navigator.share) {
         try {
           await navigator.share({
             title: `Asset: ${assetData?.asset.name}`,
@@ -524,7 +524,11 @@ const PublicAssetViewer: React.FC = () => {
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-off-white/70">
                       <MapPin className="w-4 h-4" />
-                      <span className="truncate">{asset.location.address}</span>
+                      <span className="truncate">
+                        {typeof asset.location === 'string' 
+                          ? asset.location 
+                          : asset.location?.address || asset.location?.region || asset.location?.country || 'N/A'}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-off-white/70">
                       <Calendar className="w-4 h-4" />
@@ -551,19 +555,35 @@ const PublicAssetViewer: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <span className="font-medium text-off-white/70">Address:</span>
-                    <p className="text-off-white">{asset.location.address}</p>
+                    <p className="text-off-white">
+                      {typeof asset.location === 'string' 
+                        ? asset.location 
+                        : asset.location?.address || 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <span className="font-medium text-off-white/70">City:</span>
-                    <p className="text-off-white">{asset.location.city}</p>
+                    <p className="text-off-white">
+                      {typeof asset.location === 'string' 
+                        ? 'N/A' 
+                        : asset.location?.city || 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <span className="font-medium text-off-white/70">State:</span>
-                    <p className="text-off-white">{asset.location.state}</p>
+                    <p className="text-off-white">
+                      {typeof asset.location === 'string' 
+                        ? 'N/A' 
+                        : asset.location?.state || asset.location?.region || 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <span className="font-medium text-off-white/70">Country:</span>
-                    <p className="text-off-white">{asset.location.country}</p>
+                    <p className="text-off-white">
+                      {typeof asset.location === 'string' 
+                        ? 'N/A' 
+                        : asset.location?.country || 'N/A'}
+                    </p>
                   </div>
                 </div>
               </CardContent>

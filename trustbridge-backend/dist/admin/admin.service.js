@@ -8,16 +8,23 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 var AdminService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
+const mongoose_1 = require("@nestjs/mongoose");
+const mongoose_2 = require("mongoose");
 const hedera_service_1 = require("../hedera/hedera.service");
+const asset_schema_1 = require("../schemas/asset.schema");
 let AdminService = AdminService_1 = class AdminService {
-    constructor(configService, hederaService) {
+    constructor(configService, hederaService, assetModel) {
         this.configService = configService;
         this.hederaService = hederaService;
+        this.assetModel = assetModel;
         this.logger = new common_1.Logger(AdminService_1.name);
         this.adminWallets = this.configService
             .get('ADMIN_WALLETS', '')
@@ -374,10 +381,28 @@ let AdminService = AdminService_1 = class AdminService {
             if (!adminStatus.isAdmin && !adminStatus.isAmcAdmin && !adminStatus.isSuperAdmin && !adminStatus.isPlatformAdmin) {
                 throw new common_1.UnauthorizedException('Insufficient permissions to approve assets');
             }
+            const asset = await this.assetModel.findOne({ tokenContract: assetId });
+            if (!asset) {
+                throw new common_1.BadRequestException('Asset not found');
+            }
+            if (approved) {
+                asset.status = asset_schema_1.AssetStatus.ACTIVE;
+                asset.verificationScore = verificationScore || 85;
+            }
+            else {
+                asset.status = asset_schema_1.AssetStatus.PENDING;
+            }
+            await asset.save();
             this.logger.log(`Asset ${assetId} ${approved ? 'approved' : 'rejected'} by admin ${adminWallet}`);
             return {
                 success: true,
-                message: `Asset ${approved ? 'approved' : 'rejected'} successfully`
+                message: `Asset ${approved ? 'approved' : 'rejected'} successfully`,
+                asset: {
+                    assetId: asset.assetId,
+                    tokenId: asset.tokenContract,
+                    status: asset.status,
+                    verificationScore: asset.verificationScore
+                }
             };
         }
         catch (error) {
@@ -392,7 +417,9 @@ let AdminService = AdminService_1 = class AdminService {
 exports.AdminService = AdminService;
 exports.AdminService = AdminService = AdminService_1 = __decorate([
     (0, common_1.Injectable)(),
+    __param(2, (0, mongoose_1.InjectModel)(asset_schema_1.Asset.name)),
     __metadata("design:paramtypes", [config_1.ConfigService,
-        hedera_service_1.HederaService])
+        hedera_service_1.HederaService,
+        mongoose_2.Model])
 ], AdminService);
 //# sourceMappingURL=admin.service.js.map

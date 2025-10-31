@@ -2,14 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { api } from '../services/api';
 
 export const USSDDemo: React.FC = () => {
-  // Generate random session and phone number for each new session
-  const generateRandomPhone = () => {
-    const random = Math.floor(100000000 + Math.random() * 900000000);
-    return `080${random}`;
-  };
-
-  const [sessionId] = useState(`demo_${Date.now()}`);
-  const [phoneNumber, setPhoneNumber] = useState(generateRandomPhone());
+  const [sessionId, setSessionId] = useState(`demo_${Date.now()}`);
+  const [phoneNumber, setPhoneNumber] = useState<string>(localStorage.getItem('ussdPhone') || '');
   const [ussdHistory, setUssdHistory] = useState<Array<{
     type: 'user' | 'system';
     text: string;
@@ -24,17 +18,29 @@ export const USSDDemo: React.FC = () => {
   const [regStep, setRegStep] = useState<'idle' | 'reg1' | 'reg2' | 'reg3'>('idle');
   const [regName, setRegName] = useState('');
   const [regState, setRegState] = useState('');
+  const [inPinFlow, setInPinFlow] = useState(false);
   
   // Calculate API URL
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4001';
+  const baseUrl = import.meta.env.VITE_API_URL || '';
   const cleanBaseUrl = baseUrl.replace(/\/api$/, '');
-  const apiUrl = `${cleanBaseUrl}/api/mobile/ussd`;
+  const apiUrl = cleanBaseUrl ? `${cleanBaseUrl}/api/mobile/ussd` : '';
 
   // Initialize with welcome message - only once on mount
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Persist phone between sessions
+  useEffect(() => {
+    if (phoneNumber) localStorage.setItem('ussdPhone', phoneNumber);
+  }, [phoneNumber]);
   
   const handleDialUSSD = async () => {
     if (hasDialed) return;
+    if (!phoneNumber || phoneNumber.trim().length < 7) {
+      setUssdHistory([
+        { type: 'system', text: 'END Please enter your phone number at the top before dialing.', timestamp: new Date() }
+      ]);
+      return;
+    }
     
     setHasDialed(true);
     setIsLoading(true);
@@ -85,7 +91,15 @@ export const USSDDemo: React.FC = () => {
     console.log('🔍 Current regStep:', regStep, 'regName:', regName, 'regState:', regState);
     
     // If we're in registration flow, send ONLY the new input (backend uses input.slice(1) internally)
-    if (regStep === 'reg1') {
+    if (inPinFlow) {
+      // PIN flow after registration - just send the PIN directly
+      console.log('🔐 Sending PIN input:', input);
+      if (lastInput) {
+        fullInput = `${lastInput}*${input}`;
+      } else {
+        fullInput = input;
+      }
+    } else if (regStep === 'reg1') {
       // Next input is full name - just send the name
       console.log('📝 Step 1: Setting name to:', input);
       setRegName(input);
@@ -146,11 +160,20 @@ export const USSDDemo: React.FC = () => {
         console.log('🎯 Setting regStep to reg3, regState:', regState || input);
         setRegStep('reg3');
         setLastInput(`1*${regName}*${regState || input}`);
-      } else if (isEnd) {
+      } else if (!isEnd && (responseText.includes('Enter 4-digit PIN') || responseText.includes('Registration Complete'))) {
+        // PIN flow after registration - reset regStep
+        console.log('🎯 Registration complete, entering PIN flow');
+        setInPinFlow(true);
         setRegStep('idle');
         setRegName('');
         setRegState('');
+        setLastInput(''); // Clear registration context
+      } else if (!isEnd && responseText.includes('Choose Asset Type')) {
+        // PIN set successfully, moving to tokenize flow
+        console.log('🎯 PIN set, entering tokenize flow');
+        setInPinFlow(false);
       }
+      // Note: Don't reset regStep on all END messages - only on completion (handled below)
 
       // Add user input to history (if not empty)
       if (input.trim()) {
@@ -172,12 +195,9 @@ export const USSDDemo: React.FC = () => {
       setInputText('');
       
       // Update last input after successful response - AFTER setting regStep
+      // Reset lastInput on END messages unless it's a continuation flow
       if (isEnd) {
-        // Reset everything if END
         setLastInput('');
-        setRegStep('idle');
-        setRegName('');
-        setRegState('');
       } else if (regStep === 'idle') {
         setLastInput(fullInput);
       }
@@ -201,6 +221,18 @@ export const USSDDemo: React.FC = () => {
 
   const handleOptionClick = (option: string) => {
     sendUSSDCommand(option);
+  };
+
+  const handleEndCall = () => {
+    setLastInput('');
+    setRegStep('idle');
+    setRegName('');
+    setRegState('');
+    setInPinFlow(false);
+    setHasDialed(false);
+    setSessionId(`demo_${Date.now()}`);
+    setUssdHistory([]);
+    setInputText('');
   };
 
   // Parse system message to extract menu options
@@ -237,14 +269,17 @@ export const USSDDemo: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">
-            📱 TrustBridge Africa - USSD Demo
+            📱 TrustBridge Africa - USSD Simulator
           </h1>
           <p className="text-gray-400">
-            Experience tokenization via USSD - No bank account needed!
+            Demo: Tokenize RWAs via USSD - No bank account needed!
           </p>
           <div className="mt-4 inline-flex items-center px-4 py-2 bg-green-500/20 border border-green-500 rounded-lg">
             <span className="text-green-400 font-mono">*384#</span>
-            <span className="ml-3 text-gray-300">Dial this code on any phone</span>
+            <span className="ml-3 text-gray-300">Interactive demo simulator</span>
+          </div>
+          <div className="mt-2 text-xs text-amber-400">
+            ⚠️ Demo Mode - Real Hedera testnet transactions
           </div>
         </div>
 
@@ -254,25 +289,19 @@ export const USSDDemo: React.FC = () => {
           <div className="bg-gradient-to-b from-gray-800 to-gray-900 rounded-[2rem] p-6 h-[600px] flex flex-col">
           {/* Phone Header */}
           <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-700">
-            <div className="flex items-center space-x-2">
-              <span className="text-2xl">📱</span>
-              <span className="text-white font-semibold">*384#</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className="text-xs text-gray-400 font-mono">{phoneNumber}</span>
-              <button
-                onClick={() => {
-                  setPhoneNumber(generateRandomPhone());
-                  setUssdHistory([]);
-                  setLastInput('');
-                  setHasDialed(false);
-                }}
-                className="text-xs text-blue-400 hover:text-blue-300 px-2 py-1 rounded bg-blue-500/10"
-                title="New phone number"
-              >
-                🔄
-              </button>
-            </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-2xl">📱</span>
+            <span className="text-white font-semibold">*384#</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <input
+              type="tel"
+              placeholder="Enter phone"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="text-xs bg-gray-800 text-gray-200 px-2 py-1 rounded border border-gray-700 focus:border-blue-500 focus:outline-none w-40"
+            />
+          </div>
           </div>
 
             {/* Phone Keypad - Show before first dial */}
@@ -363,17 +392,27 @@ export const USSDDemo: React.FC = () => {
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  disabled={isLoading}
-                  placeholder={isLoading ? "Processing..." : "Type your response..."}
+                  disabled={isLoading || !hasDialed}
+                  placeholder={isLoading ? "Processing..." : !hasDialed ? "Dial to start..." : "Type your response..."}
                   className="flex-1 bg-gray-800 text-white px-4 py-3 rounded-xl border border-gray-700 focus:border-blue-500 focus:outline-none disabled:opacity-50"
                 />
                 <button
                   onClick={() => inputText.trim() && sendUSSDCommand(inputText.trim())}
-                  disabled={isLoading || !inputText.trim()}
+                  disabled={isLoading || !inputText.trim() || !hasDialed}
                   className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 text-white px-6 py-3 rounded-xl transition-colors"
                 >
                   Send
                 </button>
+                {hasDialed && (
+                  <button
+                    onClick={handleEndCall}
+                    disabled={isLoading}
+                    className="bg-red-600 hover:bg-red-700 disabled:bg-gray-700 text-white px-4 py-3 rounded-xl transition-colors"
+                    title="End Call"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -386,30 +425,72 @@ export const USSDDemo: React.FC = () => {
 
         {/* Info Section */}
         <div className="mt-8 bg-gray-800/50 rounded-2xl p-6 border border-gray-700">
-          <h3 className="text-xl font-bold text-white mb-4">✨ Features Demonstrated</h3>
+          <h3 className="text-xl font-bold text-white mb-4">✨ What Works Now</h3>
           <div className="grid md:grid-cols-2 gap-4 text-gray-300">
             <div className="flex items-start space-x-2">
               <span className="text-green-400">✅</span>
               <div>
-                <strong className="text-white">Bankless Access:</strong> Tokenize assets without a bank account
+                <strong className="text-white">Farmer Registration:</strong> Create account with Hedera wallet
               </div>
             </div>
             <div className="flex items-start space-x-2">
               <span className="text-green-400">✅</span>
               <div>
-                <strong className="text-white">Paga Integration:</strong> Cash payments via 87,000+ agents
+                <strong className="text-white">PIN Security:</strong> 4-digit PIN with verification
               </div>
             </div>
             <div className="flex items-start space-x-2">
               <span className="text-green-400">✅</span>
               <div>
-                <strong className="text-white">USSD Interface:</strong> Works on any phone (feature or smartphone)
+                <strong className="text-white">Asset Tokenization:</strong> Create Hedera HTS tokens
               </div>
             </div>
             <div className="flex items-start space-x-2">
               <span className="text-green-400">✅</span>
               <div>
-                <strong className="text-white">Hedera Blockchain:</strong> Transparent, immutable records
+                <strong className="text-white">Paga Payments:</strong> Simulated agent payments (₦500)
+              </div>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="text-green-400">✅</span>
+              <div>
+                <strong className="text-white">Portfolio View:</strong> Check assets and earnings
+              </div>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="text-green-400">✅</span>
+              <div>
+                <strong className="text-white">Sponsor Account:</strong> Gasless transactions for users
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-6 pt-6 border-t border-gray-700">
+            <h4 className="text-md font-bold text-white mb-3">🔄 Coming Soon</h4>
+            <div className="grid md:grid-cols-2 gap-4 text-gray-400">
+              <div className="flex items-start space-x-2">
+                <span className="text-gray-500">⏳</span>
+                <div>
+                  <strong className="text-gray-300">Live USSD:</strong> Africa's Talking integration
+                </div>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-gray-500">⏳</span>
+                <div>
+                  <strong className="text-gray-300">Investment Flows:</strong> Browse pools, invest, track ROI
+                </div>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-gray-500">⏳</span>
+                <div>
+                  <strong className="text-gray-300">Multi-language:</strong> Hausa, Yoruba, Igbo support
+                </div>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="text-gray-500">⏳</span>
+                <div>
+                  <strong className="text-gray-300">SMS Notifications:</strong> Africa's Talking SMS
+                </div>
               </div>
             </div>
           </div>

@@ -13,13 +13,15 @@ TrustBridge is not just another DeFi platform—it's a **complete ecosystem** th
 ### **🎯 Our Mission**
 Democratize access to **$1 trillion+** in real-world assets and **$100 billion+** in digital assets by creating a **secure, transparent, and efficient** platform for asset tokenization, fractional ownership, and institutional-grade trading across both physical and digital asset classes.
 
-### **📱 USSD Integration - Bankless Financial Inclusion**
-- **Mobile-First Access** - Tokenize assets via USSD (*384#) on any phone
-- **No Internet Required** - Works on feature phones without data
-- **Cash Payments** - Pay via Paga agent network (87,000+ locations)
-- **Bank USSD Payments** - Pay directly from any Nigerian bank via USSD
-- **Farmers & Rural Access** - Enables bankless users to participate in tokenization
-- **Payment Flexibility** - Multiple payment options (Paga agents, Bank USSD, mobile money)
+### **📱 USSD Integration - Bankless Financial Inclusion (Demo Simulator)**
+- **Mobile-First Demo** - Simulated USSD flow (*384#) for demonstration
+- **Farmer Registration** - Register with name, state, and location
+- **PIN Security** - Set and verify 4-digit PIN for transactions
+- **Hedera Account Creation** - Automatic blockchain account creation
+- **Asset Tokenization** - Create farmland assets via USSD menu
+- **Paga Payment Flow** - Simulated agent and bank USSD payment options
+- **Portfolio View** - Check owned assets and earnings
+- **Note**: Currently a demo simulator. Live USSD integration requires Africa's Talking approval
 
 ---
 
@@ -549,10 +551,12 @@ TrustBridge is powered by **Google AI Studio** and **Gemini AI**, providing adva
 - ✅ **HCS Integration** - Complete audit trail and event logging
 - ✅ **Chainlink Oracles** - Real-time price feeds and external data
 - ✅ **Trust Exchange** - Built-in HBAR ↔ TRUST token exchange
-- ✅ **USSD Integration** - Mobile access via *384# (Africa's Talking)
-- ✅ **Paga Integration** - Bank USSD payment processing
-- ✅ **Mobile Payments** - Cash-based payments via Paga agents
-- ✅ **Financial Inclusion** - Bankless tokenization for unbanked users
+- ✅ **USSD Demo Simulator** - Interactive phone simulator for hackathon demo
+- ✅ **USSD Flow** - Registration, PIN, tokenization, portfolio via USSD
+- ✅ **Paga Payment Flow** - Simulated agent and bank USSD payments
+- ✅ **Hedera Account Creation** - Auto-create accounts for USSD users
+- ✅ **Sponsor Account** - Gasless transactions via sponsor wallet
+- 🔄 **Live USSD Integration** - Pending Africa's Talking approval
 
 ### **Scaling Strategy**
 - **Production Domain** - [tbafrica.xyz](https://tbafrica.xyz)
@@ -564,43 +568,51 @@ TrustBridge is powered by **Google AI Studio** and **Gemini AI**, providing adva
 
 ---
 
-## 📱 **USSD & Mobile Integration - Banking the Unbanked**
+## 📱 **USSD & Mobile Integration - Demo Simulator**
 
-### **Mobile Access for Everyone**
-TrustBridge enables **anyone with a phone** to participate in the tokenization economy, even without internet, a smartphone, or a bank account.
+### **Demo Simulator - Currently in Development**
+TrustBridge provides a **demo USSD simulator** for hackathon demonstration. This allows us to showcase the complete mobile tokenization flow without requiring live telecom integration.
 
-### **USSD Interface - *384#**
-- **Universal Access** - Works on any phone (feature phone or smartphone)
-- **No Data Required** - Uses USSD protocol (standard across all telecoms)
-- **Menu-Driven** - Simple step-by-step interface
-- **Multilingual** - Supports major African languages
+### **USSD Demo Simulator Features**
+- **Interactive Phone Interface** - T9 numeric keypad simulation
+- **Real Backend Integration** - Connects to actual TrustBridge API
+- **Full Flow Demo** - Complete registration → tokenization → portfolio flow
+- **Hedera Integration** - Real blockchain transactions on testnet
+- **Visual Feedback** - Shows actual USSD responses and state changes
 
-### **Multiple Payment Options**
-- **Paga Agent Payments** - Pay with cash at 87,000+ Paga agents nationwide
-- **Bank USSD** - Pay via any Nigerian bank (*737#, *901#, etc.)
-- **Mobile Money** - Integration with mobile money providers
-- **Cash Accessibility** - No bank account required
+### **Current USSD Flow**
+1. **Farmer Registration**
+   - Dial *384# → Select "Register"
+   - Enter name, state, town
+   - Set 4-digit PIN
+   - Auto-creates Hedera account with sponsor funding
 
-### **Target Users**
-- **Farmers** - Tokenize farmland and agricultural assets
-- **Rural Communities** - Access financial services without infrastructure
-- **Unbanked Population** - Participate in tokenization without banks
-- **Micro-Entrepreneurs** - Tokenize small businesses and assets
+2. **Asset Tokenization**
+   - Verify PIN
+   - Select asset type (Farmland, Real Estate, Business, Commodities)
+   - Enter size, location, value
+   - Pay via simulated Paga agent (₦500)
+   - Asset created as Hedera HTS token
 
-### **How It Works**
-1. **User dials *384#** on their phone
-2. **Registers asset details** via USSD menu
-3. **Selects payment method** (Paga agent, bank USSD)
-4. **Pays tokenization fee** (₦500)
-5. **Asset created on blockchain** (Hedera HTS + HCS)
-6. **Asset listed for investors**
+3. **Portfolio Management**
+   - View owned assets
+   - Check total portfolio value
+   - Monitor earnings (when investments occur)
 
 ### **Technical Implementation**
-- **USSD Gateway** - Integrated with Africa's Talking
-- **Paga API Integration** - Bank USSD payment processing
-- **Session Management** - Secure USSD session handling
-- **Webhook Integration** - Payment confirmation callbacks
-- **SMS Notifications** - Real-time payment and transaction updates
+- **Frontend Simulator** - React-based phone UI component
+- **Backend USSD Endpoint** - `/api/mobile/ussd` handles all USSD logic
+- **Session Management** - In-memory sessions (MongoDB/Redis ready for production)
+- **PIN Management** - Bcrypt hashing, lockout mechanisms
+- **Sponsor Account** - Pays Hedera fees for user transactions
+- **Hedera Native** - Uses HTS for token creation, no EVM contracts
+
+### **Next Steps for Production**
+- 🔄 **Africa's Talking Integration** - Live USSD gateway approval
+- 🔄 **Paga Production Credentials** - Real payment processing
+- 🔄 **SMS Notifications** - Africa's Talking SMS for confirmations
+- 🔄 **Session Persistence** - MongoDB/Redis for session storage
+- 🔄 **Multi-language Support** - Hausa, Yoruba, Igbo translations
 
 ---
 
@@ -648,10 +660,10 @@ TrustBridge features a **native exchange** that allows users to swap HBAR for TR
 - **IPFS** - Decentralized file storage
 - **HashPack** - Wallet integration
 
-### **Financial Inclusion Partners**
-- **Africa's Talking** - USSD gateway and SMS services
-- **Paga** - Bank USSD payment processing
-- **Mobile Network Operators** - USSD infrastructure
+### **Financial Inclusion Partners (Planned)**
+- 🔄 **Africa's Talking** - USSD gateway and SMS services (pending approval)
+- 🔄 **Paga** - Bank USSD payment processing (demo integration ready)
+- 🔄 **Mobile Network Operators** - USSD infrastructure
 
 ### **Financial Partners**
 - **Asset Management Companies** - Professional asset managers
@@ -685,9 +697,10 @@ TrustBridge features a **native exchange** that allows users to swap HBAR for TR
 - ✅ **AMC Integration** - Pool management system
 - ✅ **Google AI Studio Integration** - Powered by Gemini AI
 - ✅ **Advanced Trading** - Order book and yield distribution
-- ✅ **USSD Integration** - Mobile access via *384#
-- ✅ **Paga Integration** - Bank USSD payment processing
-- ✅ **Financial Inclusion** - Bankless tokenization capabilities
+- ✅ **USSD Demo Simulator** - Hackathon demonstration ready
+- ✅ **USSD Core Flow** - Registration, PIN, tokenization, portfolio
+- 🔄 **Live USSD Integration** - Africa's Talking production integration
+- 🔄 **Paga Production** - Real payment processing
 
 ### **Q2 2025**
 - 🔄 **DeFi Integration** - Lending and borrowing

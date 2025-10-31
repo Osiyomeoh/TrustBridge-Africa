@@ -54,30 +54,67 @@ let HederaService = HederaService_1 = class HederaService {
     }
     initializeClient() {
         try {
-            const accountId = this.configService.get('HEDERA_ACCOUNT_ID');
-            const privateKey = this.configService.get('HEDERA_PRIVATE_KEY');
+            const accountId = this.configService.get('HEDERA_ACCOUNT_ID') || process.env.HEDERA_ACCOUNT_ID;
+            const privateKey = this.configService.get('HEDERA_PRIVATE_KEY') || process.env.HEDERA_PRIVATE_KEY;
+            const sponsorId = this.configService.get('HEDERA_SPONSOR_ACCOUNT_ID') || process.env.HEDERA_SPONSOR_ACCOUNT_ID;
+            const sponsorKeyRaw = this.configService.get('HEDERA_SPONSOR_PRIVATE_KEY') || process.env.HEDERA_SPONSOR_PRIVATE_KEY;
             const network = this.configService.get('HEDERA_NETWORK', 'testnet');
             if (!accountId || !privateKey) {
                 throw new Error('Hedera credentials are required for production. Please configure HEDERA_ACCOUNT_ID and HEDERA_PRIVATE_KEY in your .env file');
             }
+            const parseKey = (k) => {
+                if (!k)
+                    throw new Error('Empty private key');
+                const hex = k.startsWith('0x') ? k.slice(2) : k;
+                if (/^[0-9a-fA-F]+$/.test(hex)) {
+                    try {
+                        return sdk_1.PrivateKey.fromStringECDSA(hex);
+                    }
+                    catch { }
+                }
+                try {
+                    return sdk_1.PrivateKey.fromString(k);
+                }
+                catch { }
+                try {
+                    return sdk_1.PrivateKey.fromStringDer(k);
+                }
+                catch { }
+                try {
+                    return sdk_1.PrivateKey.fromStringECDSA(k);
+                }
+                catch { }
+                try {
+                    return sdk_1.PrivateKey.fromStringED25519(k);
+                }
+                catch { }
+                throw new Error('Unsupported Hedera private key format');
+            };
             this.operatorId = sdk_1.AccountId.fromString(accountId);
-            try {
-                this.operatorKey = sdk_1.PrivateKey.fromStringECDSA(privateKey);
-                this.logger.log('Using ECDSA key format');
-            }
-            catch (ecdsaError) {
-                this.logger.warn('ECDSA parsing failed, trying regular format:', ecdsaError.message);
-                this.operatorKey = sdk_1.PrivateKey.fromString(privateKey);
-                this.logger.log('Using regular key format');
-            }
+            this.operatorKey = parseKey(privateKey);
+            this.originalOperatorKey = this.operatorKey;
             this.network = network;
             this.client = sdk_1.Client.forName(network);
-            this.client.setOperator(this.operatorId, this.operatorKey);
-            this.logger.log(`Hedera client initialized for ${network} with account ${accountId}`);
+            if (sponsorId && sponsorKeyRaw) {
+                const sponsorKey = parseKey(sponsorKeyRaw);
+                this.operatorId = sdk_1.AccountId.fromString(sponsorId);
+                this.operatorKey = sponsorKey;
+                this.client.setOperator(this.operatorId, this.operatorKey);
+                this.payerAccountId = this.operatorId;
+                this.logger.log(`Hedera client initialized for ${network} with SPONSOR as operator/payer ${sponsorId}`);
+            }
+            else {
+                this.client.setOperator(this.operatorId, this.operatorKey);
+                this.payerAccountId = this.operatorId;
+                this.logger.log(`Hedera client initialized for ${network} with account ${accountId}`);
+            }
         }
         catch (error) {
             this.logger.error('Failed to initialize Hedera client:', error);
         }
+    }
+    getOperatorId() {
+        return this.operatorId?.toString() || '';
     }
     async getNetworkStatus() {
         if (!this.client) {
@@ -111,6 +148,22 @@ let HederaService = HederaService_1 = class HederaService {
             };
         }
     }
+    async transferHbar(toAccountId, amountHbar) {
+        if (!this.client)
+            throw new Error('Hedera client not initialized');
+        try {
+            const tx = new sdk_1.TransferTransaction()
+                .addHbarTransfer(sdk_1.AccountId.fromString(toAccountId), new sdk_1.Hbar(amountHbar))
+                .addHbarTransfer(this.payerAccountId, new sdk_1.Hbar(-amountHbar));
+            const resp = await tx.execute(this.client);
+            const receipt = await resp.getReceipt(this.client);
+            return receipt.status.toString();
+        }
+        catch (e) {
+            this.logger.error('Failed to transfer HBAR:', e);
+            throw e;
+        }
+    }
     async createAssetToken(request) {
         if (!this.client) {
             throw new Error('Hedera client not initialized. Please check your credentials.');
@@ -135,7 +188,9 @@ let HederaService = HederaService_1 = class HederaService {
                 tokenCreateTx.setFreezeKey(freezeKey.publicKey);
                 this.logger.log(`Freeze enabled for token ${request.tokenName}`);
             }
-            const tokenCreateResponse = await tokenCreateTx.execute(this.client);
+            const frozen = await tokenCreateTx.freezeWith(this.client);
+            const signedTx = await frozen.sign(this.operatorKey);
+            const tokenCreateResponse = await signedTx.execute(this.client);
             const tokenCreateReceipt = await tokenCreateResponse.getReceipt(this.client);
             const tokenId = tokenCreateReceipt.tokenId;
             this.logger.log(`Created token ${tokenId} for asset ${request.assetId} with KYC: ${request.enableKyc}, Freeze: ${request.enableFreeze}`);
@@ -1949,6 +2004,31 @@ let HederaService = HederaService_1 = class HederaService {
             throw new Error(`Admin account creation failed: ${error.message}`);
         }
     }
+    async createUserAccount(userMemo = 'USSD User') {
+        try {
+            this.logger.log(`[Hedera] Creating user account: ${userMemo}`);
+            const newKey = sdk_1.PrivateKey.generate();
+            const publicKey = newKey.publicKey;
+            const accountCreateTx = new sdk_1.AccountCreateTransaction()
+                .setKey(publicKey)
+                .setInitialBalance(new sdk_1.Hbar(1))
+                .setAccountMemo(userMemo)
+                .setMaxTransactionFee(new sdk_1.Hbar(2));
+            const response = await accountCreateTx.execute(this.client);
+            const receipt = await response.getReceipt(this.client);
+            const accountId = receipt.accountId.toString();
+            this.logger.log(`[Hedera] ✅ User account created: ${accountId}`);
+            return {
+                accountId,
+                publicKey: publicKey.toString(),
+                privateKey: newKey.toString(),
+            };
+        }
+        catch (error) {
+            this.logger.error('[Hedera] Failed to create user account:', error);
+            throw new Error('User account creation failed: ' + error.message);
+        }
+    }
     async transferHbarToAdmin(adminAccountId, amount) {
         try {
             this.logger.log(`Transferring ${amount} HBAR to admin account: ${adminAccountId}`);
@@ -2110,6 +2190,9 @@ let HederaService = HederaService_1 = class HederaService {
             const messageSubmitTx = new sdk_1.TopicMessageSubmitTransaction()
                 .setTopicId(sdk_1.TopicId.fromString(topicId))
                 .setMessage(JSON.stringify(message));
+            messageSubmitTx.freezeWith(this.client);
+            const signature = await this.originalOperatorKey.signTransaction(messageSubmitTx);
+            messageSubmitTx.addSignature(this.originalOperatorKey.publicKey, signature);
             const messageSubmitResponse = await messageSubmitTx.execute(this.client);
             const messageSubmitReceipt = await messageSubmitResponse.getReceipt(this.client);
             const transactionId = messageSubmitResponse.transactionId.toString();

@@ -59,11 +59,12 @@ const AuthStatus: React.FC<AuthStatusProps> = ({
   }
 
   // Not connected - show Connect Wallet
-  if (!isConnected || !accountId) {
+  if (!isConnected || !accountId || authLoading) {
     console.log('AuthStatus - Showing Connect Wallet button:', {
       isConnected,
       accountId,
-      hasUser: !!user
+      hasUser: !!user,
+      authLoading
     });
     return (
       <UnifiedAuthFlow

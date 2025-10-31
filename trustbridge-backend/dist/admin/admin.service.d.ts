@@ -1,5 +1,7 @@
 import { ConfigService } from '@nestjs/config';
+import { Model } from 'mongoose';
 import { HederaService } from '../hedera/hedera.service';
+import { AssetDocument } from '../schemas/asset.schema';
 export interface AdminRole {
     isAdmin: boolean;
     isSuperAdmin: boolean;
@@ -17,12 +19,13 @@ export interface AdminAssignment {
 export declare class AdminService {
     private configService;
     private hederaService;
+    private assetModel;
     private readonly logger;
     private readonly adminWallets;
     private readonly superAdminWallet;
     private readonly platformAdminWallets;
     private readonly amcAdminWallets;
-    constructor(configService: ConfigService, hederaService: HederaService);
+    constructor(configService: ConfigService, hederaService: HederaService, assetModel: Model<AssetDocument>);
     checkAdminStatus(walletAddress: string): Promise<AdminRole>;
     private checkEnvironmentAdminRole;
     private checkHederaAdminRole;
@@ -78,5 +81,6 @@ export declare class AdminService {
     approveAsset(adminWallet: string, assetId: string, approved: boolean, comments?: string, verificationScore?: number): Promise<{
         success: boolean;
         message: string;
+        asset?: any;
     }>;
 }

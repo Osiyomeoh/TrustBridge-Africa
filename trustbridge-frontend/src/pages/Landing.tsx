@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Button from '../components/UI/Button';
-import { ArrowRight, TrendingUp, Shield, Globe, Users, Zap, Star, CheckCircle, MapPin } from 'lucide-react';
+import { ArrowRight, TrendingUp, Shield, Globe, Users, Zap, Star, CheckCircle, MapPin, Phone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ThemeToggle from '../components/UI/ThemeToggle';
 import AnimatedBackground from '../components/UI/AnimatedBackground';
@@ -85,6 +85,12 @@ const Landing: React.FC = () => {
             <a href="#features" className="text-off-white hover:text-neon-green transition-colors text-sm xl:text-base">Features</a>
             <a href="#how-it-works" className="text-off-white hover:text-neon-green transition-colors text-sm xl:text-base">How It Works</a>
             <ThemeToggle />
+            <Link to="/ussd-demo">
+              <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                <Phone className="w-4 h-4" />
+                USSD Demo
+              </Button>
+            </Link>
             <Link to="/get-test-tokens">
               <Button variant="ghost" size="sm">Get Test Tokens</Button>
             </Link>
@@ -96,6 +102,12 @@ const Landing: React.FC = () => {
           {/* Tablet Navigation */}
           <div className="hidden md:flex lg:hidden items-center gap-3">
             <ThemeToggle />
+            <Link to="/ussd-demo">
+              <Button variant="ghost" size="sm" className="flex items-center gap-1">
+                <Phone className="w-4 h-4" />
+                USSD
+              </Button>
+            </Link>
             <Link to="/get-test-tokens">
               <Button variant="ghost" size="sm">Get Test Tokens</Button>
             </Link>
@@ -107,6 +119,11 @@ const Landing: React.FC = () => {
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-2">
             <ThemeToggle />
+            <Link to="/ussd-demo">
+              <Button variant="ghost" size="sm">
+                <Phone className="w-4 h-4" />
+              </Button>
+            </Link>
             <Link to="/get-test-tokens">
               <Button variant="ghost" size="sm">Test Tokens</Button>
             </Link>

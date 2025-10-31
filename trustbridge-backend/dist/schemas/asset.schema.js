@@ -132,6 +132,10 @@ __decorate([
     __metadata("design:type", Number)
 ], Asset.prototype, "verificationScore", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({ default: 0 }),
+    __metadata("design:type", Number)
+], Asset.prototype, "earnings", void 0);
+__decorate([
     (0, mongoose_1.Prop)({ required: true, enum: AssetStatus, default: AssetStatus.PENDING }),
     __metadata("design:type", String)
 ], Asset.prototype, "status", void 0);

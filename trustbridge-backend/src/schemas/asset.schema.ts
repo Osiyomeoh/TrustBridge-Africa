@@ -97,6 +97,9 @@ export class Asset {
   @Prop({ default: 0 })
   verificationScore: number;
 
+  @Prop({ default: 0 })
+  earnings: number; // Total earnings/ROI received
+
   @Prop({ required: true, enum: AssetStatus, default: AssetStatus.PENDING })
   status: AssetStatus;
 
